@@ -107,6 +107,7 @@ jobs:
       env:
         DOCKER_BUILD_SUMMARY: false
       with:
+        context: .
         file: Dockerfile
         platforms: linux/amd64
         push: true

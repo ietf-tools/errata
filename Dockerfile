@@ -5,7 +5,7 @@ RUN mkdir -p /app && \
     chown node:node /app
 WORKDIR /app
 
-COPY .output ./
+COPY ./.output ./
 # COPY .data/content/contents.sqlite ./server/
 
 USER node:node
