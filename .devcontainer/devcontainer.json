@@ -2,7 +2,7 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
 	"name": "Errata",
-	"dockerComposeFile": ["../docker-compose.yml"],
+	"dockerComposeFile": ["../docker-compose.yml", "docker-compose.extend.yml"],
 	"service": "app",
 	"workspaceFolder": "/workspace",
 	"shutdownAction": "stopCompose",
