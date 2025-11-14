@@ -1,0 +1,42 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+	"name": "Errata",
+	"dockerComposeFile": ["../docker-compose.yml"],
+	"service": "app",
+	"workspaceFolder": "/workspace",
+	"shutdownAction": "stopCompose",
+	"postCreateCommand": "/docker-init.sh",
+	// "postStartCommand": "/docker-start.sh",
+	"containerEnv": {
+			"EDITOR_VSCODE": "true"
+	},
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	"features": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [8000],
+
+	"portsAttributes": {
+			"8000": {
+					"label": "Errata",
+					"onAutoForward": "ignore"
+			}
+	},
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "pip3 install --user -r requirements.txt",
+
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"charliermarsh.ruff"
+			]
+		}
+	},
+
+	// Comment out to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	"remoteUser": "dev"
+}

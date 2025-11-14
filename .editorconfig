@@ -1,0 +1,31 @@
+# EditorConfig helps developers define and maintain consistent
+# coding styles between different editors and IDEs
+# editorconfig.org
+
+root = true
+
+# Global settings for Errata
+# ---------------------------------------------------------
+# PEP8 Style
+
+[*]
+indent_size = 4
+indent_style = space
+charset = utf-8
+trim_trailing_whitespace = false
+insert_final_newline = true
+
+# Specializations below *add to* the above defaults
+
+# Settings for .github folder
+# ---------------------------------------------------------
+# GitHub Markdown Style
+
+[.github/**]
+indent_size = 2
+
+# Settings for Kubernetes yaml
+# ---------------------------------------------------------
+# Use 2-space indents
+[k8s/**.yaml]
+indent_size = 2
