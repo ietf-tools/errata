@@ -120,3 +120,13 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'errata',
+        'USER': 'django',
+        'PASSWORD': 'dev-not-a-secret',
+        'HOST': 'db'
+    }
+}

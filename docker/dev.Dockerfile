@@ -1,4 +1,4 @@
-FROM python:3.12-bookworm
+FROM python:3.12-trixie
 LABEL maintainer="IETF Tools Team <tools-discuss@ietf.org>"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -12,7 +12,10 @@ COPY docker/scripts/app-init.sh /docker-init.sh
 RUN sed -i 's/\r$//' /docker-init.sh && chmod +rx /docker-init.sh
 
 # Setup non-root user
-RUN apt-get update --fix-missing && apt-get install -qy --no-install-recommends sudo
+RUN apt-get update --fix-missing && apt-get install -qy --no-install-recommends \
+    postgresql-client-17 \
+    sudo
+    
 RUN groupadd -g 1000 dev && \
     useradd -c "Dev Datatracker User" -u 1000 -g dev -m -s /bin/false dev && \
     adduser dev sudo && \
