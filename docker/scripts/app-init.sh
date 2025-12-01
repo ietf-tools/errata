@@ -3,9 +3,9 @@
 WORKSPACEDIR="/workspace"
 
 # Handle Linux host mounting the workspace dir as root
-if [ ! -O "${WORKSPACEDIR}/errata" ]; then
-    sudo chown -R dev:dev $WORKSPACEDIR
-fi
+#if [ ! -O "${WORKSPACEDIR}/errata" ]; then
+#    sudo chown -R dev:dev $WORKSPACEDIR
+#fi
 
 # Add /workspace as a safe git directory
 git config --global --add safe.directory /workspace

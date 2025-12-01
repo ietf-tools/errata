@@ -26,3 +26,4 @@ COPY requirements.txt /tmp/pip-tmp/
 RUN pip3 --disable-pip-version-check --no-cache-dir install --user --no-warn-script-location -r /tmp/pip-tmp/requirements.txt
 RUN sudo rm -rf /tmp/pip-tmp
 ENV PATH=/home/dev/.local/bin:${PATH}
+ENV DJANGO_SETTINGS_MODULE=errata_project.settings.dev
