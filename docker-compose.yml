@@ -2,34 +2,16 @@ services:
   app:
     build:
       context: .
-      dockerfile: docker/dev.Dockerfile
-      
+      dockerfile: docker/errata.Dockerfile
+      target: app-dev
     init: true
-    
-    # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
-    
-    # Runs app on the same network as the database container, allows "forwardPorts" in devcontainer.json function.
-    # network_mode: service:db
-    
     depends_on:
       - db
-    
     ipc: host
-    
     environment:
       DISPLAY: host.docker.internal:0
-      # USER: django
-      # UID: 1001
-      # GID: 1001
-      # DATADIR: data
-      # DJANGO_SETTINGS_MODULE: settings_test
-      
-    # Uncomment the next line to use a non-root user for all processes.
     user: dev
-    
-    # Use "forwardPorts" in **devcontainer.json** to forward an app port locally.
-    # (Adding the "ports" property to this file will not forward from a Codespace.)
 
   db:
     build:
@@ -41,5 +23,3 @@ services:
 
 volumes:
   errata_data:
-     name: errata_data
-     
