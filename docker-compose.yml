@@ -11,7 +11,21 @@ services:
     ipc: host
     environment:
       DISPLAY: host.docker.internal:0
-    user: dev
+    user: notroot
+
+  celery:
+    build:
+      context: .
+      dockerfile: docker/errata.Dockerfile
+      target: celery-dev
+    init: true
+    depends_on:
+      - db
+    ipc: host
+    environment:
+      DISPLAY: host.docker.internal:0
+      CELERY_ROLE: worker
+    user: notroot 
 
   db:
     build:
