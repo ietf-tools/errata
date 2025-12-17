@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Wobble Up{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Wobble Up</h1>
+    <p>You are {% if user.is_authenticated %}"{{request.user.username}}"{% else %}not authenticated{% endif %}</p>
+</div>
+{% endblock %}
