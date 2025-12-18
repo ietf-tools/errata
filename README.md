@@ -1,35 +1,15 @@
 # Errata Website
 
-## Setup
+This is a simple django re-implementation of the current errata system.
+It is not intended to add features beyond these two:
+* Verifiers will login via datatracker credentals
+* The RPC will vet all new filed errata (and handle spam) before verifiers are asked to look
 
-Make sure to install dependencies:
-
-```bash
-# npm
-npm install
+## Development
+Have a datatracker development instance running at `http://localhost:8000' (it will serve as the OIDC provider)
 ```
+dev ➜ /workspace (minimal) $ ./manage.py test
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
-npm run dev
+dev ➜ /workspace (minimal) $ ./manage.py runserver 8808
 ```
-
-## Production
-
-Build the application for production:
-
-```bash
-# npm
-npm run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-```
+and browse to `http://localhost:8808`
