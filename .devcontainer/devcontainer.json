@@ -20,10 +20,10 @@
         },
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	"forwardPorts": [8000],
+	"forwardPorts": [8808],
 
-	"portsAttributes": {
-			"8000": {
+	 "portsAttributes": {
+			"8808": {
 					"label": "Errata",
 					"onAutoForward": "ignore"
 			}

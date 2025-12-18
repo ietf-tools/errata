@@ -6,5 +6,13 @@
 <div class="container">
     <h1>Wobble Up</h1>
     <p>You are {% if user.is_authenticated %}"{{request.user.username}}"{% else %}not authenticated{% endif %}</p>
+    {% if user.is_authenticated %}
+        <form action="{% url 'oidc_logout' %}" method="post">
+            {% csrf_token %}
+            <input type="submit" value="logout">
+        </form>
+    {% else %}
+    <a href="{% url 'oidc_authentication_init' %}">Login</a>
+    {% endif %}
 </div>
 {% endblock %}

@@ -1,3 +1,4 @@
 Django~=5.2
-mozilla-django-oidc>=4.0.0
+mozilla-django-oidc>=4,<5
 psycopg>=3,<4
+rules>=3.5

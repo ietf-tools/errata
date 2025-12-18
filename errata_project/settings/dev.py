@@ -1,1 +1,16 @@
 from .base import *  # noqa
+import os
+
+# OIDC configuration (see also base.py)
+OIDC_RP_CLIENT_ID = os.environ["ERRATA_OIDC_RP_CLIENT_ID"]
+OIDC_RP_CLIENT_SECRET = os.environ["ERRATA_OIDC_RP_CLIENT_SECRET"]
+OIDC_OP_ISSUER_ID = "http://localhost:8000/api/openid"
+OIDC_OP_JWKS_ENDPOINT = "http://host.docker.internal:8000/api/openid/jwks/"
+OIDC_OP_AUTHORIZATION_ENDPOINT = (
+    "http://localhost:8000/api/openid/authorize/"  # URL for user agent
+)
+OIDC_OP_TOKEN_ENDPOINT = "http://host.docker.internal:8000/api/openid/token/"
+OIDC_OP_USER_ENDPOINT = "http://host.docker.internal:8000/api/openid/userinfo/"
+OIDC_OP_END_SESSION_ENDPOINT = "http://localhost:8000/api/openid/end-session/"
+
+DEPLOYMENT_MODE = "development"

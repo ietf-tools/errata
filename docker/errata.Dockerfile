@@ -19,4 +19,6 @@ RUN mv /docker-init.sh /docker-app-init.sh
 COPY docker/scripts/app-dev-init.sh /docker-init.sh
 RUN sed -i 's/\r$//' /docker-init.sh && chmod +rx /docker-init.sh
 ENV DJANGO_SETTINGS_MODULE=errata_project.settings.dev
+ENV ERRATA_OIDC_RP_CLIENT_ID=079065
+ENV ERRATA_OIDC_RP_CLIENT_SECRET=788eb5a13ee8e233e91a42c88b5ad1736342c5b98e3bcec834d01074
 

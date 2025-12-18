@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rules.apps.AutodiscoverRulesConfig",
     "errata_auth.apps.ErrataAuthConfig",
     'errata.apps.ErrataConfig',
 ]
@@ -66,7 +67,7 @@ WSGI_APPLICATION = "errata_project.wsgi.application"
 
 # TODO - verify rules.permissions are needed/used
 AUTHENTICATION_BACKENDS = (
-    "rpcauth.backends.ErrataOIDCAuthBackend",
+    "errata_auth.backends.ErrataOIDCAuthBackend",
     "rules.permissions.ObjectPermissionBackend",
     "django.contrib.auth.backends.ModelBackend",
 )
@@ -76,7 +77,11 @@ OIDC_RP_SIGN_ALGO = "RS256"
 OIDC_RP_SCOPES = "openid profile roles"
 OIDC_STORE_ID_TOKEN = True  # store id_token in session (used for RP-initiated logout)
 ALLOW_LOGOUT_GET_METHOD = True  # for now anyway
-OIDC_OP_LOGOUT_URL_METHOD = "rpcauth.utils.op_logout_url"
+OIDC_OP_LOGOUT_URL_METHOD = "errata_auth.utils.op_logout_url"
+
+SESSION_COOKIE_NAME = (
+    "erratasessionid"  # need to set this if oidc provider is on same domain as client
+)
 
 # How often to renew tokens? Default is 15 minutes. Needs SessionRefresh middleware.
 # OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = 15 * 60
