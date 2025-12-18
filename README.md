@@ -6,7 +6,8 @@ It is not intended to add features beyond these two:
 * The RPC will vet all new filed errata (and handle spam) before verifiers are asked to look
 
 ## Development
-Have a datatracker development instance running at `http://localhost:8000' (it will serve as the OIDC provider)
+
+Have a datatracker development instance running at `http://localhost:8000` (it will serve as the OIDC provider)
 ```
 dev ➜ /workspace (minimal) $ ./manage.py test
 

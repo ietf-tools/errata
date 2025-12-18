@@ -144,6 +144,7 @@ class ErrataOIDCAuthBackend(ServiceTokenOIDCAuthenticationBackend):
                 datatracker_subject_id=subject_id,
                 name=claims["name"],  # required claim,
                 avatar=claims.get("picture", ""),
+                roles=claims.get("roles",[]),
                 is_staff=admin_access,
                 is_superuser=admin_access,
             )
@@ -162,6 +163,9 @@ class ErrataOIDCAuthBackend(ServiceTokenOIDCAuthenticationBackend):
             updated = True
         if user.avatar != claims.get("picture", ""):
             user.avatar = claims.get("picture")
+            updated = True
+        if user.roles != claims.get("roles", []):
+            user.roles = claims.get("roles", [])
             updated = True
 
         admin_access = self.ADMIN_ACCESS_ROLE in claims["roles"]

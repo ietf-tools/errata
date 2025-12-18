@@ -21,3 +21,5 @@ class User(AbstractUser):
     )
 
     avatar = models.URLField(blank=True)
+
+    roles = models.JSONField(blank=True)
