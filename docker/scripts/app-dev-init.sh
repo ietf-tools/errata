@@ -4,6 +4,8 @@ source /docker-app-init.sh
 
 echo Performing app-dev initialization
 
+./manage.py migrate
+
 # Add /workspace as a safe git directory
 git config --global --add safe.directory /workspace
 
