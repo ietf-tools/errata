@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load filters %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Errata</h1>
+
+    {% regroup errata by status as errata_by_status %}
+
+    {% for status_group in errata_by_status %}
+        <h2 class="mt-5">{{ status_group.grouper }} ({{ status_group.list|length }})</h2>
+        
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>RFC Number (Errata ID)</th>
+                    <th>Section</th>
+                    <th>Type</th>
+                    <th>Source of RFC</th>
+                    <th>Submitted By</th>
+                    <th>Publication Format</th>
+                    <th>Date Submitted</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for erratum in status_group.list %}
+                    <tr>
+                        <td>RFC{{erratum.rfc_number }} ({{ erratum.id }})</td>
+                        <td>{{ erratum.section|suppress_strings_starting_with_99 }}</td>
+                        <td>{{ erratum.type }}</td>
+                        <td>{{ erratum.rfc_metadata.responsible_body }}{% if erratum.rfc_metadata.area_assignment %} ({{ erratum.rfc_metadata.area_assignment }}){% endif %}</td>
+                        <td>{{ erratum.submitter_name }}</td>
+                        <td>{{ erratum.format|join:", " }}</td>
+                        <td>{{ erratum.submitted_at|date:"Y-m-d" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">No errata found</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% empty %}
+        <p class="alert alert-info">No errata available.</p>
+    {% endfor %}
+</div>
+{% endblock %}

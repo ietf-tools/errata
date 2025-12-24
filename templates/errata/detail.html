@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load static filters %}
+
+{% block title %}Erratum {{ erratum.id }} - RFC {{ erratum.rfc_number }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-dark">
+                    <h2 class="mb-0">RFC {{ erratum.rfc_number }}, "{{ erratum.rfc_metadata.title }}", {{ erratum.rfc_metadata.publication_month|month_name }} {{ erratum.rfc_metadata.publication_year }}</h2>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">TODO: show obsoleted/updated</p>
+                    <p class="mb-0"><strong>Source of RFC:</strong> {{ erratum.rfc_metadata.responsible_body }}{% if erratum.rfc_metadata.area_assignment %} ({{ erratum.rfc_metadata.area_assignment }}){% endif %}</p>
+                </div>
+            </div>
+            <!-- Erratum Header -->
+            <div class="card mb-4">
+                <div class="card-header bg-light text-dark">
+                    <h3 class="mb-0">Errata-ID: {{ erratum.id }}</h>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Status:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-info">{{ erratum.status.name }}</span>
+                        </dd>
+
+                        <dt class="col-sm-4">Type:</dt>
+                        <dd class="col-sm-8">
+                            {% if erratum.type %}
+                                <span class="badge bg-secondary">{{ erratum.type.name }}</span>
+                            {% else %}
+                                <span class="text-muted">Not specified</span>
+                            {% endif %}
+                        </dd>
+
+                        {% if erratum.rfc_number >= 8650 %}
+                        <dt class="col-sm-4">Publication Format{{ erratum.format|pluralize }}:</dt>
+                        <dd class="col-sm-8">
+                            {% if erratum.format %}
+                                {% for fmt in erratum.format %}
+                                    <span class="badge bg-primary">{{ fmt }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">None specified</span>
+                            {% endif %}
+                        </dd>
+                        {% endif %}
+
+                        <dt class="col-sm-4">Reported By:</dt>
+                        <dd class="col-sm-8">
+                            <span>{{ erratum.submitter_name|default:"Not provided" }}</span>
+                        </dd>
+
+                        <dt class="col-sm-4">Date Reported:</dt>
+                        <dd class="col-sm-8">
+                            <span>{{ erratum.submitted_at|date:"Y-m-d" |default:"Not provided" }}</span>
+                        </dd>
+
+                    </dl>
+                    <p> {# See https://github.com/rfc-editor/rpcwebsite/blob/182c06862b4f83014dae9b67ee6911f73bafc802/rfcscripts/errata_lib.php#L1810-L1892 #}
+                        {% if errata.section == "Global" %}
+                            Throughout the document, when it says:
+                        {% elif errata.section|suppress_strings_starting_with_99 != "-" %}
+                            Section {{ erratum.section }} says:
+                        {% elif errata.section|length > 2 %}
+                            {{ erratum.section|slice:"2:"}}
+                        {% else %}
+                            &nbsp;
+                        {% endif %}
+                    </p>
+                    {% if erratum.orig_text %}
+                        <pre class="bg-light p-3 rounded"><code>{{ erratum.orig_text }}</code></pre>
+                    {% else %}
+                        <p class="text-muted">No original text provided.</p>
+                    {% endif %}
+                    {% if erratum.corrected_text %}
+                        <p>It should say:</p>
+                        <pre class="bg-light p-3 rounded"><code>{{ erratum.corrected_text }}</code></pre>
+                    {% endif %}
+                    {% if erratum.notes %}
+                        <p>Notes:</p>
+                        <p>{{ erratum.notes }}</p>
+                    {% endif %}
+                    
+
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex gap-2 mb-4">
+                <a href="{% url 'errata_list' %}" class="btn btn-secondary"> {# TODO remove when search form is added #}
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </a>
+                {# TODO: Add button to Report New Errata #}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
