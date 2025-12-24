@@ -10,20 +10,33 @@ def add_status_data(apps, schema_editor):
             "slug": "verified",
             "name": "Verified",
             "desc": "Erratum has been verified by Stream Specific Party",
+            "order": 1,
         },
         {
             "slug": "reported",
             "name": "Reported",
             "desc": "Erratum is reported, but not verified",
+            "order": 2,
         },
         {
             "slug": "held_for_doc_update",
             "name": "Held for Document Update",
             "desc": "Erratum not verified, but should be reexamined when the RFC is "
             "updated or deprecated.",
+            "order": 3,
         },
-        {"slug": "sort_fix", "name": "Sort-Fix", "desc": "Fixing sort order."},
-        {"slug": "rejected", "name": "Rejected", "desc": "This erratum was rejected."},
+        {
+            "slug": "sort_fix",
+            "name": "Sort-Fix",
+            "desc": "Fixing sort order.",
+            "order": 4,
+        },
+        {
+            "slug": "rejected",
+            "name": "Rejected",
+            "desc": "This erratum was rejected.",
+            "order": 5,
+        },
     ]
     for status in statuses:
         Status.objects.create(**status)

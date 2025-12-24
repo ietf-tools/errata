@@ -6,8 +6,8 @@ from django.db import migrations
 def add_type_data(apps, schema_editor):
     Type = apps.get_model("errata", "Type")
     types = [
-        {"slug": "editorial", "name": "Editorial"},
-        {"slug": "technical", "name": "Technical"},
+        {"slug": "editorial", "name": "Editorial", "order": 2},
+        {"slug": "technical", "name": "Technical", "order": 1},
     ]
     for type in types:
         Type.objects.create(**type)

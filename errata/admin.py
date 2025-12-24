@@ -3,11 +3,11 @@
 from django.contrib import admin
 
 from .models import (
-    AreaAssignment,
     Erratum,
     Log,
     Status,
     Type,
+    RfcMetadata,
 )
 
 
@@ -53,14 +53,23 @@ class LogAdmin(admin.ModelAdmin):
         "created_at",
     ]
     raw_id_fields = ["erratum"]
+    list_filter = ["erratum"]
 
 
 admin.site.register(Log, LogAdmin)
 
 
-class AreaAssignmentAdmin(admin.ModelAdmin):
-    search_fields = ["rfc_number", "area_acronym"]
-    list_display = ["rfc_number", "area_acronym"]
+class RfcMetadataAdmin(admin.ModelAdmin):
+    search_fields = ["rfc_number", "title"]
+    list_display = [
+        "rfc_number",
+        "title",
+        "publication_year",
+        "publication_month",
+        "area_assignment",
+        "responsible_body",
+    ]
+    list_filter = ["area_assignment", "responsible_body"]
 
 
-admin.site.register(AreaAssignment, AreaAssignmentAdmin)
+admin.site.register(RfcMetadata, RfcMetadataAdmin)

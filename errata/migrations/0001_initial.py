@@ -14,6 +14,20 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
+            name="RfcMetadata",
+            fields=[
+                (
+                    "rfc_number",
+                    models.PositiveIntegerField(primary_key=True, serialize=False),
+                ),
+                ("title", models.CharField(max_length=512)),
+                ("publication_year", models.PositiveIntegerField()),
+                ("publication_month", models.PositiveIntegerField()),
+                ("area_assignment", models.CharField(blank=True, max_length=32)),
+                ("responsible_body", models.CharField(blank=True, max_length=32)),
+            ],
+        ),
+        migrations.CreateModel(
             name="Status",
             fields=[
                 (
@@ -23,6 +37,7 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=255)),
                 ("desc", models.TextField(blank=True)),
                 ("used", models.BooleanField(default=True)),
+                ("order", models.PositiveIntegerField(default=0)),
             ],
             options={
                 "verbose_name_plural": "Statuses",
@@ -38,33 +53,10 @@ class Migration(migrations.Migration):
                 ("name", models.CharField(max_length=255)),
                 ("desc", models.TextField(blank=True)),
                 ("used", models.BooleanField(default=True)),
+                ("order", models.PositiveIntegerField(default=0)),
             ],
             options={
                 "abstract": False,
-            },
-        ),
-        migrations.CreateModel(
-            name="AreaAssignment",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("rfc_number", models.PositiveIntegerField()),
-                ("area_acronym", models.CharField(max_length=32)),
-            ],
-            options={
-                "constraints": [
-                    models.UniqueConstraint(
-                        fields=("rfc_number", "area_acronym"),
-                        name="unique_rfc_number_area_acronym",
-                    )
-                ],
             },
         ),
         migrations.CreateModel(
@@ -109,6 +101,14 @@ class Migration(migrations.Migration):
                         default=list,
                         help_text="A list of formats. Possible values: 'HTML', 'PDF', and 'TXT'.",
                         size=None,
+                    ),
+                ),
+                (
+                    "rfc_metadata",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="erratum",
+                        to="errata.rfcmetadata",
                     ),
                 ),
                 (

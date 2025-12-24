@@ -8,6 +8,7 @@ class Name(models.Model):
     name = models.CharField(max_length=255)
     desc = models.TextField(blank=True)
     used = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
 
     class Meta:
         abstract = True
@@ -30,6 +31,9 @@ class Erratum(models.Model):
     """
 
     rfc_number = models.PositiveIntegerField()
+    rfc_metadata = models.ForeignKey(
+        "RfcMetadata", related_name="erratum", on_delete=models.PROTECT, null=False
+    )
     status = models.ForeignKey(
         "Status",
         on_delete=models.PROTECT,
@@ -117,21 +121,17 @@ class Log(models.Model):
         return f"Log {self.id} for Erratum {self.erratum_id}"
 
 
-class AreaAssignment(models.Model):
+class RfcMetadata(models.Model):
     """
-    Model representing area assignments for RFCs.
+    Model representing metadata for RFCs.
     """
 
-    rfc_number = models.PositiveIntegerField()
-    area_acronym = models.CharField(max_length=32)
+    rfc_number = models.PositiveIntegerField(primary_key=True)
+    title = models.CharField(max_length=512)
+    publication_year = models.PositiveIntegerField()
+    publication_month = models.PositiveIntegerField()
+    area_assignment = models.CharField(max_length=32, blank=True)
+    responsible_body = models.CharField(max_length=32, blank=True)
 
     def __str__(self):
-        return f"Area Assignment {self.area_acronym} for RFC {self.rfc_number}"
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["rfc_number", "area_acronym"],
-                name="unique_rfc_number_area_acronym",
-            )
-        ]
+        return f"RFC {self.rfc_number}: {self.title}"
