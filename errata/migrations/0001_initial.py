@@ -23,8 +23,11 @@ class Migration(migrations.Migration):
                 ("title", models.CharField(max_length=512)),
                 ("publication_year", models.PositiveIntegerField()),
                 ("publication_month", models.PositiveIntegerField()),
-                ("area_assignment", models.CharField(blank=True, max_length=32)),
-                ("responsible_body", models.CharField(blank=True, max_length=32)),
+                ("group_acronym", models.CharField(blank=True, max_length=40)),
+                ("area_acronym", models.CharField(blank=True, max_length=40)),
+                ("stream", models.CharField(blank=True, max_length=40)),
+                ("area_assignment", models.CharField(blank=True, max_length=40)),
+                ("obsoleted_by", models.CharField(blank=True, max_length=160)),
             ],
         ),
         migrations.CreateModel(

@@ -1,9 +1,29 @@
 {% extends "base.html" %}
-{% load filters %}
+{% load filters django_bootstrap5 %}
 
 {% block content %}
 <div class="container mt-4">
     <h1>Errata</h1>
+
+    <form id="errata-search-form" method="get">
+        {% bootstrap_form form %}
+        <button class="btn btn-primary" type="submit">Submit</button>
+    </form>
+    {% if form.errors %}
+        <div class="alert alert-danger mt-3">
+            <strong>Please correct the errors below:</strong>
+            <ul>
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 
     {% regroup errata by status as errata_by_status %}
 
@@ -41,7 +61,7 @@
             </tbody>
         </table>
     {% empty %}
-        <p class="alert alert-info">No errata available.</p>
+        {% if search_ran %}<p class="alert alert-info">No matching errata found.</p>{% endif %}
     {% endfor %}
 </div>
 {% endblock %}

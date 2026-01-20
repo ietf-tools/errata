@@ -6,6 +6,6 @@ from . import views
 
 urlpatterns = [
     path("", views.wobbleup, name="wobbleup"),
-    path("list/", views.list, name="errata_list"),
-    path("detail/eid<int:pk>/", views.detail, name="errata_detail"),
+    path("search/", views.search, name="errata_search"),
+    path("eid<int:pk>/", views.detail, name="errata_detail"),
 ]

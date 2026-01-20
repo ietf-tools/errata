@@ -130,8 +130,11 @@ class RfcMetadata(models.Model):
     title = models.CharField(max_length=512)
     publication_year = models.PositiveIntegerField()
     publication_month = models.PositiveIntegerField()
-    area_assignment = models.CharField(max_length=32, blank=True)
-    responsible_body = models.CharField(max_length=32, blank=True)
+    group_acronym = models.CharField(max_length=40, blank=True)
+    area_acronym = models.CharField(max_length=40, blank=True)
+    stream = models.CharField(max_length=40, blank=True)
+    area_assignment = models.CharField(max_length=40, blank=True)
+    obsoleted_by = models.CharField(max_length=160, blank=True)
 
     def __str__(self):
         return f"RFC {self.rfc_number}: {self.title}"

@@ -66,10 +66,12 @@ class RfcMetadataAdmin(admin.ModelAdmin):
         "title",
         "publication_year",
         "publication_month",
+        "group_acronym",
+        "area_acronym",
+        "stream",
         "area_assignment",
-        "responsible_body",
     ]
-    list_filter = ["area_assignment", "responsible_body"]
+    list_filter = ["area_acronym", "stream", "area_assignment"]
 
 
 admin.site.register(RfcMetadata, RfcMetadataAdmin)
