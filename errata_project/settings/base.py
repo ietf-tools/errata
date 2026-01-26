@@ -34,7 +34,7 @@ INSTALLED_APPS = [
     "django_bootstrap5",
     "rules.apps.AutodiscoverRulesConfig",
     "errata_auth.apps.ErrataAuthConfig",
-    'errata.apps.ErrataConfig',
+    "errata.apps.ErrataConfig",
 ]
 
 MIDDLEWARE = [

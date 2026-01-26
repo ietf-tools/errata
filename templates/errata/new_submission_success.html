@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load filters django_bootstrap5 %}
+
+{% block title %}New Erratum Submitted{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>New Erratum for RFC{{ staged_erratum.rfc_number }} successfully submitted</h1>
+    <p>Your erratum has been successfully submitted for spam screening by the RFC Produciton Center staff.</p>
+    <p>It will not appear in errata search results until that screening process is complete.</p>
+    <p>The errata verification process will begin after that screening process is complete.</p>
+</div>
+{% endblock %}

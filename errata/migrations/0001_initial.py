@@ -1,9 +1,10 @@
-# Copyright The IETF Trust 2025, All Rights Reserved
+# Copyright The IETF Trust 2025-2026, All Rights Reserved
 
 import django.contrib.postgres.fields
 import django.db.models.deletion
 import django.utils.timezone
 import errata.models
+import uuid
 from django.db import migrations, models
 
 
@@ -13,6 +14,22 @@ class Migration(migrations.Migration):
     dependencies = []
 
     operations = [
+        migrations.CreateModel(
+            name="ErratumType",
+            fields=[
+                (
+                    "slug",
+                    models.CharField(max_length=32, primary_key=True, serialize=False),
+                ),
+                ("name", models.CharField(max_length=255)),
+                ("desc", models.TextField(blank=True)),
+                ("used", models.BooleanField(default=True)),
+                ("order", models.PositiveIntegerField(default=0)),
+            ],
+            options={
+                "abstract": False,
+            },
+        ),
         migrations.CreateModel(
             name="RfcMetadata",
             fields=[
@@ -44,22 +61,6 @@ class Migration(migrations.Migration):
             ],
             options={
                 "verbose_name_plural": "Statuses",
-            },
-        ),
-        migrations.CreateModel(
-            name="Type",
-            fields=[
-                (
-                    "slug",
-                    models.CharField(max_length=32, primary_key=True, serialize=False),
-                ),
-                ("name", models.CharField(max_length=255)),
-                ("desc", models.TextField(blank=True)),
-                ("used", models.BooleanField(default=True)),
-                ("order", models.PositiveIntegerField(default=0)),
-            ],
-            options={
-                "abstract": False,
             },
         ),
         migrations.CreateModel(
@@ -107,6 +108,17 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
+                    "erratum_type",
+                    models.ForeignKey(
+                        blank=True,
+                        db_column="erratum_type_slug",
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="erratum",
+                        to="errata.erratumtype",
+                    ),
+                ),
+                (
                     "rfc_metadata",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.PROTECT,
@@ -124,20 +136,67 @@ class Migration(migrations.Migration):
                         to="errata.status",
                     ),
                 ),
+            ],
+            options={
+                "verbose_name_plural": "Errata",
+            },
+        ),
+        migrations.CreateModel(
+            name="StagedErratum",
+            fields=[
                 (
-                    "type",
-                    models.ForeignKey(
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "entry_status",
+                    models.CharField(
+                        choices=[
+                            ("incomplete", "Incomplete"),
+                            ("submitted", "Submitted for Screening"),
+                        ],
+                        default="incomplete",
+                        max_length=20,
+                    ),
+                ),
+                ("rfc_number", models.PositiveIntegerField()),
+                ("section", models.TextField(blank=True)),
+                ("orig_text", models.TextField(blank=True)),
+                ("corrected_text", models.TextField(blank=True)),
+                ("submitter_name", models.CharField(blank=True, max_length=80)),
+                ("submitter_email", models.EmailField(blank=True, max_length=120)),
+                ("notes", models.TextField(blank=True)),
+                ("submitted_at", models.DateTimeField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
+                (
+                    "formats",
+                    django.contrib.postgres.fields.ArrayField(
+                        base_field=models.CharField(
+                            choices=[("HTML", "HTML"), ("PDF", "PDF"), ("TXT", "TXT")],
+                            max_length=10,
+                        ),
                         blank=True,
-                        db_column="type_slug",
-                        null=True,
+                        default=errata.models.get_default_staged_erratum_formats,
+                        help_text="A list of formats. Possible values: 'HTML', 'PDF', and 'TXT'.",
+                        size=None,
+                    ),
+                ),
+                (
+                    "rfc_metadata",
+                    models.ForeignKey(
                         on_delete=django.db.models.deletion.PROTECT,
-                        related_name="erratum",
-                        to="errata.type",
+                        related_name="stagederratum",
+                        to="errata.rfcmetadata",
                     ),
                 ),
             ],
             options={
-                "verbose_name_plural": "Errata",
+                "verbose_name_plural": "StagedErrata",
             },
         ),
         migrations.CreateModel(
@@ -175,21 +234,21 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
+                    "erratum_type",
+                    models.ForeignKey(
+                        db_column="erratum_type_slug",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="logs_erratum_type",
+                        to="errata.erratumtype",
+                    ),
+                ),
+                (
                     "status",
                     models.ForeignKey(
                         db_column="status_slug",
                         on_delete=django.db.models.deletion.PROTECT,
                         related_name="logs_status",
                         to="errata.status",
-                    ),
-                ),
-                (
-                    "type",
-                    models.ForeignKey(
-                        db_column="type_slug",
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="logs_type",
-                        to="errata.type",
                     ),
                 ),
             ],

@@ -47,7 +47,7 @@
                     <tr>
                         <td>RFC{{erratum.rfc_number }} ({{ erratum.id }})</td>
                         <td>{{ erratum.section|suppress_strings_starting_with_99 }}</td>
-                        <td>{{ erratum.type }}</td>
+                        <td>{{ erratum.erratum_type }}</td>
                         <td>{{ erratum.rfc_metadata.responsible_body }}{% if erratum.rfc_metadata.area_assignment %} ({{ erratum.rfc_metadata.area_assignment }}){% endif %}</td>
                         <td>{{ erratum.submitter_name }}</td>
                         <td>{{ erratum.format|join:", " }}</td>

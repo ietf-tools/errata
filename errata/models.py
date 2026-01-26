@@ -1,3 +1,6 @@
+# Copyright The IETF Trust 2025-2026, All Rights Reserved
+import uuid
+
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils import timezone
@@ -32,7 +35,10 @@ class Erratum(models.Model):
 
     rfc_number = models.PositiveIntegerField()
     rfc_metadata = models.ForeignKey(
-        "RfcMetadata", related_name="erratum", on_delete=models.PROTECT, null=False
+        "RfcMetadata",
+        related_name="erratum",
+        on_delete=models.PROTECT,
+        null=False,
     )
     status = models.ForeignKey(
         "Status",
@@ -41,11 +47,11 @@ class Erratum(models.Model):
         related_name="erratum",
         db_column="status_slug",
     )
-    type = models.ForeignKey(
-        "Type",
+    erratum_type = models.ForeignKey(
+        "ErratumType",
         on_delete=models.PROTECT,
         related_name="erratum",
-        db_column="type_slug",
+        db_column="erratum_type_slug",
         null=True,
         blank=True,
     )
@@ -84,13 +90,15 @@ class Status(Name):
     pass
 
 
-class Type(Name):
+class ErratumType(Name):
     pass
 
 
 class Log(models.Model):
     """
-    Model representing the log of changes or updates to erratum.
+    Model representing the log of changes to errata objects.
+
+    If designed from scratch, this would be SimpleHistory instead.
     """
 
     erratum = models.ForeignKey(
@@ -104,11 +112,11 @@ class Log(models.Model):
         related_name="logs_status",
         db_column="status_slug",
     )
-    type = models.ForeignKey(
-        "Type",
+    erratum_type = models.ForeignKey(
+        "ErratumType",
         on_delete=models.PROTECT,
-        related_name="logs_type",
-        db_column="type_slug",
+        related_name="logs_erratum_type",
+        db_column="erratum_type_slug",
     )
     editor_email = models.EmailField(max_length=120, blank=True)
     section = models.TextField(blank=True)
@@ -138,3 +146,62 @@ class RfcMetadata(models.Model):
 
     def __str__(self):
         return f"RFC {self.rfc_number}: {self.title}"
+
+
+class StagedErratumStatus(models.TextChoices):
+    INCOMPLETE = "incomplete", "Incomplete"
+    SUBMITTED = "submitted", "Submitted for Screening"
+
+
+def get_default_staged_erratum_formats():
+    return ["TXT"]
+
+
+class StagedErratum(models.Model):
+    """
+    A place for holding errata reports for Erratum entry and RPC screening.
+
+    Held as a separate table to make it less likely that
+    unscreened erratum leak through the UI or APis.
+
+    Entry objects that aren't submitted for screening are expected
+    to be periodically cleaned by a scheduled task (such as daily
+    cleaning such entries more than 7 days old)
+
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    entry_status = models.CharField(
+        max_length=20,
+        choices=StagedErratumStatus.choices,
+        default=StagedErratumStatus.INCOMPLETE,
+    )
+    rfc_number = models.PositiveIntegerField()
+    rfc_metadata = models.ForeignKey(
+        "RfcMetadata",
+        related_name="stagederratum",
+        on_delete=models.PROTECT,
+        null=False,
+    )
+    section = models.TextField(blank=True)
+    orig_text = models.TextField(blank=True)
+    corrected_text = models.TextField(blank=True)
+    submitter_name = models.CharField(max_length=80, blank=True)
+    submitter_email = models.EmailField(max_length=120, blank=True)
+    notes = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    formats = ArrayField(
+        models.CharField(
+            max_length=10, choices=[("HTML", "HTML"), ("PDF", "PDF"), ("TXT", "TXT")]
+        ),
+        default=get_default_staged_erratum_formats,
+        blank=True,
+        help_text="A list of formats. Possible values: 'HTML', 'PDF', and 'TXT'.",
+    )
+
+    def __str__(self):
+        return f"StagedErratum {self.id} for RFC {self.rfc_number}"
+
+    class Meta:
+        verbose_name_plural = "StagedErrata"

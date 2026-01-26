@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load filters django_bootstrap5 %}
+
+{% block title %}Preview New Erratum{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Preview New Erratum for RFC{{ staged_erratum.rfc_number }}</h1>
+    <p class="font-italic"><This erratum has not yet been submitted.</p>
+    <div class="card mb-4">
+        <div class="card-header bg-light text-dark">
+            <h4 class="mt-4">New Erratum for RFC{{ erratum.rfc_number }}</h4>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-4">Type:</dt>
+                <dd class="col-sm-8">
+                    {% if erratum.erratum_type %}
+                        <span class="badge bg-secondary">{{ erratum.erratum_type.name }}</span>
+                    {% else %}
+                        <span class="text-muted">Not specified</span>
+                    {% endif %}
+                </dd>
+
+                <dt class="col-sm-4">Reported By:</dt>
+                <dd class="col-sm-8">
+                    <span>{{ erratum.submitter_name|default:"Not provided" }}</span>
+                </dd>
+
+                <dt class="col-sm-4">Date Reported:</dt>
+                <dd class="col-sm-8">
+                    <span>{{ today|date:"Y-m-d" |default:"Not provided" }}</span>
+                </dd>
+
+                {% if erratum.rfc_number >= 8650 %}
+                    <dt class="col-sm-4">Formats Affected:</dt>
+                    <dd class="col-sm-8">
+                        {% if erratum.formats %}
+                            {% for format in erratum.formats %}
+                                <span class="badge bg-info text-dark">{{ format }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted">Not specified</span>
+                        {% endif %}
+                {% endif %}
+            </dl>
+            <p> {# See https://github.com/rfc-editor/rpcwebsite/blob/182c06862b4f83014dae9b67ee6911f73bafc802/rfcscripts/errata_lib.php#L1810-L1892 #}
+                {% if erratum.section|upper == "GLOBAL" %}
+                    Throughout the document, when it says:
+                {% elif erratum.section|suppress_strings_starting_with_99 != "-" %}
+                    Section {{ erratum.section }} says:
+                {% elif erratum.section|length > 2 %}
+                    {{ erratum.section|slice:"2:"}}
+                {% else %}
+                    &nbsp;
+                {% endif %}
+            </p>
+            {% if erratum.orig_text %}
+                <pre class="bg-light p-3 rounded"><code>{{ erratum.orig_text }}</code></pre>
+            {% else %}
+                <p class="text-muted">No original text provided.</p>
+            {% endif %}
+            {% if erratum.corrected_text %}
+                <p>It should say:</p>
+                <pre class="bg-light p-3 rounded"><code>{{ erratum.corrected_text }}</code></pre>
+            {% endif %}
+            {% if erratum.notes %}
+                <p>Notes:</p>
+                <p>{{ erratum.notes }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<p>The email address for the reporter is {{ erratum.submitter_email|default:"Not provided" }}</p>
+<form id="submit-for-screening-form" method="post" class="mt-4">
+    {% csrf_token %}
+    <button class="btn btn-warning" type="submit" name="return_to_edit">Return to Edit</button>
+    <button class="btn btn-primary" type="submit" name="submit_for_screening">Submit for Screening</button>
+</form>
+{% endblock %}

@@ -1,22 +1,22 @@
-# Copyright The IETF Trust 2025, All Rights Reserved
+# Copyright The IETF Trust 2025-2026, All Rights Reserved
 
 from django.db import migrations
 
 
 def add_type_data(apps, schema_editor):
-    Type = apps.get_model("errata", "Type")
+    ErratumType = apps.get_model("errata", "ErratumType")
     types = [
         {"slug": "editorial", "name": "Editorial", "order": 2},
         {"slug": "technical", "name": "Technical", "order": 1},
     ]
     for type in types:
-        Type.objects.create(**type)
+        ErratumType.objects.create(**type)
 
 
 def remove_type_data(apps, schema_editor):
-    Type = apps.get_model("errata", "Type")
+    ErratumType = apps.get_model("errata", "ErratumType")
     slugs = ["editorial", "technical"]
-    Type.objects.filter(slug__in=slugs).delete()
+    ErratumType.objects.filter(slug__in=slugs).delete()
 
 
 class Migration(migrations.Migration):

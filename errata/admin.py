@@ -5,8 +5,9 @@ from django.contrib import admin
 from .models import (
     Erratum,
     Log,
+    StagedErratum,
     Status,
-    Type,
+    ErratumType,
     RfcMetadata,
 )
 
@@ -19,21 +20,21 @@ class ErratumAdmin(admin.ModelAdmin):
         "verifier_name",
         "verifier_email",
         "status",
-        "type",
+        "erratum_type",
         "submitter_email",
         "submitted_at",
     ]
-    list_filter = ["status", "type"]
+    list_filter = ["status", "erratum_type"]
 
 
 admin.site.register(Erratum, ErratumAdmin)
 
 
-class TypeAdmin(admin.ModelAdmin):
+class ErratumTypeAdmin(admin.ModelAdmin):
     list_display = ["name", "slug", "used"]
 
 
-admin.site.register(Type, TypeAdmin)
+admin.site.register(ErratumType, ErratumTypeAdmin)
 
 
 class StatusAdmin(admin.ModelAdmin):
@@ -48,7 +49,7 @@ class LogAdmin(admin.ModelAdmin):
         "erratum",
         "verifier_email",
         "status",
-        "type",
+        "erratum_type",
         "editor_email",
         "created_at",
     ]
@@ -75,3 +76,17 @@ class RfcMetadataAdmin(admin.ModelAdmin):
 
 
 admin.site.register(RfcMetadata, RfcMetadataAdmin)
+
+class StagedErratumAdmin(admin.ModelAdmin):
+    search_fields = ["rfc_number", "submitter_email"]
+    list_display = [
+        "id",
+        "rfc_number",
+        "submitter_name",
+        "submitter_email",
+        "entry_status",
+        "created_at",
+    ]
+    list_filter = ["entry_status"]
+
+admin.site.register(StagedErratum, StagedErratumAdmin)

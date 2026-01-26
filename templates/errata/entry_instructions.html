@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load filters django_bootstrap5 %}
+
+{% block title %}Report New Erratum{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Report New Erratum</h1> 
+     <p>If you have new errata to report, use form below to first check that a report is not already in the system. If your issue is not listed, you will be able to submit a new report from that screen.</p>
+     <p><b>Note:</b> To report an error in an existing erratum, please contact the <a href="mailto:rfc-editor@rfc-editor.org">RFC Editor</a>.</p>
+     <p>The HTML files for RFCs 1 through 8649 were generated from the text file using rfc2html; errors may be reported at the <a href="https://github.com/ietf-tools/rfc2html">rfc2html repository</a> or <a href="mailto:rfc-editor@rfc-editor.org">RFC Editor</a>.</p>
+     <form id="errata-search-form" method="post">
+        {% csrf_token %}
+        {% bootstrap_form form %}
+        <button class="btn btn-primary" type="submit">Review Existing Errata</button>
+    </form>
+    {% if form.errors %}
+        <div class="alert alert-danger mt-3">
+            <strong>Please correct the errors below:</strong>
+            <ul>
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

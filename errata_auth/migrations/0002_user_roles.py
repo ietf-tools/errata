@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('errata_auth', '0001_initial'),
+        ("errata_auth", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='roles',
+            model_name="user",
+            name="roles",
             field=models.JSONField(blank=True, default=[]),
             preserve_default=False,
         ),

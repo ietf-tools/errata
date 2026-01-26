@@ -144,7 +144,7 @@ class ErrataOIDCAuthBackend(ServiceTokenOIDCAuthenticationBackend):
                 datatracker_subject_id=subject_id,
                 name=claims["name"],  # required claim,
                 avatar=claims.get("picture", ""),
-                roles=claims.get("roles",[]),
+                roles=claims.get("roles", []),
                 is_staff=admin_access,
                 is_superuser=admin_access,
             )

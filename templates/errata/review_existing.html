@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load filters django_bootstrap5 %}
+
+{% block title %}Review Existing Errata{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    {% if error_message %}
+        <h1>Review Existing Errata</h1> 
+        <div class="alert alert-danger mt-3">
+            <strong>{{ error_message }}</strong>
+        </div>
+    {% else %}
+        <h1>Review Existing Errata for RFC{{ rfc_number }}</h1>
+        {% include "errata/list_detail_table.html" %}
+        <form id="confirm-existing-errata-read-form" method="post" class="mt-4">
+            {% csrf_token %}
+            {% bootstrap_form form %}
+            <button class="btn btn-primary" type="submit">Enter new Erratum for RFC{{ rfc_number }}</button>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}

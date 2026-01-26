@@ -29,8 +29,8 @@
 
                             <dt class="col-sm-4">Type:</dt>
                             <dd class="col-sm-8">
-                                {% if erratum.type %}
-                                    <span class="badge bg-secondary">{{ erratum.type.name }}</span>
+                                {% if erratum.erratum_type %}
+                                    <span class="badge bg-secondary">{{ erratum.erratum_type.name }}</span>
                                 {% else %}
                                     <span class="text-muted">Not specified</span>
                                 {% endif %}

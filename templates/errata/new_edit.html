@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load filters django_bootstrap5 %}
+
+{% block title %}Edit New Erratum{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Edit New Erratum for RFC{{ staged_erratum.rfc_number }}</h1>
+    <p class="font-italic"><This erratum has not yet been submitted.</p>
+    <form method="post" class="mt-4">
+        {% csrf_token %}
+        {% bootstrap_form form %}
+        <button class="btn btn-primary" type="submit">Preview Erratum</button>
+    </form>
+</div>
+{% endblock %}
