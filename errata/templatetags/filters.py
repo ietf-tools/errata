@@ -3,6 +3,8 @@
 import calendar
 from django import template
 
+from errata.utils import can_classify
+
 register = template.Library()
 
 
@@ -28,3 +30,7 @@ def has_role(user, role_names):
     if not user:
         return False
     return has_role(user, role_names.split(","))
+
+@register.filter
+def is_classifiable_by(erratum, user):
+    return can_classify(user, erratum.id)

@@ -4,11 +4,7 @@
 {% block content %}
 <div class="container mt-4">
     <h1>Errata</h1>
-
-    <form id="errata-search-form" method="get">
-        {% bootstrap_form form %}
-        <button class="btn btn-primary" type="submit">Submit</button>
-    </form>
+ 
     {% if form.errors %}
         <div class="alert alert-danger mt-3">
             <strong>Please correct the errors below:</strong>
@@ -24,6 +20,10 @@
             </ul>
         </div>
     {% endif %}
+   <form id="errata-search-form" method="get">
+        {% bootstrap_form form %}
+        <button class="btn btn-primary" type="submit">Submit</button>
+    </form>
 
     {% regroup errata by status as errata_by_status %}
 
@@ -45,7 +45,7 @@
             <tbody>
                 {% for erratum in status_group.list %}
                     <tr>
-                        <td>RFC{{erratum.rfc_number }} ({{ erratum.id }})</td>
+                        <td>RFC{{erratum.rfc_number }} (<a href="{% url 'errata_detail' pk=erratum.id %}">{{ erratum.id }}</a>)</td>
                         <td>{{ erratum.section|suppress_strings_starting_with_99 }}</td>
                         <td>{{ erratum.erratum_type }}</td>
                         <td>{{ erratum.rfc_metadata.display_source_with_assignment }}</td>
@@ -63,5 +63,6 @@
     {% empty %}
         {% if search_ran %}<p class="alert alert-info">No matching errata found.</p>{% endif %}
     {% endfor %}
+    {% if search_ran %}<a href="{% url 'errata_new_entry_instructions' %}" class="btn btn-primary">Report New Erratum</a>{% endif %}
 </div>
 {% endblock %}

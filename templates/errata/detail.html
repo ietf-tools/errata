@@ -106,10 +106,15 @@
 
             <!-- Action Buttons -->
             <div class="d-flex gap-2 mb-4">
+                {% if erratum|is_classifiable_by:request.user %}
+                    <a href="{% url 'errata_reported_classify' erratum_id=erratum.id %}" class="btn btn-primary">
+                        Classify this Erratum
+                    </a>
+                {% endif %}
+                <a href="{% url 'errata_new_entry_instructions' %}" class="btn btn-primary">Report New Erratum</a>
                 <a href="{% url 'errata_search' %}" class="btn btn-secondary"> {# TODO remove when search form is added #}
-                    <i class="bi bi-arrow-left"></i> Back to List
+                    Back to List
                 </a>
-                {# TODO: Add button to Report New Errata #}
             </div>
         </div>
     </div>

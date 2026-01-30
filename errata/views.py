@@ -24,7 +24,7 @@ from .models import (
     Status,
 )
 from .search import search_errata
-from .utils import unverified_errata
+from .utils import can_classify, unverified_errata
 
 
 def user_info(request):
@@ -320,7 +320,7 @@ def reported_classify(request, erratum_id: int):
     # of a 400 if the status isn't reported.
     erratum = get_object_or_404(Erratum, id=erratum_id, status_id="reported")
     # Make sure this user can manipulate this erratum
-    if not unverified_errata(request.user).filter(id=erratum.id).exists():
+    if not can_classify(request.user, erratum_id):
         raise Http404
     if request.method == "POST":
         form = EditErratumForm(data=request.POST, instance=erratum)

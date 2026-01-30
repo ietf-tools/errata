@@ -61,3 +61,6 @@ def unverified_errata(user):
         queries_to_union.append(Q(rfc_metadata__stream="irtf"))
     combined_queries = reduce(operator.or_, queries_to_union)
     return unverified.filter(combined_queries)
+
+def can_classify(user, erratum_id):
+    return unverified_errata(user).filter(id=erratum_id).exists()

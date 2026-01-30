@@ -26,7 +26,7 @@
                                     {% for erratum in rfc_group.list %}
                                         <div class="card mb-4">
                                             <div class="card-header bg-light text-dark">
-                                                <h4 class="mt-4">Errata-ID: {{ erratum.id }}</h4>
+                                                <h4 class="mt-4">Errata-ID: <a href="{% url 'errata_detail' pk=erratum.id %}">{{ erratum.id }}</a></h4>
                                             </div>
                                             <div class="card-body">
                                                 <dl class="row">

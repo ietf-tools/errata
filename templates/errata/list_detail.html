@@ -2,12 +2,9 @@
 {% load filters django_bootstrap5 %}
 
 {% block content %}
+<div>
 <h1>Errata</h1>
 
-<form id="errata-search-form" method="get">
-    {% bootstrap_form form %}
-    <button class="btn btn-primary" type="submit">Submit</button>
-</form>
 {% if form.errors %}
     <div class="alert alert-danger mt-3">
         <strong>Please correct the errors below:</strong>
@@ -23,5 +20,11 @@
         </ul>
     </div>
 {% endif %}
+<form id="errata-search-form" method="get">
+    {% bootstrap_form form %}
+    <button class="btn btn-primary" type="submit">Submit</button>
+</form>
 {% include "errata/list_detail_table.html" %}
+{% if search_ran %}<a href="{% url 'errata_new_entry_instructions' %}" class="btn btn-primary">Report New Erratum</a>{% endif %}
+</div>
 {% endblock %}
