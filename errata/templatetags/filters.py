@@ -19,3 +19,12 @@ def suppress_strings_starting_with_99(value):
 @register.filter
 def month_name(month_number):
     return calendar.month_name[month_number]
+
+
+@register.filter
+def has_role(user, role_names):
+    from errata_auth.utils import has_role
+
+    if not user:
+        return False
+    return has_role(user, role_names.split(","))

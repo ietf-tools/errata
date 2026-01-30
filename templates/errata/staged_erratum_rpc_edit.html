@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load filters django_bootstrap5 %}
+
+{% block title %}Edit Staged Erratum{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Edit Staged Erratum for RFC{{ staged_erratum.rfc_number }}</h1>
+    <form method="post" class="mt-4">
+        {% csrf_token %}
+        {% bootstrap_form form %}
+        <button class="btn btn-primary" type="submit">Save</button>
+    </form>
+</div>
+{% endblock %}

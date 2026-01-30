@@ -1,4 +1,8 @@
-{% load django_bootstrap5 filters %}
+{% extends "base.html" %}
+{% load filters django_bootstrap5 %}
+
+{% block content %}
+<h1>Reported errata you can classify</h1>
 <div class="container mt-4">
     {% regroup errata by status as errata_by_status %}
     {% for status_group in errata_by_status %}
@@ -27,6 +31,7 @@
                                         <div class="card mb-4">
                                             <div class="card-header bg-light text-dark">
                                                 <h4 class="mt-4">Errata-ID: {{ erratum.id }}</h4>
+                                                <a href="{% url 'errata_reported_classify' erratum_id=erratum.id%}" class="btn btn-primary">Classify</a>
                                             </div>
                                             <div class="card-body">
                                                 <dl class="row">
@@ -67,20 +72,6 @@
                                                         <span>{{ erratum.submitted_at|date:"Y-m-d" |default:"Not provided" }}</span>
                                                     </dd>
 
-                                                    {% if erratum.verifier_name %}
-                                                        <dt class="col-sm-4">{{erratum.status.name}} by:</dt>
-                                                        <dd class="col-sm-8">
-                                                            <span>{{ erratum.verifier_name }}</span>
-                                                        </dd>
-                                                    {% endif %}
-
-                                                    {% if erratum.verified_at %}
-                                                        <dt class="col-sm-4">Date {{erratum.status.name}}:</dt>
-                                                        <dd class="col-sm-8">
-                                                            <span>{{ erratum.verified_at|date:"Y-m-d"}}</span>
-                                                        </dd>
-                                                    {% endif %}
-
                                                 </dl>
                                                 <p> {# See https://github.com/rfc-editor/rpcwebsite/blob/182c06862b4f83014dae9b67ee6911f73bafc802/rfcscripts/errata_lib.php#L1810-L1892 #}
                                                     {% if erratum.section|upper == "GLOBAL" %}
@@ -117,6 +108,8 @@
             </div>
         </div>
     {% empty %}
-        {% if search_ran %}<p class="alert alert-info">No matching errata found.</p>{% endif %}
+        {% if search_ran %}<p class="alert alert-info">No errata needing classification.</p>{% endif %}
     {% endfor %}
 </div>
+
+{% endblock %}

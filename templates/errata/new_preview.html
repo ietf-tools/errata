@@ -13,15 +13,6 @@
         </div>
         <div class="card-body">
             <dl class="row">
-                <dt class="col-sm-4">Type:</dt>
-                <dd class="col-sm-8">
-                    {% if erratum.erratum_type %}
-                        <span class="badge bg-secondary">{{ erratum.erratum_type.name }}</span>
-                    {% else %}
-                        <span class="text-muted">Not specified</span>
-                    {% endif %}
-                </dd>
-
                 <dt class="col-sm-4">Reported By:</dt>
                 <dd class="col-sm-8">
                     <span>{{ erratum.submitter_name|default:"Not provided" }}</span>

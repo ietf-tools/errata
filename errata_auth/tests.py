@@ -151,15 +151,7 @@ class ErrataOIDCAuthBackendTests(TestCase):
                     "sub": "test-subject-id",
                     "name": "test-name",
                     "roles": [["auth", "rpc"]],
-                }
-            )
-        )
-        self.assertTrue(
-            self.backend.verify_claims(
-                {
-                    "sub": "test-subject-id",
-                    "name": "test-name",
-                    "roles": [["secr", "secretariat"]],
+                    "email": "test@example.com",
                 }
             )
         )

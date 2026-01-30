@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 filters %}
+
+{% block title %}Confirm Add to Unverified{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-light">
+            <h4 class="mt-4">Confirm adding Staged Erratum for RFC{{ erratum.rfc_number }} as an unverified {{ erratum_type }} erratum</h4>
+        </div>
+        {% include "errata/staged_erratum_card_body.html" %}
+        <hr>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning" name="action" value="confirm">Confirm adding as {{ erratum_type }}</button>
+                <a href={% url "errata_staged_list" %} class="btn btn-info">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

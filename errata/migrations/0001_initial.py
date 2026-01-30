@@ -95,7 +95,7 @@ class Migration(migrations.Migration):
                 ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
                 ("updated_at", errata.models.AutoDateTimeField()),
                 (
-                    "format",
+                    "formats",
                     django.contrib.postgres.fields.ArrayField(
                         base_field=models.CharField(
                             choices=[("HTML", "HTML"), ("PDF", "PDF"), ("TXT", "TXT")],

@@ -145,6 +145,7 @@ class ErrataOIDCAuthBackend(ServiceTokenOIDCAuthenticationBackend):
                 name=claims["name"],  # required claim,
                 avatar=claims.get("picture", ""),
                 roles=claims.get("roles", []),
+                email=claims.get("email", ""),
                 is_staff=admin_access,
                 is_superuser=admin_access,
             )
@@ -166,6 +167,9 @@ class ErrataOIDCAuthBackend(ServiceTokenOIDCAuthenticationBackend):
             updated = True
         if user.roles != claims.get("roles", []):
             user.roles = claims.get("roles", [])
+            updated = True
+        if user.email != claims.get("email", ""):
+            user.email = claims.get("email", "")
             updated = True
 
         admin_access = self.ADMIN_ACCESS_ROLE in claims["roles"]
@@ -254,17 +258,8 @@ class ErrataOIDCAuthBackend(ServiceTokenOIDCAuthenticationBackend):
                 )
             )
 
-        required_claims = {"sub", "name", "roles"}
+        required_claims = {"sub", "name", "roles", "email"}
         if required_claims.intersection(claims.keys()) != required_claims:
             return False
 
-        # Check datatracker roles
-        claim_roles = claims["roles"]
-        authorized_roles = [
-            ["secr", "secretariat"],
-            ["auth", "rpc"],
-            self.ADMIN_ACCESS_ROLE,
-        ]
-        return any(
-            authorized_role in claim_roles for authorized_role in authorized_roles
-        )
+        return True

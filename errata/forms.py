@@ -3,7 +3,7 @@
 import re
 from django import forms
 
-from .models import RfcMetadata
+from .models import RfcMetadata, Erratum
 
 STATUS_CHOICES = [
     ("any", "All/Any"),
@@ -148,6 +148,54 @@ class EditStagedErratumForm(forms.Form):
         super().__init__(*args, **kwargs)
         if rfc_number < 8650:  # Start of the v3 RFCs
             self.fields.pop("formats")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("orig_text") == cleaned_data.get("corrected_text"):
+            self.add_error(
+                "corrected_text", "Corrected Text must be different from Original Text."
+            )
+
+
+class EditErratumForm(forms.ModelForm):
+    formats = forms.MultipleChoiceField(
+        choices=[("HTML", "HTML"), ("PDF", "PDF"), ("TXT", "TXT")],
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+    )
+
+    class Meta:
+        model = Erratum
+        fields = (
+            "erratum_type",
+            "section",
+            "orig_text",
+            "corrected_text",
+            "submitter_name",
+            "submitter_email",
+            "notes",
+            "formats",
+        )
+        widgets = {
+            "section": forms.TextInput(attrs={"placeholder": "Enter number or GLOBAL"}),
+        }
+        help_texts = {
+            "formats": "",
+        }
+        labels = {"orig_text": "Original text"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.rfc_number < 8650:
+            self.fields.pop("formats")
+        else:
+            self.fields["formats"].required = True
+        self.fields["erratum_type"].required = True
+        self.fields["section"].required = True
+        self.fields["orig_text"].required = True
+        self.fields["corrected_text"].required = True
+        self.fields["submitter_name"].required = True
+        self.fields["submitter_email"].required = True
 
     def clean(self):
         cleaned_data = super().clean()

@@ -77,6 +77,7 @@ class RfcMetadataAdmin(admin.ModelAdmin):
 
 admin.site.register(RfcMetadata, RfcMetadataAdmin)
 
+
 class StagedErratumAdmin(admin.ModelAdmin):
     search_fields = ["rfc_number", "submitter_email"]
     list_display = [
@@ -88,5 +89,6 @@ class StagedErratumAdmin(admin.ModelAdmin):
         "created_at",
     ]
     list_filter = ["entry_status"]
+
 
 admin.site.register(StagedErratum, StagedErratumAdmin)

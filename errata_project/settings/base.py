@@ -75,7 +75,7 @@ AUTHENTICATION_BACKENDS = (
 
 # OIDC configuration (see also production.py/development.py)
 OIDC_RP_SIGN_ALGO = "RS256"
-OIDC_RP_SCOPES = "openid profile roles"
+OIDC_RP_SCOPES = "openid profile roles email"
 OIDC_STORE_ID_TOKEN = True  # store id_token in session (used for RP-initiated logout)
 ALLOW_LOGOUT_GET_METHOD = True  # for now anyway
 OIDC_OP_LOGOUT_URL_METHOD = "errata_auth.utils.op_logout_url"
@@ -88,7 +88,7 @@ SESSION_COOKIE_NAME = (
 # OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = 15 * 60
 
 # Misc
-LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = "/user-info/"
 LOGOUT_REDIRECT_URL = "/"
 
 # Database
@@ -163,4 +163,54 @@ DATABASES = {
         "PASSWORD": "dev-not-a-secret",
         "HOST": "db",
     }
+}
+
+# TODO configure logging
+# This is a stub configuration
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    #
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+        },
+        "django.server": {
+            "handlers": ["django.server"],
+            "level": "INFO",
+        },
+        "django.security": {
+            "handlers": [
+                "console",
+            ],
+            "level": "INFO",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "plain",
+        },
+        "django.server": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "django.server",
+        },
+    },
+    "formatters": {
+        "django.server": {
+            "()": "django.utils.log.ServerFormatter",
+            "format": "[%(server_time)s] %(message)s",
+        },
+        "plain": {
+            "style": "{",
+            "format": "{levelname}: {name}:{lineno}: {message}",
+        },
+    },
 }

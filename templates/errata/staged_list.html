@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 filters %}
+
+{% block title %}Staged Errata{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Staged Errata</h2>
+    {% for erratum in staged_errata %}
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-light">
+            <h4 class="mt-4">New Erratum for RFC{{ erratum.rfc_number }} (UUID: {{erratum.id}})</h4>
+        </div>
+        {% include "errata/staged_erratum_card_body.html" %}
+        <hr>
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="uuid" value="{{ erratum.id }}">
+                <button type="submit" class="btn btn-primary" name="action" value="edit">Edit</button>
+                <button type="submit" class="btn btn-primary" name="action" value="post_editorial">Add to Unverified as Editorial</button>
+                <button type="submit" class="btn btn-primary" name="action" value="post_technical">Add to Unverifed as Technical</button>
+                <button type="submit" class="btn btn-warning" name="action" value="delete">Delete (Spam)</button>
+            </form>
+        </div>
+    </div>
+    {% empty %}
+       <p>There are currently no submitted Staged Erratum</p>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{# Copyright The IETF Trust 2026, All Rights Reserved #}
+{% extends "base.html" %}
+{% load django_bootstrap5 %}
+{% block title %}Error: Restricted Access{% endblock %}
+{% block content %}
+    <div class="alert alert-warning my-3">
+        <h1>Restricted Access</h1>
+        <hr>
+        <p>
+            {{ exception }}
+        </p>
+    </div>
+{% endblock %}

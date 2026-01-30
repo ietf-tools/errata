@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load filters django_bootstrap5 %}
+
+{% block title %}Classify Erratum{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header bg-info text-dark">
+        <h1>Classify Erratum {{form.instance.id}}</h1>
+        <p class="mb-0">RFC {{ form.instance.rfc_number }}, "{{ form.instance.rfc_metadata.title }}", {{ form.instance.rfc_metadata.publication_month|month_name }} {{ form.instance.rfc_metadata.publication_year }}</p>
+         <!--<p class="mb-0">TODO: show obsoleted/updated</p>-->
+        <p class="mb-0"><strong>Source of RFC:</strong> {{ form.instance.rfc_metadata.display_source }}</p>
+        {% if form.instance.rfc_metadata.area_assignment %}
+        <p class="mb-0">Area assignment {{form.instance.rfc_metadata.area_assignment}}</p>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if form.errors %}
+        <p class="alert alert-danger">Please correct the errors highlighted below:</p>
+        {% endif %}
+        <form method="post" class="mt-4" novalidate>
+            {% csrf_token %}
+            {% bootstrap_form form %}
+            <button class="btn btn-primary" type="submit" name="action" value="save">Save and Continue Editing</button>
+            <button class="btn btn-primary" type="submit" name="action" value="mark_verified">Save and Mark Verified</button>
+            <button class="btn btn-primary" type="submit" name="action" value="mark_rejected">Save and Mark Rejected</button>
+            <button class="btn btn-primary" type="submit" name="action" value="mark_held_for_doc_update">Save and Mark Hold for Document Update</button>
+            <a href="{% url 'errata_reported_list' %}" class="btn btn-info">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

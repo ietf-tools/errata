@@ -67,7 +67,7 @@ class Erratum(models.Model):
     verifier_email = models.EmailField(max_length=120, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = AutoDateTimeField()
-    format = ArrayField(
+    formats = ArrayField(
         models.CharField(
             max_length=10, choices=[("HTML", "HTML"), ("PDF", "PDF"), ("TXT", "TXT")]
         ),
@@ -146,6 +146,34 @@ class RfcMetadata(models.Model):
 
     def __str__(self):
         return f"RFC {self.rfc_number}: {self.title}"
+
+    def display_source(self):
+        if self.group_acronym != "":
+            result = self.group_acronym
+            if self.area_acronym != "":
+                result += f" ({self.area_acronym})"
+            elif self.stream_acronym != "":
+                result += f" ({self.stream_acronym})"
+        elif self.area_acronym != "":
+            result = f"{self.area_acronym} ({self.stream})"
+        elif self.stream != "":
+            if (
+                self.stream == "ietf"
+                and self.group_acronym == ""
+                and self.area_acronym == ""
+            ):
+                result = "IETF - NON WORKING GROUP"
+            else:
+                result = self.stream
+        else:
+            result = ""
+        return result
+
+    def display_source_with_assignment(self):
+        result = self.display_source()
+        if self.area_assignment != "":
+            result += f" ({self.area_assignment})"
+        return result
 
 
 class StagedErratumStatus(models.TextChoices):

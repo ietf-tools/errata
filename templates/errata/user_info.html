@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 filters %}
+
+{% block title %}User Information{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    {% if user.is_authenticated %}
+        <div class="card mb-4 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h2 class="h5 mb-0">{{request.user.name}} ({{request.user.email}})</h2>
+            </div>
+            <div class="card-body">
+                {% if not user|has_role:"rpc,verifier" %}
+                    <p>Login successful.</p>
+                {% else %}
+                    <p>Available Tasks:</p>
+                    <div>
+                        {% if user|has_role:"rpc" %}
+                            <a href="{% url 'errata_staged_list' %}" class="btn btn-primary">Screen Staged Errata Reports</a>
+                        {% endif %}
+                        {% if user|has_role:"rpc,verifier" %}
+                            <a href="{% url 'errata_reported_list' %}" class="btn btn-primary">Verify Reported Errata</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning text-white">
+            <h2 class="h5 mb-0">Debug - Remove before deployment</h2>
+        </div>
+        <div class="card-body">
+            <p>You are {% if user.is_authenticated %}
+                <table><tbody>
+                <tr><td>Username</td><td>"{{request.user.username}}"</td></tr>
+                <tr><td>Name</td><td>"{{request.user.name}}"</td></tr>
+                <tr><td>Email</td><td>"{{request.user.email}}"</td></tr>
+                <tr><td>datatracker_subject_id</td><td>{{ request.user.datatracker_subject_id }}</td></tr>
+                <tr><td>is_staff</td><td>{{ request.user.is_staff }}</td></tr>
+                <tr><td>is_superuser</td><td>{{ request.user.is_superuser }}</td></tr>
+                <tr><td>roles</td><td>{{ request.user.roles }}</td></tr>
+                <tr><td>avatar</td><td><img src="{{ request.user.avatar }}" alt="avatar" width="50"></td></tr>
+                <tr><td>avatar url</td><td><{{ request.user.avatar }}</td></tr>
+                </tbody></table>
+            {% else %}not authenticated{% endif %}</p>
+        </div>
+    </div>
+    <div class="container d-flex justify-content-center align-items-center">
+        <div class="mt-3">
+            {% if user.is_authenticated %}
+                <form action="{% url 'oidc_logout' %}" method="post">
+                    {% csrf_token %}
+                    <input type="submit" value="logout" class="btn btn-primary">
+                </form>
+            {% else %}
+            <a href="{% url 'oidc_authentication_init' %}" class="btn btn-primary">Login</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
