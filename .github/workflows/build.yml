@@ -44,7 +44,7 @@ jobs:
           DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: .
-          file: dev/build/statics.Dockerfile
+          file: dev/build/errata.Dockerfile
           target: statics
           platforms: linux/amd64
           push: true
