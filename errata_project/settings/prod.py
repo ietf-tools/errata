@@ -4,6 +4,20 @@ import os
 
 DEPLOYMENT_MODE = "production"
 
+def _multiline_to_list(s):
+    """Helper to split at newlines and convert to list"""
+    return [item.strip() for item in s.split("\n") if item.strip()]
+
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ["ERRATA_DJANGO_SECRET_KEY"]
+assert not SECRET_KEY.startswith(
+    "django-insecure"
+)  # be sure we didn't get the dev secret
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = False
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
