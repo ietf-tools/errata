@@ -1,0 +1,10 @@
+namespace: errata
+namePrefix: errata-
+configMapGenerator:
+  - name: errata-files-cfgmap
+    files:
+      - nginx-logging.conf
+      - nginx-errata.conf
+resources:
+  - backend.yaml
+
