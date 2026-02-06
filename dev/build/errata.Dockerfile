@@ -8,19 +8,9 @@ COPY requirements.txt /tmp/pip-tmp/
 RUN pip3 --disable-pip-version-check --no-cache-dir install --no-warn-script-location -r /tmp/pip-tmp/requirements.txt && rm -rf /tmp/pip-tmp
 RUN groupadd --force --gid 1000 notroot && \
     useradd -s /bin/bash --uid 1000 --gid 1000 -m notroot
-
-FROM base as statics-collector
- # Collect statics
-RUN DJANGO_SETTINGS_MODULE=errata_project.settings.base ./manage.py collectstatic --no-input
-
-FROM ghcr.io/nginx/nginx-unprivileged:1.29 as statics
-LABEL maintainer="IETF Tools Team <tools-discuss@ietf.org>"
-
-# install the static files
-COPY --from=statics-collector /workspace/static /usr/share/nginx/html/static/
-
-# listen on port 8042 instead of 8080
-RUN sed --in-place 's/8080/8042/' /etc/nginx/conf.d/default.conf
+# Create workspace
+RUN mkdir -p /workspace
+WORKDIR /workspace
 
 FROM base as backend
 COPY docker/scripts/app-init.sh /docker-init.sh
@@ -42,3 +32,17 @@ RUN chmod +x start.sh && \
 CMD ["./start.sh"]
 
 EXPOSE 8000
+
+FROM backend as statics-collector
+ # Collect statics
+RUN DJANGO_SETTINGS_MODULE=errata_project.settings.base ./manage.py collectstatic --no-input
+
+FROM ghcr.io/nginx/nginx-unprivileged:1.29 as statics
+LABEL maintainer="IETF Tools Team <tools-discuss@ietf.org>"
+
+# install the static files
+COPY --from=statics-collector /workspace/static /usr/share/nginx/html/static/
+
+# listen on port 8042 instead of 8080
+RUN sed --in-place 's/8080/8042/' /etc/nginx/conf.d/default.conf
+
