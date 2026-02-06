@@ -73,7 +73,7 @@ AUTHENTICATION_BACKENDS = (
     "django.contrib.auth.backends.ModelBackend",
 )
 
-# OIDC configuration (see also production.py/development.py)
+# OIDC configuration (see also prod.py/dev.py)
 OIDC_RP_SIGN_ALGO = "RS256"
 OIDC_RP_SCOPES = "openid profile roles email"
 OIDC_STORE_ID_TOKEN = True  # store id_token in session (used for RP-initiated logout)
