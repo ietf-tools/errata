@@ -11,7 +11,7 @@ RUN groupadd --force --gid 1000 notroot && \
 
 FROM base as statics-collector
  # Collect statics
-RUN DJANGO_SETTINGS_MODULE=errata_orject.settings.base ./manage.py collectstatic --no-input
+RUN DJANGO_SETTINGS_MODULE=errata_project.settings.base ./manage.py collectstatic --no-input
 
 FROM ghcr.io/nginx/nginx-unprivileged:1.29 as statics
 LABEL maintainer="IETF Tools Team <tools-discuss@ietf.org>"
