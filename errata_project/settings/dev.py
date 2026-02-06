@@ -1,6 +1,16 @@
 from .base import *  # noqa
 import os
 
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "errata",
+        "USER": "django",
+        "PASSWORD": "dev-not-a-secret",
+        "HOST": "db",
+    }
+}
+
 # OIDC configuration (see also base.py)
 OIDC_RP_CLIENT_ID = os.environ["ERRATA_OIDC_RP_CLIENT_ID"]
 OIDC_RP_CLIENT_SECRET = os.environ["ERRATA_OIDC_RP_CLIENT_SECRET"]

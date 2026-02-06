@@ -73,7 +73,7 @@ AUTHENTICATION_BACKENDS = (
     "django.contrib.auth.backends.ModelBackend",
 )
 
-# OIDC configuration (see also production.py/development.py)
+# OIDC configuration (see also prod.py/dev.py)
 OIDC_RP_SIGN_ALGO = "RS256"
 OIDC_RP_SCOPES = "openid profile roles email"
 OIDC_STORE_ID_TOKEN = True  # store id_token in session (used for RP-initiated logout)
@@ -90,17 +90,6 @@ SESSION_COOKIE_NAME = (
 # Misc
 LOGIN_REDIRECT_URL = "/user-info/"
 LOGOUT_REDIRECT_URL = "/"
-
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -154,16 +143,6 @@ ADMINS = [("Some Admin", "admin@example.org")]
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "errata",
-        "USER": "django",
-        "PASSWORD": "dev-not-a-secret",
-        "HOST": "db",
-    }
-}
 
 # TODO configure logging
 # This is a stub configuration
