@@ -9,7 +9,20 @@ RUN pip3 --disable-pip-version-check --no-cache-dir install --no-warn-script-loc
 RUN groupadd --force --gid 1000 notroot && \
     useradd -s /bin/bash --uid 1000 --gid 1000 -m notroot
 
-FROM base
+FROM base as statics-collector
+ # Collect statics
+RUN PURPLE_DEPLOYMENT_MODE=build ./manage.py collectstatic --no-input
+
+FROM ghcr.io/nginxinc/nginx-unprivileged:1.29 as statics
+LABEL maintainer="IETF Tools Team <tools-discuss@ietf.org>"
+
+# install the static files
+COPY --from=statics-collector /workspace/static /usr/share/nginx/html/static/
+
+# listen on port 8042 instead of 8080
+RUN sed --in-place 's/8080/8042/' /etc/nginx/conf.d/default.conf
+
+FROM base as backend
 COPY docker/scripts/app-init.sh /docker-init.sh
 RUN sed -i 's/\r$//' /docker-init.sh && chmod +rx /docker-init.sh
 ENV DJANGO_SETTINGS_MODULE=errata_project.settings.prod

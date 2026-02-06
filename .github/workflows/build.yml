@@ -1,0 +1,51 @@
+name: Build K8s Images
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: .
+          file: dev/build/errata.Dockerfile
+          target: backend
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/ietf-tools/errata-backend:latest
+
+      - name: Build statics image
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: .
+          file: dev/build/statics.Dockerfile
+          target: statics
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/ietf-tools/errata-statics:latest
