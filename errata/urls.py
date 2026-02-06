@@ -20,6 +20,7 @@ register_converter(ErratumTypeConverter, "erratumtype")
 
 urlpatterns = [
     path("", RedirectView.as_view(url="/search/", permanent=True)),
+    path("health/", lambda _: HttpResponse(status=204)),  # no content
     path("user-info/", views.user_info, name="errata_user_info"),
     path("search/", views.search, name="errata_search"),
     path("eid<int:pk>/", views.detail, name="errata_detail"),
