@@ -144,16 +144,6 @@ ADMINS = [("Some Admin", "admin@example.org")]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "errata",
-        "USER": "django",
-        "PASSWORD": "dev-not-a-secret",
-        "HOST": "db",
-    }
-}
-
 # TODO configure logging
 # This is a stub configuration
 LOGGING = {
