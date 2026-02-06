@@ -1,4 +1,5 @@
 # Copyright The IETF Trust 2025, All Rights Reserved
+from django.http import HttpResponse
 from django.urls import path, register_converter
 from django.views.generic import RedirectView
 
