@@ -1,5 +1,6 @@
 Django~=5.2
 django-bootstrap5>=25.1
+gunicorn>=25.0.0
 python-json-logger>=4.0.0
 mozilla-django-oidc>=4,<5
 mysqlclient>=2.2.1

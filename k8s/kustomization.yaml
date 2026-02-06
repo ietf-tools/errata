@@ -7,4 +7,3 @@ configMapGenerator:
       - nginx-errata.conf
 resources:
   - backend.yaml
-
