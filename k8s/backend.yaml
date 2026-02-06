@@ -74,7 +74,7 @@ spec:
         # Nginx Container
         # -----------------------------------------------------
         - name: nginx
-          image: "ghcr.io/nginxinc/nginx-unprivileged:1.29"
+          image: "ghcr.io/nginx/nginx-unprivileged:1.29"
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

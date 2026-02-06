@@ -13,7 +13,7 @@ FROM base as statics-collector
  # Collect statics
 RUN DJANGO_SETTINGS_MODULE=errata_orject.settings.base ./manage.py collectstatic --no-input
 
-FROM ghcr.io/nginxinc/nginx-unprivileged:1.29 as statics
+FROM ghcr.io/nginx/nginx-unprivileged:1.29 as statics
 LABEL maintainer="IETF Tools Team <tools-discuss@ietf.org>"
 
 # install the static files
