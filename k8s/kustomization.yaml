@@ -1,0 +1,5 @@
+namespace: errata
+namePrefix: errata-
+resources:
+  - backend.yaml
+
