@@ -11,7 +11,7 @@ RUN groupadd --force --gid 1000 notroot && \
 
 FROM base as statics-collector
  # Collect statics
-RUN PURPLE_DEPLOYMENT_MODE=build ./manage.py collectstatic --no-input
+RUN ./manage.py collectstatic --no-input
 
 FROM ghcr.io/nginxinc/nginx-unprivileged:1.29 as statics
 LABEL maintainer="IETF Tools Team <tools-discuss@ietf.org>"
