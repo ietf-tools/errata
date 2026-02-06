@@ -58,3 +58,11 @@ OIDC_OP_USER_ENDPOINT = os.environ.get(
 OIDC_OP_END_SESSION_ENDPOINT = os.environ.get(
     "ERRATA_OIDC_OP_END_SESSION_ENDPOINT", f"{OIDC_OP_ISSUER_ID}/end-session/"
 )
+
+# Config for Cloudflare service token auth
+_CF_SERVICE_TOKEN_HOSTS = os.environ.get("ERRATA_SERVICE_TOKEN_HOSTS", None)
+if _CF_SERVICE_TOKEN_HOSTS is not None:
+    # include token id/secret headers for these hosts
+    CF_SERVICE_TOKEN_HOSTS = _multiline_to_list(_CF_SERVICE_TOKEN_HOSTS)
+    CF_SERVICE_TOKEN_ID = os.environ.get("ERRATA_SERVICE_TOKEN_ID", None)
+    CF_SERVICE_TOKEN_SECRET = os.environ.get("ERRATA_SERVICE_TOKEN_SECRET", None)
