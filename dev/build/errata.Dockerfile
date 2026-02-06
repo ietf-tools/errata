@@ -1,4 +1,4 @@
-FROM python:3.12-trixie as base
+FROM python:3.12-trixie AS base
 LABEL maintainer="IETF Tools Team <tools-discuss@ietf.org>"
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update --fix-missing && \
@@ -12,7 +12,7 @@ RUN groupadd --force --gid 1000 notroot && \
 RUN mkdir -p /workspace
 WORKDIR /workspace
 
-FROM base as backend
+FROM base AS backend
 COPY docker/scripts/app-init.sh /docker-init.sh
 RUN sed -i 's/\r$//' /docker-init.sh && chmod +rx /docker-init.sh
 ENV DJANGO_SETTINGS_MODULE=errata_project.settings.prod
@@ -33,11 +33,11 @@ CMD ["./start.sh"]
 
 EXPOSE 8000
 
-FROM backend as statics-collector
+FROM backend AS statics-collector
  # Collect statics
 RUN DJANGO_SETTINGS_MODULE=errata_project.settings.base ./manage.py collectstatic --no-input
 
-FROM ghcr.io/nginx/nginx-unprivileged:1.29 as statics
+FROM ghcr.io/nginx/nginx-unprivileged:1.29 AS statics
 LABEL maintainer="IETF Tools Team <tools-discuss@ietf.org>"
 
 # install the static files

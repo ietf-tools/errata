@@ -1,4 +1,4 @@
-FROM python:3.12-trixie as base
+FROM python:3.12-trixie AS base
 LABEL maintainer="IETF Tools Team <tools-discuss@ietf.org>"
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update --fix-missing && \
@@ -9,12 +9,12 @@ RUN pip3 --disable-pip-version-check --no-cache-dir install --no-warn-script-loc
 RUN groupadd --force --gid 1000 notroot && \
     useradd -s /bin/bash --uid 1000 --gid 1000 -m notroot
 
-FROM base as app
+FROM base AS app
 COPY docker/scripts/app-init.sh /docker-init.sh
 RUN sed -i 's/\r$//' /docker-init.sh && chmod +rx /docker-init.sh
 ENV DJANGO_SETTINGS_MODULE=errata_project.settings.prod
 
-FROM app as app-dev
+FROM app AS app-dev
 RUN mv /docker-init.sh /docker-app-init.sh
 COPY docker/scripts/app-dev-init.sh /docker-init.sh
 RUN sed -i 's/\r$//' /docker-init.sh && chmod +rx /docker-init.sh
