@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: docker/errata.Dockerfile
-#      target: app-dev
+      target: app-dev
     init: true
     command: sleep infinity
     depends_on:
