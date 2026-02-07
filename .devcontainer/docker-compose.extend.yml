@@ -2,5 +2,3 @@ services:
     app:
         environment:
             EDITOR_VSCODE: 1
-        volumes:
-            - .:/workspace

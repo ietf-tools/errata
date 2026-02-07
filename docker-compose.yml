@@ -12,6 +12,8 @@ services:
     environment:
       DISPLAY: host.docker.internal:0
     user: notroot
+    volumes:
+        - .:/workspace
 
   db:
     build:
