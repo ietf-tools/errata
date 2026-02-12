@@ -13,7 +13,9 @@ services:
       DISPLAY: host.docker.internal:0
     user: notroot
     volumes:
-        - .:/workspace
+      - .:/workspace
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   db:
     build:
@@ -22,6 +24,20 @@ services:
     restart: unless-stopped
     volumes:
       - errata_data:/var/lib/postgresql/data
+
+  celery:
+    image: "${COMPOSE_PROJECT_NAME}-app"
+    command:
+      - "/celery-init.sh"
+    depends_on:
+      - db
+      - mq
+    volumes:
+      - .:/workspace
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  mq:
+    image: rabbitmq:4.2-management
 
 volumes:
   errata_data:

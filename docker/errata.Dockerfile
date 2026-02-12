@@ -18,9 +18,15 @@ RUN sed -i 's/\r$//' /docker-init.sh && chmod +rx /docker-init.sh
 ENV DJANGO_SETTINGS_MODULE=errata_project.settings.prod
 
 FROM app AS app-dev
+RUN apt-get install -qy --no-install-recommends netcat-openbsd 
+# Fetch wait-for utility (needs netcat)
+ADD --chmod=+rx https://raw.githubusercontent.com/eficode/wait-for/v2.2.4/wait-for /usr/local/bin/
+RUN pip3 --disable-pip-version-check --no-cache-dir install --no-warn-script-location 'watchdog[watchmedo]'
 RUN mv /docker-init.sh /docker-app-init.sh
-COPY docker/scripts/app-dev-init.sh /docker-init.sh
-RUN sed -i 's/\r$//' /docker-init.sh && chmod +rx /docker-init.sh
+COPY --chmod=+rx docker/scripts/app-dev-init.sh /docker-init.sh
+COPY --chmod=+rx docker/scripts/celery-init.sh /celery-init.sh
+RUN sed -i 's/\r$//' /docker-init.sh
+RUN sed -i 's/\r$//' /celery-init.sh
 ENV DJANGO_SETTINGS_MODULE=errata_project.settings.dev
 ENV ERRATA_OIDC_RP_CLIENT_ID=079065
 ENV ERRATA_OIDC_RP_CLIENT_SECRET=788eb5a13ee8e233e91a42c88b5ad1736342c5b98e3bcec834d01074

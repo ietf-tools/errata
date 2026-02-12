@@ -1,5 +1,7 @@
+celery>=5.5.3
 Django~=5.2
 django-bootstrap5>=25.1
+django-celery-beat>=2.8.1
 gunicorn>=25.0.0
 python-json-logger>=4.0.0
 mozilla-django-oidc>=4,<5

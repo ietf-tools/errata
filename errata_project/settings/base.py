@@ -1,5 +1,6 @@
-# Copyright The IETF Trust 2025, All Rights Reserved
+# Copyright The IETF Trust 2025-2026, All Rights Reserved
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -32,6 +33,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_bootstrap5",
+    "django_celery_beat",
     "rules.apps.AutodiscoverRulesConfig",
     "errata_auth.apps.ErrataAuthConfig",
     "errata.apps.ErrataConfig",
@@ -193,3 +195,15 @@ LOGGING = {
         },
     },
 }
+
+# Celery
+CELERY_TIMEZONE = "UTC"
+CELERY_BROKER_URL = os.environ.get("ERRATA_BROKER_URL", "amqp://mq/")
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_TASK_IGNORE_RESULT = True  # ignore results unless specifically enabled
+
+# Celery Beat
+CELERY_BEAT_SCHEDULE = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_BEAT_SYNC_EVERY = 1  # update DB after every event
+# Window after after a missed deadline before abandoning a cron task
+CELERY_BEAT_CRON_STARTING_DEADLINE = 1800  # seconds
