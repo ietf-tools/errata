@@ -1,4 +1,4 @@
 services:
-    app:
-        environment:
-            EDITOR_VSCODE: 1
+  app:
+    environment:
+      EDITOR_VSCODE: 1

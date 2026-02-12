@@ -29,3 +29,9 @@ indent_size = 2
 # Use 2-space indents
 [k8s/**.yaml]
 indent_size = 2
+
+# Settings for Docker compose files
+# ---------------------------------------------------------
+# Use 2-space indents
+[{docker-compose.yml,docker-compose.extend.yml}]
+indent_size = 2
