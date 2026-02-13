@@ -24,3 +24,8 @@ OIDC_OP_USER_ENDPOINT = "http://host.docker.internal:8000/api/openid/userinfo/"
 OIDC_OP_END_SESSION_ENDPOINT = "http://localhost:8000/api/openid/end-session/"
 
 DEPLOYMENT_MODE = "development"
+
+# email
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("ERRATA_EMAIL_HOST", "mailpit")
+EMAIL_PORT = int(os.getenv("ERRATA_EMAIL_PORT", 1025))
