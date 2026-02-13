@@ -4,6 +4,7 @@ import os
 
 DEPLOYMENT_MODE = "production"
 
+
 def _multiline_to_list(s):
     """Helper to split at newlines and convert to list"""
     return [item.strip() for item in s.split("\n") if item.strip()]

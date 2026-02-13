@@ -10,7 +10,8 @@ from celery import signals as celery_signals
 def on_setup_logging(**kwargs):
     pass
 
-app = Celery("errata")
+
+app = Celery("errata_project")
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.

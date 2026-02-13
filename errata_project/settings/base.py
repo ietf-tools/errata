@@ -171,20 +171,37 @@ LOGGING = {
             ],
             "level": "INFO",
         },
+        "errata": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+        "celery": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
     },
     "handlers": {
         "console": {
             "level": "DEBUG",
             "class": "logging.StreamHandler",
-            "formatter": "plain",
+            "formatter": "default",
         },
         "django.server": {
             "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "django.server",
         },
+        "celery_task_console": {
+            "class": "logging.StreamHandler",
+            "formatter": "celery_task",
+        },
     },
     "formatters": {
+        "default": {
+            "()": "utils.log.SimpleFormatter",
+            "format": "[{asctime}] ({levelname}) {message} ({name})",
+            "style": "{",
+        },
         "django.server": {
             "()": "django.utils.log.ServerFormatter",
             "format": "[%(server_time)s] %(message)s",
@@ -192,6 +209,13 @@ LOGGING = {
         "plain": {
             "style": "{",
             "format": "{levelname}: {name}:{lineno}: {message}",
+        },
+        "celery_task": {
+            "()": "utils.log.CeleryTaskFormatter",
+            "format": (
+                "[%(asctime)s] (%(levelname)s) "
+                "Task %(task_name)s[%(task_id)s] log: %(message)s"
+            ),
         },
     },
 }
@@ -203,7 +227,7 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TASK_IGNORE_RESULT = True  # ignore results unless specifically enabled
 
 # Celery Beat
-CELERY_BEAT_SCHEDULE = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_BEAT_SYNC_EVERY = 1  # update DB after every event
 # Window after after a missed deadline before abandoning a cron task
 CELERY_BEAT_CRON_STARTING_DEADLINE = 1800  # seconds

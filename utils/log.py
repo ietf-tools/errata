@@ -4,8 +4,8 @@
 import logging
 import time
 
-# from celery import current_task
-# from celery.app.log import TaskFormatter
+from celery import current_task
+from celery.app.log import TaskFormatter
 from pythonjsonlogger.json import JsonFormatter as _JsonFormatter
 
 
@@ -38,9 +38,7 @@ class GunicornRequestJsonFormatter(JsonFormatter):
         log_data.setdefault("x_forwarded_for", record.args["{x-forwarded-for}i"])
         log_data.setdefault("x_forwarded_proto", record.args["{x-forwarded-proto}i"])
         log_data.setdefault("cf_connecting_ip", record.args["{cf-connecting-ip}i"])
-        log_data.setdefault(
-            "cf_connecting_ipv6", record.args["{cf-connecting-ipv6}i"]
-        )
+        log_data.setdefault("cf_connecting_ipv6", record.args["{cf-connecting-ipv6}i"])
         log_data.setdefault("cf_ray", record.args["{cf-ray}i"])
 
 
@@ -49,22 +47,22 @@ class SimpleFormatter(logging.Formatter):
     default_msec_format = "%s.%03d"  # "." instead of ","
 
 
-# class CeleryTaskFormatter(TaskFormatter):
-#     converter = time.gmtime  # use UTC
-#     default_msec_format = "%s.%03d"  # "." instead of ","
+class CeleryTaskFormatter(TaskFormatter):
+    converter = time.gmtime  # use UTC
+    default_msec_format = "%s.%03d"  # "." instead of ","
 
 
-# class CeleryTaskJsonFormatter(JsonFormatter):
-#     """JsonFormatter for tasks, adding the task name and id
-# 
-#     Based on celery.app.log.TaskFormatter
-#     """
-# 
-#     def format(self, record):
-#         task = current_task
-#         if task and task.request:
-#             record.__dict__.update(task_id=task.request.id, task_name=task.name)
-#         else:
-#             record.__dict__.setdefault("task_name", "???")
-#             record.__dict__.setdefault("task_id", "???")
-#         return super().format(record)
+class CeleryTaskJsonFormatter(JsonFormatter):
+    """JsonFormatter for tasks, adding the task name and id
+
+    Based on celery.app.log.TaskFormatter
+    """
+
+    def format(self, record):
+        task = current_task
+        if task and task.request:
+            record.__dict__.update(task_id=task.request.id, task_name=task.name)
+        else:
+            record.__dict__.setdefault("task_name", "???")
+            record.__dict__.setdefault("task_id", "???")
+        return super().format(record)
