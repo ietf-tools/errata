@@ -1,9 +1,16 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 import uuid
+from collections.abc import Iterable
+from email.policy import EmailPolicy
 
+from django import forms
+from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.forms import SimpleArrayField
 from django.db import models
 from django.utils import timezone
+
+from errata_project.mail import make_message_id, EmailMessage
 
 
 class Name(models.Model):
@@ -233,3 +240,72 @@ class StagedErratum(models.Model):
 
     class Meta:
         verbose_name_plural = "StagedErrata"
+
+
+class AddressListField(models.CharField):
+    def from_db_value(self, value, expression, connection):
+        return self._parse_header_value(value)
+
+    def get_prep_value(self, value: str | Iterable[str]):
+        """Convert python value to query value"""
+        # Parse the value to validate it, then convert to a string for the CharField.
+        # A bit circular, but guarantees that only valid addresses are saved.
+        if isinstance(value, str):
+            parsed = self._parse_header_value(value)
+        else:
+            parsed = self._parse_header_value(",".join(value))
+        return ",".join(parsed)
+
+    def to_python(self, value: str | Iterable[str]):
+        if isinstance(value, str):
+            return self._parse_header_value(value)
+        return self._parse_header_value(",".join(str(item) for item in value))
+
+    def formfield(self, **kwargs):
+        # n.b., the SimpleArrayField is intended for use with postgres ArrayField
+        # but it works cleanly with this field. We are not using a special postgres-
+        # only field in the model.
+        defaults = {"form_class": SimpleArrayField, "base_field": forms.CharField()}
+        defaults.update(kwargs)
+        return super().formfield(**defaults)
+
+    @staticmethod
+    def _parse_header_value(value: str):
+        policy = EmailPolicy(utf8=True)  # allow direct UTF-8 in addresses
+        header = policy.header_factory("To", value)
+        if len(header.defects) > 0:
+            raise ValidationError("; ".join(str(defect) for defect in header.defects))
+        return [str(addr) for addr in header.addresses]
+
+
+class MailMessage(models.Model):
+    """Email message to be delivered"""
+
+    erratum = models.ForeignKey(
+        "Erratum",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        help_text="Erratum to which this message relates",
+    )
+    to = AddressListField(blank=False, max_length=1000)
+    cc = AddressListField(blank=True, max_length=1000)
+    subject = models.CharField(max_length=1000)
+    body = models.TextField()
+    message_id = models.CharField(default=make_message_id, max_length=255)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    sent = models.BooleanField(default=False)
+    sender = models.ForeignKey(
+        "errata_auth.User",
+        on_delete=models.PROTECT,
+    )
+
+    def as_emailmessage(self):
+        """Instantiate an EmailMessage for delivery"""
+        return EmailMessage(
+            subject=self.subject,
+            body=self.body,
+            to=self.to,
+            cc=self.cc,
+            headers={"message-id": self.message_id},
+        )

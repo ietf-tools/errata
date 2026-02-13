@@ -1,5 +1,4 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
-import os
 
 from celery import Celery
 from celery import signals as celery_signals
