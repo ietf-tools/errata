@@ -4,14 +4,18 @@ import django.contrib.postgres.fields
 import django.db.models.deletion
 import django.utils.timezone
 import errata.models
+import errata_project.mail
 import uuid
+from django.conf import settings
 from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
     initial = True
 
-    dependencies = []
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
 
     operations = [
         migrations.CreateModel(
@@ -140,6 +144,49 @@ class Migration(migrations.Migration):
             options={
                 "verbose_name_plural": "Errata",
             },
+        ),
+        migrations.CreateModel(
+            name="MailMessage",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("to", errata.models.AddressListField(max_length=1000)),
+                ("cc", errata.models.AddressListField(blank=True, max_length=1000)),
+                ("subject", models.CharField(max_length=1000)),
+                ("body", models.TextField()),
+                (
+                    "message_id",
+                    models.CharField(
+                        default=errata_project.mail.make_message_id, max_length=255
+                    ),
+                ),
+                ("attempts", models.PositiveSmallIntegerField(default=0)),
+                ("sent", models.BooleanField(default=False)),
+                (
+                    "erratum",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Erratum to which this message relates",
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="errata.erratum",
+                    ),
+                ),
+                (
+                    "sender",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+            ],
         ),
         migrations.CreateModel(
             name="StagedErratum",
