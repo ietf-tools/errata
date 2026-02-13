@@ -152,8 +152,8 @@ class RfcMetadata(models.Model):
             result = self.group_acronym
             if self.area_acronym != "":
                 result += f" ({self.area_acronym})"
-            elif self.stream_acronym != "":
-                result += f" ({self.stream_acronym})"
+            elif self.stream != "":
+                result += f" ({self.stream})"
         elif self.area_acronym != "":
             result = f"{self.area_acronym} ({self.stream})"
         elif self.stream != "":
