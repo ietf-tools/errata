@@ -92,4 +92,4 @@ _admins_str = os.environ.get("ERRATA_ADMINS", None)
 if _admins_str is not None:
     ADMINS = [parseaddr(admin) for admin in _multiline_to_list(_admins_str)]
 else:
-    raise RuntimeError("PURPLE_ADMINS must be set")
+    raise RuntimeError("ERRATA_ADMINS must be set")

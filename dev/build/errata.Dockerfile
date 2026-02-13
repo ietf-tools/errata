@@ -20,6 +20,7 @@ ENV DJANGO_SETTINGS_MODULE=errata_project.settings.prod
 COPY . .
 COPY --chmod=+x ./dev/build/start.sh ./start.sh
 COPY --chmod=+x ./dev/build/backend-start.sh ./backend-start.sh
+COPY --chmod=+x ./dev/build/celery-start.sh ./celery-start.sh
 COPY --chmod=+x ./dev/build/migration-start.sh ./migration-start.sh
 COPY ./dev/build/gunicorn.conf.py ./gunicorn.conf.py
 

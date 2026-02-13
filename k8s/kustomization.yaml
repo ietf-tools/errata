@@ -7,3 +7,5 @@ configMapGenerator:
       - nginx-errata.conf
 resources:
   - backend.yaml
+  - beat.yaml
+  - celery.yaml
