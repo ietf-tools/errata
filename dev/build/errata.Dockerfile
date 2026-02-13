@@ -18,16 +18,12 @@ RUN sed -i 's/\r$//' /docker-init.sh && chmod +rx /docker-init.sh
 ENV DJANGO_SETTINGS_MODULE=errata_project.settings.prod
 
 COPY . .
-COPY ./dev/build/start.sh ./start.sh
-COPY ./dev/build/backend-start.sh ./backend-start.sh
-COPY ./dev/build/migration-start.sh ./migration-start.sh
+COPY --chmod=+x ./dev/build/start.sh ./start.sh
+COPY --chmod=+x ./dev/build/backend-start.sh ./backend-start.sh
+COPY --chmod=+x ./dev/build/migration-start.sh ./migration-start.sh
 COPY ./dev/build/gunicorn.conf.py ./gunicorn.conf.py
 
 RUN pip3 --disable-pip-version-check --no-cache-dir install -r requirements.txt
-
-RUN chmod +x start.sh && \
-    chmod +x backend-start.sh && \
-    chmod +x migration-start.sh
 
 CMD ["./start.sh"]
 
