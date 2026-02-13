@@ -137,7 +137,10 @@ CACHES = {
     }
 }
 
-# TODO configure the email system
+# email - disabled in base config
+EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
+DEFAULT_FROM_EMAIL = os.getenv("ERRATA_DEFAULT_FROM_EMAIL", "errata@rfc-editor.org")
+MESSAGE_ID_DOMAIN = "rfc-editor.org"
 
 ADMINS = [("Some Admin", "admin@example.org")]
 

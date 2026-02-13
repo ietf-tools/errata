@@ -39,5 +39,14 @@ services:
   mq:
     image: rabbitmq:4.2-management
 
+  mailpit:
+    image: axllent/mailpit:v1.27
+    environment:
+      - MP_DISABLE_VERSION_CHECK=true
+      - MP_LABEL=ErrataMail
+    ports:
+      - "8825:8025"
+
+
 volumes:
   errata_data:

@@ -1,8 +1,10 @@
 from .base import *  # noqa
+from email.utils import parseaddr
 import json
 import os
 
 DEPLOYMENT_MODE = "production"
+
 
 def _multiline_to_list(s):
     """Helper to split at newlines and convert to list"""
@@ -66,3 +68,28 @@ if _CF_SERVICE_TOKEN_HOSTS is not None:
     CF_SERVICE_TOKEN_HOSTS = _multiline_to_list(_CF_SERVICE_TOKEN_HOSTS)
     CF_SERVICE_TOKEN_ID = os.environ.get("ERRATA_SERVICE_TOKEN_ID", None)
     CF_SERVICE_TOKEN_SECRET = os.environ.get("ERRATA_SERVICE_TOKEN_SECRET", None)
+
+
+# Email
+_email_host = os.environ.get("ERRATA_EMAIL_HOST", None)
+if _email_host is not None:
+    # Email is configured via the ERRATA_EMAIL_* settings. Use those.
+    _email_port = os.environ.get("ERRATA_EMAIL_PORT", None)
+else:
+    # Use the mailpit k8s service settings if present
+    _email_host = os.environ.get("MAILPIT_SERVICE_HOST", None)
+    _email_port = os.environ.get("MAILPIT_SERVICE_PORT", None)
+
+# Set up mail if it is configured
+if _email_host is not None:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = _email_host
+    if _email_port is not None:
+        EMAIL_PORT = _email_port
+
+
+_admins_str = os.environ.get("ERRATA_ADMINS", None)
+if _admins_str is not None:
+    ADMINS = [parseaddr(admin) for admin in _multiline_to_list(_admins_str)]
+else:
+    raise RuntimeError("PURPLE_ADMINS must be set")
