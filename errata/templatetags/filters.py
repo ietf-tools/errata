@@ -31,6 +31,7 @@ def has_role(user, role_names):
         return False
     return has_role(user, role_names.split(","))
 
+
 @register.filter
 def is_classifiable_by(erratum, user):
     return can_classify(user, erratum.id)
