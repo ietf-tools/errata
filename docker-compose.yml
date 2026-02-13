@@ -27,8 +27,8 @@ services:
 
   celery:
     image: "${COMPOSE_PROJECT_NAME}-app"
-    command:
-      - "/celery-init.sh"
+    command: [ "/celery-init.sh" ]  # without beat
+#    command: [ "/celery-init.sh", "-BE" ]  # with beat
     depends_on:
       - db
       - mq
@@ -36,6 +36,7 @@ services:
       - .:/workspace
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
   mq:
     image: rabbitmq:4.2-management
 

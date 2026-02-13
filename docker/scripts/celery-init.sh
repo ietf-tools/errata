@@ -29,7 +29,7 @@ watchmedo auto-restart \
           --recursive \
           --debounce-interval 5 \
           -- \
-          $CELERY --app="${CELERY_APP:-errata_project}" worker &
+          $CELERY --app="${CELERY_APP:-errata_project}" worker --loglevel=INFO "$@" &
 celery_pid=$!
 
 # Just chill while celery does its thang
