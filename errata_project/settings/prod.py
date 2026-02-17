@@ -38,6 +38,8 @@ DATABASES = {
 DATATRACKER_BASE = os.environ.get(
     "NUXT_PUBLIC_DATATRACKER_BASE", "https://datatracker.ietf.org"
 )
+DATATRACKER_RPC_API_BASE = DATATRACKER_BASE
+DATATRACKER_RPC_API_TOKEN = os.environ["ERRATA_RPC_API_TOKEN"]
 
 # OIDC configuration (see also base.py)
 OIDC_RP_CLIENT_ID = os.environ["ERRATA_OIDC_RP_CLIENT_ID"]

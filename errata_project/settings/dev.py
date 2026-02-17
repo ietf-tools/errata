@@ -29,3 +29,8 @@ DEPLOYMENT_MODE = "development"
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("ERRATA_EMAIL_HOST", "mailpit")
 EMAIL_PORT = int(os.getenv("ERRATA_EMAIL_PORT", 1025))
+
+# datatracker
+DATATRACKER_BASE = "http://localhost:8000"
+DATATRACKER_RPC_API_BASE = "http://host.docker.internal:8000"
+DATATRACKER_RPC_API_TOKEN = "redtoken"  # not a real secret
