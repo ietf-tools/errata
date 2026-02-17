@@ -1,15 +1,27 @@
+FROM node:24 AS api-builder
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && \
+    apt-get install -qy --no-install-recommends openjdk-17-jre-headless
+# Build API client
+WORKDIR /workspace
+COPY rpcapi.yaml /workspace
+COPY openapitools.json /workspace
+RUN npx --yes @openapitools/openapi-generator-cli generate --generator-key datatracker
+
 FROM python:3.12-trixie AS base
 LABEL maintainer="IETF Tools Team <tools-discuss@ietf.org>"
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update --fix-missing && \
     apt-get install -qy --no-install-recommends \
-        postgresql-client-17 
+        postgresql-client-17
 COPY requirements.txt /tmp/pip-tmp/
-RUN pip3 --disable-pip-version-check --no-cache-dir install --no-warn-script-location -r /tmp/pip-tmp/requirements.txt && rm -rf /tmp/pip-tmp
+COPY --from=api-builder /workspace/openapi /tmp/pip-tmp/openapi/
+RUN cd /tmp/pip-tmp && \
+    pip3 --disable-pip-version-check --no-cache-dir install --no-warn-script-location -r /tmp/pip-tmp/requirements.txt &&  \
+    rm -rf /tmp/pip-tmp
 RUN groupadd --force --gid 1000 notroot && \
     useradd -s /bin/bash --uid 1000 --gid 1000 -m notroot
 # Create workspace
-RUN mkdir -p /workspace
 WORKDIR /workspace
 
 FROM base AS backend
