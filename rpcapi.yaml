@@ -1,0 +1,3867 @@
+openapi: 3.0.3
+info:
+  title: Datatracker API
+  version: 1.0.0
+  description: Datatracker API
+paths:
+  /api/purple/doc/drafts_by_names/:
+    post:
+      operationId: get_drafts_by_names
+      description: returns a list of drafts with matching names
+      summary: Get a batch of drafts by draft names
+      tags:
+      - purple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDraftsByNamesErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Draft'
+          description: ''
+  /api/purple/draft/{doc_id}/:
+    get:
+      operationId: get_draft_by_id
+      description: Returns the draft for the requested ID
+      summary: Get a draft
+      parameters:
+      - in: path
+        name: doc_id
+        schema:
+          type: integer
+        description: Doc ID identifying this draft.
+        required: true
+      tags:
+      - purple
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDraftByIdErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullDraft'
+          description: ''
+  /api/purple/draft/{doc_id}/references/:
+    get:
+      operationId: get_draft_references
+      description: Returns the id and name of each normatively referenced Internet-Draft
+        for the given docId
+      summary: Get normative references to I-Ds
+      parameters:
+      - in: path
+        name: doc_id
+        schema:
+          type: integer
+        description: Doc ID identifying this draft.
+        required: true
+      tags:
+      - purple
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDraftReferencesErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reference'
+          description: ''
+  /api/purple/draft/bulk_authors/:
+    post:
+      operationId: get_draft_authors
+      description: returns a list mapping draft names to objects describing authors
+      summary: Gather authors of the drafts with the given names
+      tags:
+      - purple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDraftAuthorsErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DraftWithAuthors'
+          description: ''
+  /api/purple/draft/submitted_to_rpc/:
+    get:
+      operationId: submitted_to_rpc
+      description: List documents ready to enter the RFC Editor Queue
+      summary: List documents ready to enter the RFC Editor Queue
+      tags:
+      - purple
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmittedToRpcErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubmittedToQueue'
+          description: ''
+  /api/purple/person/{person_id}/:
+    get:
+      operationId: get_person_by_id
+      description: Returns a single person
+      summary: Find person by ID
+      parameters:
+      - in: path
+        name: person_id
+        schema:
+          type: integer
+        description: Person ID identifying this person.
+        required: true
+      tags:
+      - purple
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPersonByIdErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+          description: ''
+  /api/purple/person/batch/:
+    post:
+      operationId: get_persons
+      description: Returns a list of persons matching requested ids. Omits any that
+        are missing.
+      summary: Get a batch of persons
+      tags:
+      - purple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: integer
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPersonsErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Person'
+          description: ''
+  /api/purple/person/batch_by_email/:
+    post:
+      operationId: persons_by_email
+      description: Returns a list of persons matching requested ids. Omits any that
+        are missing.
+      summary: Get a batch of persons by email addresses
+      tags:
+      - purple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonsByEmailErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmailPerson'
+          description: ''
+  /api/purple/persons/search/:
+    get:
+      operationId: search_person
+      description: Get a list of persons, matching by partial name or email
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - purple
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchPersonErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPersonList'
+          description: ''
+  /api/purple/rfc/{rfc_number}/:
+    put:
+      operationId: purple_rfc_update
+      parameters:
+      - in: path
+        name: rfc_number
+        schema:
+          type: string
+        required: true
+      tags:
+      - purple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditableRfcRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurpleRfcUpdateErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EditableRfc'
+          description: ''
+    patch:
+      operationId: purple_rfc_partial_update
+      parameters:
+      - in: path
+        name: rfc_number
+        schema:
+          type: string
+        required: true
+      tags:
+      - purple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEditableRfcRequest'
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurpleRfcPartialUpdateErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EditableRfc'
+          description: ''
+  /api/purple/rfc/{rfc_number}/authors/:
+    get:
+      operationId: purple_rfc_authors_list
+      description: |-
+        ViewSet for RfcAuthor model
+
+        Router needs to provide rfc_number as a kwarg
+      parameters:
+      - in: path
+        name: rfc_number
+        schema:
+          type: integer
+        required: true
+      tags:
+      - purple
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurpleRfcAuthorsListErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RfcAuthor'
+          description: ''
+  /api/purple/rfc/{rfc_number}/authors/{author_id}/:
+    get:
+      operationId: purple_rfc_authors_retrieve
+      description: |-
+        ViewSet for RfcAuthor model
+
+        Router needs to provide rfc_number as a kwarg
+      parameters:
+      - in: path
+        name: author_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: rfc_number
+        schema:
+          type: integer
+        required: true
+      tags:
+      - purple
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurpleRfcAuthorsRetrieveErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RfcAuthor'
+          description: ''
+  /api/purple/rfc/bulk_authors/:
+    post:
+      operationId: get_rfc_authors
+      description: returns a list mapping rfc numbers to objects describing authors
+      summary: Gather authors of the RFCs with the given numbers
+      tags:
+      - purple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: integer
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetRfcAuthorsErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RfcWithAuthors'
+          description: ''
+  /api/purple/rfc/publish/:
+    post:
+      operationId: notify_rfc_published
+      summary: Notify datatracker of RFC publication
+      tags:
+      - purple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RfcPubRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotifyRfcPublishedErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationAck'
+          description: ''
+  /api/purple/rfc/publish/files/:
+    post:
+      operationId: upload_rfc_files
+      summary: Upload files for a published RFC
+      tags:
+      - purple
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RfcFileRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadRfcFilesErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationAck'
+          description: ''
+  /api/purple/rfc/rfc_original_stream/:
+    get:
+      operationId: get_rfc_original_streams
+      description: returns a list of dicts associating an RFC with its originally
+        published stream
+      summary: Get the streams RFCs were originally published into
+      tags:
+      - purple
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetRfcOriginalStreamsErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OriginalStream'
+          description: ''
+  /api/purple/subject/{subject_id}/person/:
+    get:
+      operationId: get_subject_person_by_id
+      description: Returns a single person
+      summary: Find person for OIDC subject by ID
+      parameters:
+      - in: path
+        name: subject_id
+        schema:
+          type: string
+        description: subject ID of person to return
+        required: true
+      tags:
+      - purple
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSubjectPersonByIdErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+          description: ''
+  /api/red/doc/:
+    get:
+      operationId: red_doc_list
+      parameters:
+      - in: query
+        name: area
+        schema:
+          type: array
+          items:
+            type: string
+        explode: true
+        style: form
+      - in: query
+        name: group
+        schema:
+          type: array
+          items:
+            type: string
+        explode: true
+        style: form
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: published_after
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: published_before
+        schema:
+          type: string
+          format: date
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: sort
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - -number
+            - -published
+            - number
+            - published
+        description: |-
+          Ordering
+
+          * `number` - Number
+          * `-number` - Number (descending)
+          * `published` - Published
+          * `-published` - Published (descending)
+        explode: false
+        style: form
+      - in: query
+        name: status
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - bcp
+            - ds
+            - exp
+            - hist
+            - inf
+            - not-issued
+            - ps
+            - std
+            - unkn
+        description: |-
+          * `bcp` - bcp
+          * `ds` - ds
+          * `exp` - exp
+          * `hist` - hist
+          * `inf` - inf
+          * `not-issued` - not-issued
+          * `ps` - ps
+          * `std` - std
+          * `unkn` - unkn
+        explode: true
+        style: form
+      - in: query
+        name: stream
+        schema:
+          type: array
+          items:
+            type: string
+        explode: true
+        style: form
+      tags:
+      - red
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedDocListErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRfcMetadataList'
+          description: ''
+  /api/red/doc/{rfc_number}/:
+    get:
+      operationId: red_doc_retrieve
+      parameters:
+      - in: path
+        name: rfc_number
+        schema:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        required: true
+      tags:
+      - red
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedDocRetrieveErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rfc'
+          description: ''
+  /api/red/subseries/:
+    get:
+      operationId: red_subseries_list
+      parameters:
+      - in: query
+        name: type
+        schema:
+          type: array
+          items:
+            type: string
+        explode: true
+        style: form
+      tags:
+      - red
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedSubseriesListErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubseriesDoc'
+          description: ''
+  /api/red/subseries/{name}/:
+    get:
+      operationId: red_subseries_retrieve
+      parameters:
+      - in: path
+        name: name
+        schema:
+          type: string
+        required: true
+      tags:
+      - red
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedSubseriesRetrieveErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubseriesDoc'
+          description: ''
+  /api/schema/:
+    get:
+      operationId: schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      tags:
+      - schema
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                $ref: '#/components/schemas/SchemaRetrieveErrorResponse400'
+            application/yaml:
+              schema:
+                $ref: '#/components/schemas/SchemaRetrieveErrorResponse400'
+            application/vnd.oai.openapi+json:
+              schema:
+                $ref: '#/components/schemas/SchemaRetrieveErrorResponse400'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaRetrieveErrorResponse400'
+          description: ''
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    AuthorPerson:
+      type: object
+      properties:
+        person_pk:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: Full Name (Unicode)
+          description: Preferred long form of name.
+          maxLength: 255
+        last_name:
+          type: string
+        initials:
+          type: string
+        email_addresses:
+          type: array
+          items:
+            type: string
+            format: email
+      required:
+      - email_addresses
+      - initials
+      - last_name
+      - name
+    ClientErrorEnum:
+      enum:
+      - client_error
+      type: string
+      description: '* `client_error` - Client Error'
+    ContainingSubseries:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+      required:
+      - name
+      - type
+    DocIdentifier:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/DocIdentifierTypeEnum'
+        value:
+          type: string
+      required:
+      - type
+      - value
+    DocIdentifierTypeEnum:
+      enum:
+      - doi
+      - issn
+      type: string
+      description: |-
+        * `doi` - doi
+        * `issn` - issn
+    DocumentAuthor:
+      type: object
+      description: Serializer for a Person in a response
+      properties:
+        person:
+          type: integer
+        plain_name:
+          type: string
+          readOnly: true
+      required:
+      - person
+    Draft:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        rev:
+          type: string
+          title: Revision
+          maxLength: 16
+        stream:
+          type: string
+          nullable: true
+        title:
+          type: string
+          maxLength: 255
+        group:
+          type: string
+          readOnly: true
+        pages:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        source_format:
+          allOf:
+          - $ref: '#/components/schemas/SourceFormatEnum'
+          readOnly: true
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentAuthor'
+        consensus:
+          type: boolean
+          nullable: true
+          readOnly: true
+      required:
+      - authors
+      - name
+      - title
+    DraftWithAuthors:
+      type: object
+      properties:
+        draft_name:
+          type: string
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthorPerson'
+      required:
+      - authors
+      - draft_name
+    EditableRfc:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RfcAuthor'
+      required:
+      - authors
+    EditableRfcRequest:
+      type: object
+      properties:
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RfcAuthorRequest'
+      required:
+      - authors
+    EmailPerson:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        person_pk:
+          type: integer
+        name:
+          type: string
+        last_name:
+          type: string
+        initials:
+          type: string
+      required:
+      - email
+      - initials
+      - last_name
+      - name
+      - person_pk
+    Error404:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode404Enum'
+        detail:
+          type: string
+        attr:
+          type: string
+          nullable: true
+      required:
+      - attr
+      - code
+      - detail
+    ErrorCode404Enum:
+      enum:
+      - not_found
+      type: string
+      description: '* `not_found` - Not Found'
+    ErrorResponse404:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ClientErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error404'
+      required:
+      - errors
+      - type
+    FmtEnum:
+      enum:
+      - xml
+      - txt
+      - html
+      - pdf
+      - ps
+      - json
+      - notprepped
+      type: string
+      description: |-
+        * `xml` - xml
+        * `txt` - txt
+        * `html` - html
+        * `pdf` - pdf
+        * `ps` - ps
+        * `json` - json
+        * `notprepped` - notprepped
+    FullDraft:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        rev:
+          type: string
+          title: Revision
+          maxLength: 16
+        stream:
+          type: string
+          nullable: true
+        title:
+          type: string
+          maxLength: 255
+        group:
+          type: string
+          readOnly: true
+        abstract:
+          type: string
+        pages:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        source_format:
+          allOf:
+          - $ref: '#/components/schemas/SourceFormatEnum'
+          readOnly: true
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentAuthor'
+        intended_std_level:
+          type: string
+          nullable: true
+          title: Intended standardization level
+        consensus:
+          type: boolean
+          nullable: true
+          readOnly: true
+        shepherd:
+          type: integer
+          readOnly: true
+        ad:
+          type: integer
+          nullable: true
+          title: Area director
+      required:
+      - authors
+      - name
+      - title
+    GetDraftAuthorsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetDraftByIdErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetDraftReferencesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetDraftsByNamesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetPersonByIdErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetPersonsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetRfcAuthorsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetRfcOriginalStreamsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetSubjectPersonByIdErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    Group:
+      type: object
+      properties:
+        acronym:
+          type: string
+          maxLength: 40
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          maxLength: 80
+        type:
+          type: string
+          nullable: true
+      required:
+      - acronym
+      - name
+    NotificationAck:
+      type: object
+      properties:
+        message:
+          type: string
+          default: ack
+    NotifyRfcPublishedAbstractErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - abstract
+          type: string
+          description: '* `abstract` - abstract'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedAdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ad
+          type: string
+          description: '* `ad` - ad'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedAuthorsINDEXAffiliationErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.affiliation
+          type: string
+          description: '* `authors.INDEX.affiliation` - authors.INDEX.affiliation'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedAuthorsINDEXCountryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.country
+          type: string
+          description: '* `authors.INDEX.country` - authors.INDEX.country'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedAuthorsINDEXDatatrackerPersonPathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.datatracker_person_path
+          type: string
+          description: '* `authors.INDEX.datatracker_person_path` - authors.INDEX.datatracker_person_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedAuthorsINDEXEmailErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.email
+          type: string
+          description: '* `authors.INDEX.email` - authors.INDEX.email'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedAuthorsINDEXIsEditorErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.is_editor
+          type: string
+          description: '* `authors.INDEX.is_editor` - authors.INDEX.is_editor'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedAuthorsINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.non_field_errors
+          type: string
+          description: '* `authors.INDEX.non_field_errors` - authors.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedAuthorsINDEXPersonErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.person
+          type: string
+          description: '* `authors.INDEX.person` - authors.INDEX.person'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedAuthorsINDEXTitlepageNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.titlepage_name
+          type: string
+          description: '* `authors.INDEX.titlepage_name` - authors.INDEX.titlepage_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedAuthorsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.non_field_errors
+          type: string
+          description: '* `authors.non_field_errors` - authors.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedDraftNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - draft_name
+          type: string
+          description: '* `draft_name` - draft_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedDraftRevErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - draft_rev
+          type: string
+          description: '* `draft_rev` - draft_rev'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedError:
+      oneOf:
+      - $ref: '#/components/schemas/NotifyRfcPublishedNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedPublishedErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedDraftNameErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedDraftRevErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedRfcNumberErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedTitleErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXTitlepageNameErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXIsEditorErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXPersonErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXEmailErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXAffiliationErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXCountryErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXDatatrackerPersonPathErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedGroupErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedStreamErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedAbstractErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedPagesErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedStdLevelErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedAdErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedObsoletesErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedUpdatesErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedSubseriesErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedSubseriesINDEXErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/NotifyRfcPublishedNonFieldErrorsErrorComponent'
+          published: '#/components/schemas/NotifyRfcPublishedPublishedErrorComponent'
+          draft_name: '#/components/schemas/NotifyRfcPublishedDraftNameErrorComponent'
+          draft_rev: '#/components/schemas/NotifyRfcPublishedDraftRevErrorComponent'
+          rfc_number: '#/components/schemas/NotifyRfcPublishedRfcNumberErrorComponent'
+          title: '#/components/schemas/NotifyRfcPublishedTitleErrorComponent'
+          authors.non_field_errors: '#/components/schemas/NotifyRfcPublishedAuthorsNonFieldErrorsErrorComponent'
+          authors.INDEX.non_field_errors: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXNonFieldErrorsErrorComponent'
+          authors.INDEX.titlepage_name: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXTitlepageNameErrorComponent'
+          authors.INDEX.is_editor: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXIsEditorErrorComponent'
+          authors.INDEX.person: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXPersonErrorComponent'
+          authors.INDEX.email: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXEmailErrorComponent'
+          authors.INDEX.affiliation: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXAffiliationErrorComponent'
+          authors.INDEX.country: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXCountryErrorComponent'
+          authors.INDEX.datatracker_person_path: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXDatatrackerPersonPathErrorComponent'
+          group: '#/components/schemas/NotifyRfcPublishedGroupErrorComponent'
+          stream: '#/components/schemas/NotifyRfcPublishedStreamErrorComponent'
+          abstract: '#/components/schemas/NotifyRfcPublishedAbstractErrorComponent'
+          pages: '#/components/schemas/NotifyRfcPublishedPagesErrorComponent'
+          std_level: '#/components/schemas/NotifyRfcPublishedStdLevelErrorComponent'
+          ad: '#/components/schemas/NotifyRfcPublishedAdErrorComponent'
+          obsoletes: '#/components/schemas/NotifyRfcPublishedObsoletesErrorComponent'
+          updates: '#/components/schemas/NotifyRfcPublishedUpdatesErrorComponent'
+          subseries: '#/components/schemas/NotifyRfcPublishedSubseriesErrorComponent'
+          subseries.INDEX: '#/components/schemas/NotifyRfcPublishedSubseriesINDEXErrorComponent'
+    NotifyRfcPublishedErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/NotifyRfcPublishedValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/NotifyRfcPublishedValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    NotifyRfcPublishedGroupErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - group
+          type: string
+          description: '* `group` - group'
+        code:
+          enum:
+          - does_not_exist
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedObsoletesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - obsoletes
+          type: string
+          description: '* `obsoletes` - obsoletes'
+        code:
+          enum:
+          - does_not_exist
+          - invalid
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `invalid` - invalid
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedPagesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - pages
+          type: string
+          description: '* `pages` - pages'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedPublishedErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - published
+          type: string
+          description: '* `published` - published'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - 'null'
+          - overflow
+          - required
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `null` - null
+            * `overflow` - overflow
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedRfcNumberErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - rfc_number
+          type: string
+          description: '* `rfc_number` - rfc_number'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedStdLevelErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - std_level
+          type: string
+          description: '* `std_level` - std_level'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedStreamErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - stream
+          type: string
+          description: '* `stream` - stream'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedSubseriesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - subseries
+          type: string
+          description: '* `subseries` - subseries'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedSubseriesINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - subseries.INDEX
+          type: string
+          description: '* `subseries.INDEX` - subseries.INDEX'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedTitleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - title
+          type: string
+          description: '* `title` - title'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedUpdatesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - updates
+          type: string
+          description: '* `updates` - updates'
+        code:
+          enum:
+          - does_not_exist
+          - invalid
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `invalid` - invalid
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotifyRfcPublishedError'
+      required:
+      - errors
+      - type
+    OriginalStream:
+      type: object
+      properties:
+        rfc_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        stream:
+          type: string
+          readOnly: true
+    PaginatedPersonList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Person'
+    PaginatedRfcMetadataList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RfcMetadata'
+    ParseError:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ParseErrorCodeEnum'
+        detail:
+          type: string
+        attr:
+          type: string
+          nullable: true
+      required:
+      - attr
+      - code
+      - detail
+    ParseErrorCodeEnum:
+      enum:
+      - parse_error
+      type: string
+      description: '* `parse_error` - Parse Error'
+    ParseErrorResponse:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ClientErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParseError'
+      required:
+      - errors
+      - type
+    PatchedEditableRfcRequest:
+      type: object
+      properties:
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RfcAuthorRequest'
+    Person:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        plain_name:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        picture:
+          type: string
+          format: uri
+          readOnly: true
+        url:
+          type: string
+          format: uri
+          readOnly: true
+          description: relative URL for datatracker person page
+    PersonsByEmailErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    PurpleRfcAuthorsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    PurpleRfcAuthorsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    PurpleRfcPartialUpdateAuthorsINDEXAffiliationErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.affiliation
+          type: string
+          description: '* `authors.INDEX.affiliation` - authors.INDEX.affiliation'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateAuthorsINDEXCountryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.country
+          type: string
+          description: '* `authors.INDEX.country` - authors.INDEX.country'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.datatracker_person_path
+          type: string
+          description: '* `authors.INDEX.datatracker_person_path` - authors.INDEX.datatracker_person_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateAuthorsINDEXEmailErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.email
+          type: string
+          description: '* `authors.INDEX.email` - authors.INDEX.email'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateAuthorsINDEXIsEditorErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.is_editor
+          type: string
+          description: '* `authors.INDEX.is_editor` - authors.INDEX.is_editor'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateAuthorsINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.non_field_errors
+          type: string
+          description: '* `authors.INDEX.non_field_errors` - authors.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateAuthorsINDEXPersonErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.person
+          type: string
+          description: '* `authors.INDEX.person` - authors.INDEX.person'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateAuthorsINDEXTitlepageNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.titlepage_name
+          type: string
+          description: '* `authors.INDEX.titlepage_name` - authors.INDEX.titlepage_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateAuthorsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.non_field_errors
+          type: string
+          description: '* `authors.non_field_errors` - authors.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXTitlepageNameErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXIsEditorErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXPersonErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXEmailErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXAffiliationErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXCountryErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/PurpleRfcPartialUpdateNonFieldErrorsErrorComponent'
+          authors.non_field_errors: '#/components/schemas/PurpleRfcPartialUpdateAuthorsNonFieldErrorsErrorComponent'
+          authors.INDEX.non_field_errors: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXNonFieldErrorsErrorComponent'
+          authors.INDEX.titlepage_name: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXTitlepageNameErrorComponent'
+          authors.INDEX.is_editor: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXIsEditorErrorComponent'
+          authors.INDEX.person: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXPersonErrorComponent'
+          authors.INDEX.email: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXEmailErrorComponent'
+          authors.INDEX.affiliation: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXAffiliationErrorComponent'
+          authors.INDEX.country: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXCountryErrorComponent'
+          authors.INDEX.datatracker_person_path: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent'
+    PurpleRfcPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/PurpleRfcPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    PurpleRfcPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurpleRfcPartialUpdateError'
+      required:
+      - errors
+      - type
+    PurpleRfcUpdateAuthorsINDEXAffiliationErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.affiliation
+          type: string
+          description: '* `authors.INDEX.affiliation` - authors.INDEX.affiliation'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateAuthorsINDEXCountryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.country
+          type: string
+          description: '* `authors.INDEX.country` - authors.INDEX.country'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.datatracker_person_path
+          type: string
+          description: '* `authors.INDEX.datatracker_person_path` - authors.INDEX.datatracker_person_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateAuthorsINDEXEmailErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.email
+          type: string
+          description: '* `authors.INDEX.email` - authors.INDEX.email'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateAuthorsINDEXIsEditorErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.is_editor
+          type: string
+          description: '* `authors.INDEX.is_editor` - authors.INDEX.is_editor'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateAuthorsINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.non_field_errors
+          type: string
+          description: '* `authors.INDEX.non_field_errors` - authors.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateAuthorsINDEXPersonErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.person
+          type: string
+          description: '* `authors.INDEX.person` - authors.INDEX.person'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateAuthorsINDEXTitlepageNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.INDEX.titlepage_name
+          type: string
+          description: '* `authors.INDEX.titlepage_name` - authors.INDEX.titlepage_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateAuthorsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - authors.non_field_errors
+          type: string
+          description: '* `authors.non_field_errors` - authors.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/PurpleRfcUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXTitlepageNameErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXIsEditorErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXPersonErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXEmailErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXAffiliationErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXCountryErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/PurpleRfcUpdateNonFieldErrorsErrorComponent'
+          authors.non_field_errors: '#/components/schemas/PurpleRfcUpdateAuthorsNonFieldErrorsErrorComponent'
+          authors.INDEX.non_field_errors: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXNonFieldErrorsErrorComponent'
+          authors.INDEX.titlepage_name: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXTitlepageNameErrorComponent'
+          authors.INDEX.is_editor: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXIsEditorErrorComponent'
+          authors.INDEX.person: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXPersonErrorComponent'
+          authors.INDEX.email: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXEmailErrorComponent'
+          authors.INDEX.affiliation: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXAffiliationErrorComponent'
+          authors.INDEX.country: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXCountryErrorComponent'
+          authors.INDEX.datatracker_person_path: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent'
+    PurpleRfcUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/PurpleRfcUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/PurpleRfcUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    PurpleRfcUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurpleRfcUpdateError'
+      required:
+      - errors
+      - type
+    RedDocListAreaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - area
+          type: string
+          description: '* `area` - area'
+        code:
+          enum:
+          - invalid_choice
+          - invalid_list
+          - invalid_pk_value
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `invalid_list` - invalid_list
+            * `invalid_pk_value` - invalid_pk_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedDocListError:
+      oneOf:
+      - $ref: '#/components/schemas/RedDocListPublishedErrorComponent'
+      - $ref: '#/components/schemas/RedDocListStreamErrorComponent'
+      - $ref: '#/components/schemas/RedDocListGroupErrorComponent'
+      - $ref: '#/components/schemas/RedDocListAreaErrorComponent'
+      - $ref: '#/components/schemas/RedDocListStatusErrorComponent'
+      - $ref: '#/components/schemas/RedDocListSortErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          published: '#/components/schemas/RedDocListPublishedErrorComponent'
+          stream: '#/components/schemas/RedDocListStreamErrorComponent'
+          group: '#/components/schemas/RedDocListGroupErrorComponent'
+          area: '#/components/schemas/RedDocListAreaErrorComponent'
+          status: '#/components/schemas/RedDocListStatusErrorComponent'
+          sort: '#/components/schemas/RedDocListSortErrorComponent'
+    RedDocListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RedDocListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RedDocListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RedDocListGroupErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - group
+          type: string
+          description: '* `group` - group'
+        code:
+          enum:
+          - invalid_choice
+          - invalid_list
+          - invalid_pk_value
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `invalid_list` - invalid_list
+            * `invalid_pk_value` - invalid_pk_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedDocListPublishedErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - published
+          type: string
+          description: '* `published` - published'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedDocListSortErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort
+          type: string
+          description: '* `sort` - sort'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedDocListStatusErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - status
+          type: string
+          description: '* `status` - status'
+        code:
+          enum:
+          - invalid_choice
+          - invalid_list
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `invalid_list` - invalid_list
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedDocListStreamErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - stream
+          type: string
+          description: '* `stream` - stream'
+        code:
+          enum:
+          - invalid_choice
+          - invalid_list
+          - invalid_pk_value
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `invalid_list` - invalid_list
+            * `invalid_pk_value` - invalid_pk_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedDocListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RedDocListError'
+      required:
+      - errors
+      - type
+    RedDocRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RedSubseriesListError:
+      oneOf:
+      - $ref: '#/components/schemas/RedSubseriesListTypeErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          type: '#/components/schemas/RedSubseriesListTypeErrorComponent'
+    RedSubseriesListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RedSubseriesListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RedSubseriesListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RedSubseriesListTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - type
+          type: string
+          description: '* `type` - type'
+        code:
+          enum:
+          - invalid_choice
+          - invalid_list
+          - invalid_pk_value
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `invalid_list` - invalid_list
+            * `invalid_pk_value` - invalid_pk_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedSubseriesListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RedSubseriesListError'
+      required:
+      - errors
+      - type
+    RedSubseriesRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    Reference:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+    RelatedDraft:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        title:
+          type: string
+      required:
+      - id
+      - name
+      - title
+    RelatedRfc:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: integer
+        title:
+          type: string
+      required:
+      - id
+      - number
+      - title
+    ReverseRelatedRfc:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: integer
+        title:
+          type: string
+      required:
+      - id
+      - number
+      - title
+    Rfc:
+      type: object
+      description: Serialize an RFC, including its metadata and text content if available
+      properties:
+        number:
+          type: integer
+        title:
+          type: string
+          pattern: "^[^\x01-\x1F]*$"
+          maxLength: 255
+        published:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/RfcStatus'
+        pages:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RfcAuthor'
+          readOnly: true
+        group:
+          $ref: '#/components/schemas/Group'
+        area:
+          $ref: '#/components/schemas/Group'
+        stream:
+          $ref: '#/components/schemas/StreamName'
+        identifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocIdentifier'
+          readOnly: true
+        obsoletes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatedRfc'
+          readOnly: true
+        obsoleted_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReverseRelatedRfc'
+          readOnly: true
+        updates:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatedRfc'
+          readOnly: true
+        updated_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReverseRelatedRfc'
+          readOnly: true
+        subseries:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContainingSubseries'
+          readOnly: true
+        draft:
+          allOf:
+          - $ref: '#/components/schemas/RelatedDraft'
+          readOnly: true
+        abstract:
+          type: string
+        formats:
+          type: array
+          items:
+            $ref: '#/components/schemas/RfcFormat'
+          readOnly: true
+          description: Available formats
+        keywords:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        has_errata:
+          type: boolean
+          readOnly: true
+        text:
+          type: string
+          nullable: true
+      required:
+      - group
+      - number
+      - published
+      - status
+      - stream
+      - text
+      - title
+    RfcAuthor:
+      type: object
+      description: Serializer for an RfcAuthor / DocumentAuthor in a response
+      properties:
+        titlepage_name:
+          type: string
+          maxLength: 128
+        is_editor:
+          type: boolean
+        person:
+          type: integer
+          nullable: true
+        email:
+          type: string
+          nullable: true
+          description: Email address used by author for submission
+        affiliation:
+          type: string
+          description: Organization/company used by author for submission
+          maxLength: 100
+        country:
+          type: string
+          description: Country used by author for submission
+          maxLength: 255
+        datatracker_person_path:
+          type: string
+          format: uri
+          description: URL for person link (relative to datatracker base URL)
+      required:
+      - titlepage_name
+    RfcAuthorRequest:
+      type: object
+      description: Serializer for an RfcAuthor / DocumentAuthor in a response
+      properties:
+        titlepage_name:
+          type: string
+          minLength: 1
+          maxLength: 128
+        is_editor:
+          type: boolean
+        person:
+          type: integer
+          nullable: true
+        email:
+          type: string
+          minLength: 1
+          nullable: true
+          description: Email address used by author for submission
+        affiliation:
+          type: string
+          description: Organization/company used by author for submission
+          maxLength: 100
+        country:
+          type: string
+          description: Country used by author for submission
+          maxLength: 255
+        datatracker_person_path:
+          type: string
+          format: uri
+          minLength: 1
+          description: URL for person link (relative to datatracker base URL)
+      required:
+      - titlepage_name
+    RfcFileRequest:
+      type: object
+      properties:
+        rfc:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+          description: RFC number to which the contents belong
+        contents:
+          type: array
+          items:
+            type: string
+            format: binary
+          description: List of content files. Filename extensions are used to identify
+            file types, but filenames are otherwise ignored.
+        mtime:
+          type: string
+          format: date-time
+          description: Modification timestamp to apply to uploaded files
+        replace:
+          type: boolean
+          default: false
+          description: Replace existing files for this RFC. Defaults to false. When
+            false, if _any_ files already exist for the specified RFC the upload will
+            be rejected regardless of which files are being uploaded. When true,existing
+            files will be removed and new ones will be put in place. BEVERY CAREFUL
+            WITH THIS OPTION IN PRODUCTION.
+      required:
+      - contents
+      - rfc
+    RfcFormat:
+      type: object
+      properties:
+        fmt:
+          $ref: '#/components/schemas/FmtEnum'
+        name:
+          type: string
+          description: Name of blob in the blob store
+      required:
+      - fmt
+      - name
+    RfcMetadata:
+      type: object
+      description: Serialize metadata of an RFC
+      properties:
+        number:
+          type: integer
+        title:
+          type: string
+          pattern: "^[^\x01-\x1F]*$"
+          maxLength: 255
+        published:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/RfcStatus'
+        pages:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RfcAuthor'
+          readOnly: true
+        group:
+          $ref: '#/components/schemas/Group'
+        area:
+          $ref: '#/components/schemas/Group'
+        stream:
+          $ref: '#/components/schemas/StreamName'
+        identifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocIdentifier'
+          readOnly: true
+        obsoletes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatedRfc'
+          readOnly: true
+        obsoleted_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReverseRelatedRfc'
+          readOnly: true
+        updates:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatedRfc'
+          readOnly: true
+        updated_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReverseRelatedRfc'
+          readOnly: true
+        subseries:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContainingSubseries'
+          readOnly: true
+        draft:
+          allOf:
+          - $ref: '#/components/schemas/RelatedDraft'
+          readOnly: true
+        abstract:
+          type: string
+        formats:
+          type: array
+          items:
+            $ref: '#/components/schemas/RfcFormat'
+          readOnly: true
+          description: Available formats
+        keywords:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        has_errata:
+          type: boolean
+          readOnly: true
+      required:
+      - group
+      - number
+      - published
+      - status
+      - stream
+      - title
+    RfcPubRequest:
+      type: object
+      description: Write-only serializer for RFC publication
+      properties:
+        published:
+          type: string
+          format: date-time
+        draft_name:
+          type: string
+          minLength: 1
+          pattern: ^draft-[a-zA-Z0-9-]+$
+        draft_rev:
+          type: string
+          minLength: 1
+          pattern: ^[0-9][0-9]$
+        rfc_number:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          minLength: 1
+          pattern: "^[^\x01-\x1F]*$"
+          maxLength: 255
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RfcAuthorRequest'
+        group:
+          type: string
+          minLength: 1
+        stream:
+          type: string
+          minLength: 1
+        abstract:
+          type: string
+        pages:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        std_level:
+          type: string
+          minLength: 1
+        ad:
+          type: integer
+          nullable: true
+        obsoletes:
+          type: array
+          items:
+            type: integer
+            maximum: 2147483647
+            minimum: 0
+            nullable: true
+        updates:
+          type: array
+          items:
+            type: integer
+            maximum: 2147483647
+            minimum: 0
+            nullable: true
+        subseries:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            pattern: ^(bcp|std|fyi)[1-9][0-9]{0,4}$
+      required:
+      - authors
+      - published
+      - rfc_number
+      - std_level
+      - stream
+      - subseries
+      - title
+    RfcStatus:
+      type: object
+      description: Status serializer for a Document instance
+      properties:
+        slug:
+          $ref: '#/components/schemas/SlugEnum'
+        name:
+          type: string
+      required:
+      - name
+      - slug
+    RfcWithAuthors:
+      type: object
+      properties:
+        rfc_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthorPerson'
+      required:
+      - authors
+    SchemaRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    SearchPersonErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    SlugEnum:
+      enum:
+      - bcp
+      - ds
+      - exp
+      - hist
+      - inf
+      - not-issued
+      - ps
+      - std
+      - unkn
+      type: string
+      description: |-
+        * `bcp` - bcp
+        * `ds` - ds
+        * `exp` - exp
+        * `hist` - hist
+        * `inf` - inf
+        * `not-issued` - not-issued
+        * `ps` - ps
+        * `std` - std
+        * `unkn` - unkn
+    SourceFormatEnum:
+      enum:
+      - unknown
+      - xml-v2
+      - xml-v3
+      - txt
+      type: string
+    StreamName:
+      type: object
+      properties:
+        slug:
+          type: string
+          maxLength: 32
+        name:
+          type: string
+          maxLength: 255
+        desc:
+          type: string
+      required:
+      - name
+      - slug
+    SubmittedToQueue:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        stream:
+          type: string
+          nullable: true
+        submitted:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        consensus:
+          type: boolean
+          nullable: true
+          readOnly: true
+      required:
+      - name
+    SubmittedToRpcErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    SubseriesContent:
+      type: object
+      description: Serialize RFC contained in a subseries doc
+      properties:
+        number:
+          type: integer
+        title:
+          type: string
+          pattern: "^[^\x01-\x1F]*$"
+          maxLength: 255
+        published:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/RfcStatus'
+        pages:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RfcAuthor'
+          readOnly: true
+        group:
+          $ref: '#/components/schemas/Group'
+        area:
+          $ref: '#/components/schemas/Group'
+        stream:
+          $ref: '#/components/schemas/StreamName'
+        identifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocIdentifier'
+          readOnly: true
+        obsoletes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatedRfc'
+          readOnly: true
+        obsoleted_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReverseRelatedRfc'
+          readOnly: true
+        updates:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatedRfc'
+          readOnly: true
+        updated_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReverseRelatedRfc'
+          readOnly: true
+        subseries:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContainingSubseries'
+          readOnly: true
+        draft:
+          allOf:
+          - $ref: '#/components/schemas/RelatedDraft'
+          readOnly: true
+        abstract:
+          type: string
+        formats:
+          type: array
+          items:
+            $ref: '#/components/schemas/RfcFormat'
+          readOnly: true
+          description: Available formats
+        keywords:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        has_errata:
+          type: boolean
+          readOnly: true
+      required:
+      - group
+      - number
+      - published
+      - status
+      - stream
+      - title
+    SubseriesDoc:
+      type: object
+      description: Serialize a subseries document (e.g., a BCP or STD)
+      properties:
+        name:
+          type: string
+          pattern: ^[-a-z0-9]+$
+          maxLength: 255
+        type:
+          type: string
+          nullable: true
+        contents:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubseriesContent'
+      required:
+      - contents
+      - name
+    UploadRfcFilesContentsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - contents
+          type: string
+          description: '* `contents` - contents'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UploadRfcFilesContentsINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - contents.INDEX
+          type: string
+          description: '* `contents.INDEX` - contents.INDEX'
+        code:
+          enum:
+          - empty
+          - invalid
+          - no_name
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `empty` - empty
+            * `invalid` - invalid
+            * `no_name` - no_name
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UploadRfcFilesError:
+      oneOf:
+      - $ref: '#/components/schemas/UploadRfcFilesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UploadRfcFilesRfcErrorComponent'
+      - $ref: '#/components/schemas/UploadRfcFilesContentsErrorComponent'
+      - $ref: '#/components/schemas/UploadRfcFilesContentsINDEXErrorComponent'
+      - $ref: '#/components/schemas/UploadRfcFilesMtimeErrorComponent'
+      - $ref: '#/components/schemas/UploadRfcFilesReplaceErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/UploadRfcFilesNonFieldErrorsErrorComponent'
+          rfc: '#/components/schemas/UploadRfcFilesRfcErrorComponent'
+          contents: '#/components/schemas/UploadRfcFilesContentsErrorComponent'
+          contents.INDEX: '#/components/schemas/UploadRfcFilesContentsINDEXErrorComponent'
+          mtime: '#/components/schemas/UploadRfcFilesMtimeErrorComponent'
+          replace: '#/components/schemas/UploadRfcFilesReplaceErrorComponent'
+    UploadRfcFilesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/UploadRfcFilesValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/UploadRfcFilesValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    UploadRfcFilesMtimeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - mtime
+          type: string
+          description: '* `mtime` - mtime'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - 'null'
+          - overflow
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `null` - null
+            * `overflow` - overflow
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UploadRfcFilesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UploadRfcFilesReplaceErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - replace
+          type: string
+          description: '* `replace` - replace'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UploadRfcFilesRfcErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - rfc
+          type: string
+          description: '* `rfc` - rfc'
+        code:
+          enum:
+          - does_not_exist
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UploadRfcFilesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/UploadRfcFilesError'
+      required:
+      - errors
+      - type
+    ValidationErrorEnum:
+      enum:
+      - validation_error
+      type: string
+      description: '* `validation_error` - Validation Error'
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      description: Shared secret in the X-Api-Key header
+      name: X-Api-Key
+      in: header
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+servers:
+- url: http://localhost:8000
+  description: local dev server
+- url: https://datatracker.ietf.org
+  description: production server
