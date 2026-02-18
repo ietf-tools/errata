@@ -1,0 +1,39 @@
+{% autoescape off %}{% load filters %}The following errata report has been {{ erratum.status.name.lower }} for RFC{{erratum.rfc_metadata.rfc_number}},
+"{{erratum.rfc_metadata.title}}"
+
+--------------------------------------
+You may review the report below and at:
+{{ base_url }}{% url "errata_detail" pk=erratum.pk %}
+
+--------------------------------------
+
+Status: {{ erratum.status.name }}
+{% if erratum.erratum_type %}Type: {{erratum.erratum_type.name}}
+{% endif %}Reported by: {{ erratum.submitter_name }} <{{ erratum.submitter_email }}>
+Date Reported: {{ erratum.submitted_at }}
+{% if erratum.status.slug == "held_for_doc_update" %}Held{% else %}{{ erratum.status.name }}{% endif %} by: {{ erratum.verifier_name }} ({{ erratum|txt_errata_verifying_party }})
+
+{{ erratum|txt_errata_section }}
+
+Original Text
+-------------
+{{ erratum.orig_text }}
+
+Corrected Text
+--------------
+{{ erratum.corrected_text }}
+
+Notes
+-----
+{{ erratum.notes }}
+
+--------------------------------------
+RFC{{ erratum.rfc_metadata.rfc_number}} {% if erratum.rfc_metadata.draft_name %}({{ erratum.rfc_metadata.draft_name }}){% endif %}
+--------------------------------------
+Title               : {{ erratum.rfc_metadata.title.strip }}
+Publication Date    : {{ erratum.rfc_metadata.publication_month|month_name }} {{ erratum.rfc_metadata.publication_year }}
+Author(s)           : {{ erratum.rfc_metadata.author_names }}
+Category            : {{ erratum.rfc_metadata.std_level }}
+Source              : {{ erratum.rfc_metadata.display_source }}
+Stream              : {{ erratum.rfc_metadata.stream.upper }}
+{% endautoescape %}

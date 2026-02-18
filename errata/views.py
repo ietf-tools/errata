@@ -15,6 +15,7 @@ from .forms import (
     ChooseRfcForm,
     ConfirmExistingErrataReadForm,
 )
+from .mail import send_erratum_classified_notification, send_new_erratum_notification
 from .models import (
     Erratum,
     ErratumType,
@@ -278,7 +279,7 @@ def staged_rpc_add_to_unverified(request, staged_erratum_id, erratum_type):
             reported = Status.objects.get(slug="reported")
             # Will need `erratum=` on this create for logging
             # and email.
-            Erratum.objects.create(
+            erratum = Erratum.objects.create(
                 rfc_number=staged_erratum.rfc_number,
                 rfc_metadata_id=staged_erratum.rfc_number,
                 status=reported,
@@ -292,11 +293,11 @@ def staged_rpc_add_to_unverified(request, staged_erratum_id, erratum_type):
                 submitted_at=staged_erratum.submitted_at,
                 # created at gets default of now
                 # updated_at is an AutoDateTimeField
-                format=staged_erratum.formats,
+                formats=staged_erratum.formats,
             )
             staged_erratum.delete()
             # TODO: log what happened
-            # TODO: Send mail about it
+            send_new_erratum_notification(erratum, request.user)
             return redirect("errata_staged_list")
         else:
             pass
@@ -340,6 +341,7 @@ def reported_classify(request, erratum_id: int):
                 erratum.verifier_email = request.user.email
                 erratum.verified_at = datetime.datetime.now()
                 erratum.save()
+                send_erratum_classified_notification(erratum, request.user)
                 return redirect("errata_reported_list")
             else:
                 pass
