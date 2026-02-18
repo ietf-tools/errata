@@ -1,0 +1,43 @@
+{% autoescape off %}{% load filters %}The following errata report has been submitted for RFC{{erratum.rfc_metadata.rfc_number}},
+"{{erratum.rfc_metadata.title}}"
+
+--------------------------------------
+You may review the report below and at:
+{{ base_url }}{% url "errata_detail" pk=erratum.pk %}
+
+--------------------------------------
+{% if erratum.erratum_type %}Type: {{erratum.erratum_type.name}}
+{% endif %}Reported by: {{ erratum.submitter_name }} <{{ erratum.submitter_email }}>
+
+{{ erratum|txt_errata_section }}
+
+Original Text
+-------------
+{{ erratum.orig_text }}
+
+Corrected Text
+--------------
+{{ erratum.corrected_text }}
+
+Notes
+-----
+{{ erratum.notes }}
+
+Instructions:
+-------------
+This erratum is currently posted as "Reported". Please
+use "Reply All" to discuss whether it should be verified or
+rejected. When a decision is reached, the verifying party  
+will log in to change the status and edit the report, if necessary.
+
+--------------------------------------
+RFC{{ erratum.rfc_metadata.rfc_number}} {% if erratum.rfc_metadata.draft_name %}({{ erratum.rfc_metadata.draft_name }}){% endif %}
+--------------------------------------
+Title               : {{ erratum.rfc_metadata.title.strip }}
+Publication Date    : {{ erratum.rfc_metadata.publication_month|month_name }} {{ erratum.rfc_metadata.publication_year }}
+Author(s)           : {{ erratum.rfc_metadata.author_names }}
+Category            : {{ erratum.rfc_metadata.std_level }}
+Source              : {{ erratum.rfc_metadata.display_source }}
+Stream              : {{ erratum.rfc_metadata.stream.upper }}
+Verifying Party     : {{ erratum|txt_errata_verifying_party }}
+{% endautoescape %}

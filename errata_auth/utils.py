@@ -56,7 +56,6 @@ def op_logout_url(request):
 
 def has_role(user, role_names, *args, **kwargs):
     """Check if the user has at least one of the specified roles."""
-    print(f"in has_role, role_names = {role_names}")
     if not user.is_authenticated:
         return False
 

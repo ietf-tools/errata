@@ -136,6 +136,42 @@ class Log(models.Model):
         return f"Log {self.id} for Erratum {self.erratum_id}"
 
 
+class AddressListField(models.CharField):
+    def from_db_value(self, value, expression, connection):
+        return self._parse_header_value(value)
+
+    def get_prep_value(self, value: str | Iterable[str]):
+        """Convert python value to query value"""
+        # Parse the value to validate it, then convert to a string for the CharField.
+        # A bit circular, but guarantees that only valid addresses are saved.
+        if isinstance(value, str):
+            parsed = self._parse_header_value(value)
+        else:
+            parsed = self._parse_header_value(",".join(value))
+        return ",".join(parsed)
+
+    def to_python(self, value: str | Iterable[str]):
+        if isinstance(value, str):
+            return self._parse_header_value(value)
+        return self._parse_header_value(",".join(str(item) for item in value))
+
+    def formfield(self, **kwargs):
+        # n.b., the SimpleArrayField is intended for use with postgres ArrayField
+        # but it works cleanly with this field. We are not using a special postgres-
+        # only field in the model.
+        defaults = {"form_class": SimpleArrayField, "base_field": forms.CharField()}
+        defaults.update(kwargs)
+        return super().formfield(**defaults)
+
+    @staticmethod
+    def _parse_header_value(value: str):
+        policy = EmailPolicy(utf8=True)  # allow direct UTF-8 in addresses
+        header = policy.header_factory("To", value)
+        if len(header.defects) > 0:
+            raise ValidationError("; ".join(str(defect) for defect in header.defects))
+        return [str(addr) for addr in header.addresses]
+
+
 class RfcMetadata(models.Model):
     """
     Model representing metadata for RFCs.
@@ -143,13 +179,22 @@ class RfcMetadata(models.Model):
 
     rfc_number = models.PositiveIntegerField(primary_key=True)
     title = models.CharField(max_length=512)
+    author_names = models.CharField(max_length=1024, blank=True)
+    author_emails = AddressListField(blank=True, max_length=2550)
+    shepherd_email = models.EmailField(max_length=255, blank=True)
+    doc_ad_email = models.EmailField(max_length=255, blank=True)
+    area_ad_emails = AddressListField(blank=True, max_length=1020)
+    std_level = models.CharField(max_length=40, blank=True)
     publication_year = models.PositiveIntegerField()
     publication_month = models.PositiveIntegerField()
     group_acronym = models.CharField(max_length=40, blank=True)
+    # group_name = models.CharField(max_length=255, blank=True)
+    group_list_email = models.EmailField(max_length=64, blank=True)
     area_acronym = models.CharField(max_length=40, blank=True)
     stream = models.CharField(max_length=40, blank=True)
     area_assignment = models.CharField(max_length=40, blank=True)
-    obsoleted_by = models.CharField(max_length=160, blank=True)
+    obsoleted_by = models.CharField(max_length=1024, blank=True)
+    updated_by = models.CharField(max_length=1024, blank=True)
 
     def __str__(self):
         return f"RFC {self.rfc_number}: {self.title}"
@@ -171,7 +216,7 @@ class RfcMetadata(models.Model):
             ):
                 result = "IETF - NON WORKING GROUP"
             else:
-                result = self.stream
+                result = self.stream.upper()
         else:
             result = ""
         return result
@@ -242,42 +287,6 @@ class StagedErratum(models.Model):
         verbose_name_plural = "StagedErrata"
 
 
-class AddressListField(models.CharField):
-    def from_db_value(self, value, expression, connection):
-        return self._parse_header_value(value)
-
-    def get_prep_value(self, value: str | Iterable[str]):
-        """Convert python value to query value"""
-        # Parse the value to validate it, then convert to a string for the CharField.
-        # A bit circular, but guarantees that only valid addresses are saved.
-        if isinstance(value, str):
-            parsed = self._parse_header_value(value)
-        else:
-            parsed = self._parse_header_value(",".join(value))
-        return ",".join(parsed)
-
-    def to_python(self, value: str | Iterable[str]):
-        if isinstance(value, str):
-            return self._parse_header_value(value)
-        return self._parse_header_value(",".join(str(item) for item in value))
-
-    def formfield(self, **kwargs):
-        # n.b., the SimpleArrayField is intended for use with postgres ArrayField
-        # but it works cleanly with this field. We are not using a special postgres-
-        # only field in the model.
-        defaults = {"form_class": SimpleArrayField, "base_field": forms.CharField()}
-        defaults.update(kwargs)
-        return super().formfield(**defaults)
-
-    @staticmethod
-    def _parse_header_value(value: str):
-        policy = EmailPolicy(utf8=True)  # allow direct UTF-8 in addresses
-        header = policy.header_factory("To", value)
-        if len(header.defects) > 0:
-            raise ValidationError("; ".join(str(defect) for defect in header.defects))
-        return [str(addr) for addr in header.addresses]
-
-
 class MailMessage(models.Model):
     """Email message to be delivered"""
 
@@ -288,8 +297,8 @@ class MailMessage(models.Model):
         on_delete=models.PROTECT,
         help_text="Erratum to which this message relates",
     )
-    to = AddressListField(blank=False, max_length=1000)
-    cc = AddressListField(blank=True, max_length=1000)
+    to = AddressListField(blank=False, max_length=2550)
+    cc = AddressListField(blank=True, max_length=2550)
     subject = models.CharField(max_length=1000)
     body = models.TextField()
     message_id = models.CharField(default=make_message_id, max_length=255)
