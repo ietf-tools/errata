@@ -4,11 +4,13 @@ import operator
 
 from functools import reduce
 
+import rpcapi_client
 from django.db.models import Q
 
 from errata_auth.utils import is_rpc, is_verifier
 
 from .models import Erratum
+from .rpcapi import with_rpcapi
 
 
 def unverified_errata(user):
@@ -65,3 +67,21 @@ def unverified_errata(user):
 
 def can_classify(user, erratum_id):
     return unverified_errata(user).filter(id=erratum_id).exists()
+
+
+@with_rpcapi
+def test_datatracker_api(*, rpcapi: rpcapi_client.RedApi):
+    """Demo of datatracker API usage
+    
+    todo remove this
+    """
+    # Example: retrieve all sip / sipcore RFCs using default pagination
+    results = []
+    page = rpcapi.red_doc_list(group=["sip", "sipcore"])
+    results.extend([r.number, r.title, r.group.acronym] for r in page.results)
+    offset = len(page.results)
+    while offset < page.count:
+        page = rpcapi.red_doc_list(group=["sip", "sipcore"], offset=offset)
+        results.extend([r.number, r.title, r.group.acronym] for r in page.results)
+        offset += len(page.results)
+    return results

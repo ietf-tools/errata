@@ -29,3 +29,6 @@ __pycache__
 
 # sqlite artifacts
 db.sqlite3
+
+# generated clients
+/openapi
