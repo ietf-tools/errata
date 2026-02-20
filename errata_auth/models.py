@@ -1,4 +1,4 @@
-# Copyright The IETF Trust 2023-2025, All Rights Reserved
+# Copyright The IETF Trust 2023-2026, All Rights Reserved
 # based on github.com/ietf-tools/purple/rpcauth/models.py
 
 from django.contrib.auth.models import AbstractUser

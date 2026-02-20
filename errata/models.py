@@ -178,6 +178,7 @@ class RfcMetadata(models.Model):
     """
 
     rfc_number = models.PositiveIntegerField(primary_key=True)
+    draft_name = models.CharField(max_length=255, blank=True)
     title = models.CharField(max_length=512)
     author_names = models.CharField(max_length=1024, blank=True)
     author_emails = AddressListField(blank=True, max_length=2550)
@@ -188,7 +189,7 @@ class RfcMetadata(models.Model):
     publication_year = models.PositiveIntegerField()
     publication_month = models.PositiveIntegerField()
     group_acronym = models.CharField(max_length=40, blank=True)
-    # group_name = models.CharField(max_length=255, blank=True)
+    group_name = models.CharField(max_length=255, blank=True)
     group_list_email = models.EmailField(max_length=64, blank=True)
     area_acronym = models.CharField(max_length=40, blank=True)
     stream = models.CharField(max_length=40, blank=True)

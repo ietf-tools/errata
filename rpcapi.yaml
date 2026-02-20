@@ -708,6 +708,15 @@ paths:
         description: Number of results to return per page.
         schema:
           type: integer
+      - in: query
+        name: number
+        schema:
+          type: array
+          items:
+            type: integer
+        description: Multiple values may be separated by commas.
+        explode: false
+        style: form
       - name: offset
         required: false
         in: query
@@ -979,6 +988,38 @@ paths:
           description: ''
 components:
   schemas:
+    Area:
+      type: object
+      properties:
+        acronym:
+          type: string
+          maxLength: 40
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          maxLength: 80
+        type:
+          type: string
+          nullable: true
+        ads:
+          type: array
+          items:
+            $ref: '#/components/schemas/AreaDirector'
+          readOnly: true
+      required:
+      - acronym
+      - name
+    AreaDirector:
+      type: object
+      description: |-
+        Serialize an area director
+
+        Works with Email or Role
+      properties:
+        email:
+          type: string
+          format: email
+          readOnly: true
     AuthorPerson:
       type: object
       properties:
@@ -1325,6 +1366,9 @@ components:
         type:
           type: string
           nullable: true
+        list_email:
+          type: string
+          maxLength: 64
       required:
       - acronym
       - name
@@ -1460,28 +1504,6 @@ components:
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    NotifyRfcPublishedAuthorsINDEXEmailErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - authors.INDEX.email
-          type: string
-          description: '* `authors.INDEX.email` - authors.INDEX.email'
-        code:
-          enum:
-          - does_not_exist
-          - incorrect_type
-          type: string
-          description: |-
-            * `does_not_exist` - does_not_exist
-            * `incorrect_type` - incorrect_type
         detail:
           type: string
       required:
@@ -1681,7 +1703,6 @@ components:
       - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXTitlepageNameErrorComponent'
       - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXIsEditorErrorComponent'
       - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXPersonErrorComponent'
-      - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXEmailErrorComponent'
       - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXAffiliationErrorComponent'
       - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXCountryErrorComponent'
       - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXDatatrackerPersonPathErrorComponent'
@@ -1709,7 +1730,6 @@ components:
           authors.INDEX.titlepage_name: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXTitlepageNameErrorComponent'
           authors.INDEX.is_editor: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXIsEditorErrorComponent'
           authors.INDEX.person: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXPersonErrorComponent'
-          authors.INDEX.email: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXEmailErrorComponent'
           authors.INDEX.affiliation: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXAffiliationErrorComponent'
           authors.INDEX.country: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXCountryErrorComponent'
           authors.INDEX.datatracker_person_path: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXDatatrackerPersonPathErrorComponent'
@@ -2284,28 +2304,6 @@ components:
       - attr
       - code
       - detail
-    PurpleRfcPartialUpdateAuthorsINDEXEmailErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - authors.INDEX.email
-          type: string
-          description: '* `authors.INDEX.email` - authors.INDEX.email'
-        code:
-          enum:
-          - does_not_exist
-          - incorrect_type
-          type: string
-          description: |-
-            * `does_not_exist` - does_not_exist
-            * `incorrect_type` - incorrect_type
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     PurpleRfcPartialUpdateAuthorsINDEXIsEditorErrorComponent:
       type: object
       properties:
@@ -2438,7 +2436,6 @@ components:
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXTitlepageNameErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXIsEditorErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXPersonErrorComponent'
-      - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXEmailErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXAffiliationErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXCountryErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent'
@@ -2451,7 +2448,6 @@ components:
           authors.INDEX.titlepage_name: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXTitlepageNameErrorComponent'
           authors.INDEX.is_editor: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXIsEditorErrorComponent'
           authors.INDEX.person: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXPersonErrorComponent'
-          authors.INDEX.email: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXEmailErrorComponent'
           authors.INDEX.affiliation: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXAffiliationErrorComponent'
           authors.INDEX.country: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXCountryErrorComponent'
           authors.INDEX.datatracker_person_path: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent'
@@ -2576,28 +2572,6 @@ components:
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    PurpleRfcUpdateAuthorsINDEXEmailErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - authors.INDEX.email
-          type: string
-          description: '* `authors.INDEX.email` - authors.INDEX.email'
-        code:
-          enum:
-          - does_not_exist
-          - incorrect_type
-          type: string
-          description: |-
-            * `does_not_exist` - does_not_exist
-            * `incorrect_type` - incorrect_type
         detail:
           type: string
       required:
@@ -2736,7 +2710,6 @@ components:
       - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXTitlepageNameErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXIsEditorErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXPersonErrorComponent'
-      - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXEmailErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXAffiliationErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXCountryErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent'
@@ -2749,7 +2722,6 @@ components:
           authors.INDEX.titlepage_name: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXTitlepageNameErrorComponent'
           authors.INDEX.is_editor: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXIsEditorErrorComponent'
           authors.INDEX.person: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXPersonErrorComponent'
-          authors.INDEX.email: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXEmailErrorComponent'
           authors.INDEX.affiliation: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXAffiliationErrorComponent'
           authors.INDEX.country: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXCountryErrorComponent'
           authors.INDEX.datatracker_person_path: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent'
@@ -2824,6 +2796,7 @@ components:
       oneOf:
       - $ref: '#/components/schemas/RedDocListPublishedErrorComponent'
       - $ref: '#/components/schemas/RedDocListStreamErrorComponent'
+      - $ref: '#/components/schemas/RedDocListNumberErrorComponent'
       - $ref: '#/components/schemas/RedDocListGroupErrorComponent'
       - $ref: '#/components/schemas/RedDocListAreaErrorComponent'
       - $ref: '#/components/schemas/RedDocListStatusErrorComponent'
@@ -2833,6 +2806,7 @@ components:
         mapping:
           published: '#/components/schemas/RedDocListPublishedErrorComponent'
           stream: '#/components/schemas/RedDocListStreamErrorComponent'
+          number: '#/components/schemas/RedDocListNumberErrorComponent'
           group: '#/components/schemas/RedDocListGroupErrorComponent'
           area: '#/components/schemas/RedDocListAreaErrorComponent'
           status: '#/components/schemas/RedDocListStatusErrorComponent'
@@ -2864,6 +2838,28 @@ components:
             * `invalid_choice` - invalid_choice
             * `invalid_list` - invalid_list
             * `invalid_pk_value` - invalid_pk_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedDocListNumberErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - number
+          type: string
+          description: '* `number` - number'
+        code:
+          enum:
+          - invalid
+          - max_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_value` - max_value
         detail:
           type: string
       required:
@@ -3050,9 +3046,19 @@ components:
           type: string
         title:
           type: string
+        shepherd:
+          allOf:
+          - $ref: '#/components/schemas/Shepherd'
+          nullable: true
+        ad:
+          allOf:
+          - $ref: '#/components/schemas/AreaDirector'
+          nullable: true
       required:
+      - ad
       - id
       - name
+      - shepherd
       - title
     RelatedRfc:
       type: object
@@ -3108,9 +3114,18 @@ components:
         group:
           $ref: '#/components/schemas/Group'
         area:
-          $ref: '#/components/schemas/Group'
+          $ref: '#/components/schemas/Area'
         stream:
           $ref: '#/components/schemas/StreamName'
+        ad:
+          allOf:
+          - $ref: '#/components/schemas/AreaDirector'
+          readOnly: true
+          nullable: true
+        group_list_email:
+          type: string
+          format: email
+          readOnly: true
         identifiers:
           type: array
           items:
@@ -3186,8 +3201,8 @@ components:
           nullable: true
         email:
           type: string
-          nullable: true
-          description: Email address used by author for submission
+          format: email
+          readOnly: true
         affiliation:
           type: string
           description: Organization/company used by author for submission
@@ -3215,11 +3230,6 @@ components:
         person:
           type: integer
           nullable: true
-        email:
-          type: string
-          minLength: 1
-          nullable: true
-          description: Email address used by author for submission
         affiliation:
           type: string
           description: Organization/company used by author for submission
@@ -3279,7 +3289,13 @@ components:
       - name
     RfcMetadata:
       type: object
-      description: Serialize metadata of an RFC
+      description: |-
+        Serialize metadata of an RFC
+
+        This needs to be called with a Document queryset that has been processed with
+        api.augment_rfc_queryset() or it very likely will not work. Some of the typing
+        refers to Document, but this should really be WithAnnotations[Document, ...].
+        However, have not been able to make that work yet.
       properties:
         number:
           type: integer
@@ -3305,9 +3321,18 @@ components:
         group:
           $ref: '#/components/schemas/Group'
         area:
-          $ref: '#/components/schemas/Group'
+          $ref: '#/components/schemas/Area'
         stream:
           $ref: '#/components/schemas/StreamName'
+        ad:
+          allOf:
+          - $ref: '#/components/schemas/AreaDirector'
+          readOnly: true
+          nullable: true
+        group_list_email:
+          type: string
+          format: email
+          readOnly: true
         identifiers:
           type: array
           items:
@@ -3478,6 +3503,14 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    Shepherd:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
     SlugEnum:
       enum:
       - bcp
@@ -3579,9 +3612,18 @@ components:
         group:
           $ref: '#/components/schemas/Group'
         area:
-          $ref: '#/components/schemas/Group'
+          $ref: '#/components/schemas/Area'
         stream:
           $ref: '#/components/schemas/StreamName'
+        ad:
+          allOf:
+          - $ref: '#/components/schemas/AreaDirector'
+          readOnly: true
+          nullable: true
+        group_list_email:
+          type: string
+          format: email
+          readOnly: true
         identifiers:
           type: array
           items:

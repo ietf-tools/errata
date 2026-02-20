@@ -7,6 +7,10 @@ from django.conf import settings
 from django.template.loader import render_to_string
 
 
+# TODO : this is currently based on draft-rpc-errata-process which doesn't take the knots
+# around apps and rai being handled by art, nor the wit reorganization into account. Some of those
+# knots have already made it into the "what errata can this user validate" code, but it needs to
+# be factored back out so that the same thing happens here and there.
 def send_new_erratum_notification(erratum, user):
     subject = f"[{erratum.erratum_type} Errata Reported] RFC{erratum.rfc_metadata.rfc_number} ({erratum.id})"
     body = render_to_string(
@@ -23,7 +27,7 @@ def send_new_erratum_notification(erratum, user):
             cc.append(erratum.submitter_email)
         elif (
             stream == "ietf" and erratum.rfc_metadata.group_acronym != "none"
-        ):  # TODO verify "none" is what the metadata sync captures, and that area is populated as gen when it is
+        ):  # TODO verify "none" is what the metadata sync captures, and that area is populated as gen when it is (update: no, area is not populated. Need special code in the errata app for these docs.)
             to.extend(metadata.author_emails)
             if metadata.doc_ad_email:
                 to.append(metadata.doc_ad_email)
