@@ -1,4 +1,4 @@
-# Copyright The IETF Trust 2025, All Rights Reserved
+# Copyright The IETF Trust 2025-2026, All Rights Reserved
 # based on github.com/ietf-tools/purple/rpcauth/utils.py
 
 from functools import WRAPPER_ASSIGNMENTS, wraps

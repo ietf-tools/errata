@@ -41,6 +41,7 @@ class Migration(migrations.Migration):
                     "rfc_number",
                     models.PositiveIntegerField(primary_key=True, serialize=False),
                 ),
+                ("draft_name", models.CharField(blank=True, max_length=255)),
                 ("title", models.CharField(max_length=512)),
                 ("author_names", models.CharField(blank=True, max_length=1024)),
                 (
@@ -57,6 +58,7 @@ class Migration(migrations.Migration):
                 ("publication_year", models.PositiveIntegerField()),
                 ("publication_month", models.PositiveIntegerField()),
                 ("group_acronym", models.CharField(blank=True, max_length=40)),
+                ("group_name", models.CharField(blank=True, max_length=255)),
                 ("group_list_email", models.EmailField(blank=True, max_length=64)),
                 ("area_acronym", models.CharField(blank=True, max_length=40)),
                 ("stream", models.CharField(blank=True, max_length=40)),
