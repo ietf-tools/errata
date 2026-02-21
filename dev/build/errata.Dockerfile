@@ -36,8 +36,6 @@ COPY --chmod=+x ./dev/build/celery-start.sh ./celery-start.sh
 COPY --chmod=+x ./dev/build/migration-start.sh ./migration-start.sh
 COPY ./dev/build/gunicorn.conf.py ./gunicorn.conf.py
 
-RUN pip3 --disable-pip-version-check --no-cache-dir install -r requirements.txt
-
 CMD ["./start.sh"]
 
 EXPOSE 8000
