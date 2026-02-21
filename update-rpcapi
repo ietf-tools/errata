@@ -9,7 +9,7 @@ WORKSPACE=/workspace
 # Try to fetch schema from datatracker
 RPCAPI_TMPDIR=$(mktemp -d)
 trap '/bin/rm -rf -- "$RPCAPI_TMPDIR"' EXIT
-if curl -s http://host.docker.internal:8000/api/schema/ -o "$RPCAPI_TMPDIR/rpcapi.yaml"; then
+if curl -sf http://host.docker.internal:8000/api/schema/ -o "$RPCAPI_TMPDIR/rpcapi.yaml"; then
   /bin/cp "$RPCAPI_TMPDIR/rpcapi.yaml" "$WORKSPACE/rpcapi.yaml"
   echo "Updated rpcapi.yaml from local datatracker, using new schema."
 elif [[ -f "$WORKSPACE/rpcapi.yaml" ]]; then

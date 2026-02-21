@@ -1,6 +1,8 @@
 FROM python:3.12-trixie AS base
 LABEL maintainer="IETF Tools Team <tools-discuss@ietf.org>"
 ENV DEBIAN_FRONTEND=noninteractive
+ARG USER_UID=1000
+ARG USER_GID=1000
 
 # Add Node.js Source
 RUN mkdir -p /etc/apt/keyrings \
@@ -21,8 +23,8 @@ RUN cd /tmp/pip-tmp && \
     pip3 --disable-pip-version-check --no-cache-dir install --no-warn-script-location -r /tmp/pip-tmp/requirements.txt &&  \
     rm -rf /tmp/pip-tmp
 
-RUN groupadd --force --gid 1000 notroot && \
-    useradd -s /bin/bash --uid 1000 --gid 1000 -m notroot
+RUN groupadd --force --gid "${USER_GID}" notroot && \
+    useradd -s /bin/bash --uid "${USER_UID}" --gid "${USER_GID}" -m notroot
 
 WORKDIR /workspace
 
