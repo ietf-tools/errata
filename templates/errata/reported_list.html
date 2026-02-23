@@ -18,9 +18,15 @@
                             <div class="card h-100 shadow-sm">
                                 <div class="card-header bg-light text-dark">
                                     <h3 class="mt-4">RFC {{ rfc_group.grouper }}</h3>
-                                    <div class="card-body">
-                                        <!--<p class="mb-0">TODO: show obsoleted/updated</p>-->
+                                    <div class="card-body{% if rfc_group.list.0.rfc_metadata.obsoleted_by %} bg-danger text-light{% elif rfc_group.list.0.rfc_metadata.updated_by %} bg-warning text-light{% endif %}">
                                         <p class="mb-0"><strong>Source of RFC:</strong> {{ rfc_group.list.0.rfc_metadata.display_source }}</p>
+                                        {% if rfc_group.list.0.rfc_metadata.obsoleted_by %}
+                                            <p class="mb-0">⚠ This RFC has been obsoleted!</p>
+                                            <p class="mb-0"><strong>Obsoleted by:</strong> {{ rfc_group.list.0.rfc_metadata.obsoleted_by }}</p>
+                                        {% endif %}
+                                        {% if rfc_group.list.0.rfc_metadata.updated_by %}
+                                            <p class="mb-0"><strong>Updated by:</strong> {{ rfc_group.list.0.rfc_metadata.updated_by }}</p>
+                                        {% endif %}
                                         {% if rfc_group_list.0.rfc_metadata.area_assignment %}
                                             <p class="mb-0">Area assignment: {{ rfc_group.list.0.rfc_metadata.area_assignment }}</p>
                                         {% endif %}

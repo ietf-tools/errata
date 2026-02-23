@@ -144,8 +144,8 @@ def update_rfc_metadata(rfc_numbers=[], *, rpcapi: rpcapi_client.RedApi) -> None
                     group_list_email=r.group_list_email,
                     area_acronym=r.area.acronym if r.area else "",
                     stream=r.stream.slug,
-                    obsoleted_by=", ".join([f"RFC{o.number}" for o in r.obsoleted_by]),
-                    updated_by=", ".join([f"RFC{u.number}" for u in r.updated_by]),
+                    obsoleted_by=", ".join([f"RFC{o.number}" for o in sorted(r.obsoleted_by, key=lambda x: x.number)]),
+                    updated_by=", ".join([f"RFC{u.number}" for u in sorted(r.updated_by, key=lambda x: x.number)]),
                 ),
             )
         offset += len(page.results)
