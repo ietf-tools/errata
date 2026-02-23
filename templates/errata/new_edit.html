@@ -6,6 +6,19 @@
 {% block content %}
 <div class="container mt-4">
     <h1>Edit New Erratum for RFC{{ staged_erratum.rfc_number }}</h1>
+    {% if staged_erratum.rfc_metadata.obsoleted_by %}
+        <div class="alert alert-danger" role="alert">
+            ⚠ This RFC has been obsoleted by {{ staged_erratum.rfc_metadata.obsoleted_by }}!
+        </div>
+    {% endif %}
+    {% if staged_erratum.rfc_metadata.updated_by %}
+        <div class="alert alert-warning" role="alert">
+            This RFC has been updated by {{ staged_erratum.rfc_metadata.updated_by }}
+        </div>
+    {% endif %}
+    {% if staged_erratum.rfc_metadata.obsoleted_by or staged_erratum.rfc_metadata.updated_by %}
+        <p class="mb-4">Please verify that your erratum is still applicable given the above changes to this RFC.</p>
+    {% endif %}
     <p class="font-italic"><This erratum has not yet been submitted.</p>
     <form method="post" class="mt-4">
         {% csrf_token %}

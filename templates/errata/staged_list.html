@@ -11,6 +11,16 @@
         <div class="card-header bg-primary text-light">
             <h4 class="mt-4">New Erratum for RFC{{ erratum.rfc_number }} (UUID: {{erratum.id}})</h4>
         </div>
+        {% if erratum.rfc_metadata.obsoleted_by %}
+            <p class="mb-0 bg-danger text-light">⚠ This RFC has been obsoleted!</p>
+            <p class="mb-0 bg-danger text-light"><strong>Obsoleted by:</strong> {{ erratum.rfc_metadata.obsoleted_by }}</p>
+        {% endif %}
+        {% if erratum.rfc_metadata.updated_by %}
+            <p class="mb-0 bg-warning text-light"><strong>Updated by:</strong> {{ erratum.rfc_metadata.updated_by }}</p>
+        {% endif %}
+        {% if erratum.rfc_metadata.area_assignment %}
+            <p class="mb-0 bg-warning text-light">Area assignment: {{ erratum.rfc_metadata.area_assignment }}</p>
+        {% endif %}
         {% include "errata/staged_erratum_card_body.html" %}
         <hr>
         <div class="card-body">

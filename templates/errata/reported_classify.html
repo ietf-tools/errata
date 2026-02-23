@@ -5,11 +5,17 @@
 
 {% block content %}
 <div class="card mb-4">
-    <div class="card-header bg-info text-dark">
+    <div class="card-header{% if form.instance.rfc_metadata.obsoleted_by %} bg-danger text-light{% elif form.instance.rfc_metadata.updated_by %} bg-warning text-dark{% else %} bg-info text-dark{% endif %}">
         <h1>Classify Erratum {{form.instance.id}}</h1>
         <p class="mb-0">RFC {{ form.instance.rfc_number }}, "{{ form.instance.rfc_metadata.title }}", {{ form.instance.rfc_metadata.publication_month|month_name }} {{ form.instance.rfc_metadata.publication_year }}</p>
-         <!--<p class="mb-0">TODO: show obsoleted/updated</p>-->
         <p class="mb-0"><strong>Source of RFC:</strong> {{ form.instance.rfc_metadata.display_source }}</p>
+        {% if form.instance.rfc_metadata.obsoleted_by %}
+            <p class="mb-0">⚠ This RFC has been obsoleted!</p>
+            <p class="mb-0"><strong>Obsoleted by:</strong> {{ form.instance.rfc_metadata.obsoleted_by }}</p>
+        {% endif %}
+        {% if form.instance.rfc_metadata.updated_by %}
+            <p class="mb-0t"><strong>Updated by:</strong> {{ form.instance.rfc_metadata.updated_by }}</p>
+        {% endif %}
         {% if form.instance.rfc_metadata.area_assignment %}
         <p class="mb-0">Area assignment {{form.instance.rfc_metadata.area_assignment}}</p>
         {% endif %}
