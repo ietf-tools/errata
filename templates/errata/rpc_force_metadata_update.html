@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load filters django_bootstrap5 %}
+
+{% block title %}Force RFC Metadata Update{% endblock %}
+
+{% block content %}
+<h1>Force RFC Metadata Update</h1>
+<div class="bg-danger text-light p-3 mb-4">
+    <p class="mb-0"><strong>⚠ WARNING: This operation can be expensive and should only be used when necessary!</strong></p>
+<p>This page allows you to trigger an update of RFC metadata for all RFCs or a specified list of RFC numbers.
+It should <strong>only</strong>  be used when an error has occured with the automated synchronization with the datatracker.
+If possible sync only a small number of affected RFCs. Syncing the entire series is an expensive operation that should not be run frequently.</p>
+</div>
+<form method="post" class="mt-4">
+    {% csrf_token %}
+    {% bootstrap_form form %}
+    <button class="btn btn-danger" type="submit">Update Metadata</button>
+</form>
+{% endblock %}

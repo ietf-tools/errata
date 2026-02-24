@@ -71,4 +71,14 @@ urlpatterns = [
         views.reported_classify,
         name="errata_reported_classify",
     ),
+    path(
+        "rpc/force-metadata-update/",
+        views.rpc_force_metadata_update,
+        name="errata_rpc_force_metadata_update",
+    ),
+    path(
+        "rpc/force-metadata-update/accepted/",
+        views.rpc_force_metadata_update_accepted,
+        name="errata_rpc_force_metadata_update_accepted",
+    ),
 ]

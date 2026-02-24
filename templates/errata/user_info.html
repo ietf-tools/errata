@@ -23,6 +23,11 @@
                             <a href="{% url 'errata_reported_list' %}" class="btn btn-primary">Verify Reported Errata</a>
                         {% endif %}
                     </div>
+                    {% if user|has_role:"rpc" %}
+                        <div class="mt-4">
+                            <a href="{% url 'errata_rpc_force_metadata_update' %}" class="btn btn-danger">Force RFC Metadata Update</a>
+                        </div>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>

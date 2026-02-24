@@ -203,3 +203,35 @@ class EditErratumForm(forms.ModelForm):
             self.add_error(
                 "corrected_text", "Corrected Text must be different from Original Text."
             )
+
+class RfcNumberListForm(forms.Form):
+    rfc_numbers = forms.CharField(
+        widget=forms.TextInput(attrs={"placeholder": "e.g. 1234, 5678-5680  Leave blank for all RFCs"}),
+        required=False,
+        label="RFC Numbers",
+    )
+
+    def clean_rfc_numbers(self):
+        rfc_numbers_str = self.cleaned_data["rfc_numbers"]
+        if rfc_numbers_str.strip() == "":
+            return []
+        rfc_numbers = set()
+        for part in rfc_numbers_str.split(","):
+            part = part.strip()
+            if "-" in part:
+                start_str, end_str = part.split("-", 1)
+                try:
+                    start = int(start_str)
+                    end = int(end_str)
+                    if start > end:
+                        raise forms.ValidationError(f"Invalid range: {part}")
+                    rfc_numbers.update(range(start, end + 1))
+                except ValueError:
+                    raise forms.ValidationError(f"Invalid RFC number in range: {part}")
+            else:
+                try:
+                    rfc_number = int(part)
+                    rfc_numbers.add(rfc_number)
+                except ValueError:
+                    raise forms.ValidationError(f"Invalid RFC number: {part}")
+        return sorted(rfc_numbers)
