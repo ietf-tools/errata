@@ -92,16 +92,16 @@ def test_datatracker_api(*, rpcapi: rpcapi_client.RedApi):
 
 
 @with_rpcapi
-def update_rfc_metadata(rfc_numbers=[], *, rpcapi: rpcapi_client.RedApi) -> None:
+def update_rfc_metadata(rfc_numbers=(), *, rpcapi: rpcapi_client.RedApi) -> None:
     """Update the rfc_metadata table for a given list of rfc numbers.
 
     If no list is provided, update metadata for all RFCs.
     """
-    if rfc_numbers != []:
-        # TODO limit the search to these numbers once the API supports it
-        raise NotImplementedError()
+    api_kwargs = dict(sort=["published"], limit=500)
+    if rfc_numbers != ():
+        api_kwargs["number"] = list(rfc_numbers)
     policy = EmailPolicy(utf8=True)
-    page = rpcapi.red_doc_list(sort=["published"], limit=500)
+    page = rpcapi.red_doc_list(**api_kwargs)
     offset = 0
     while offset < page.count:
         for r in page.results:
@@ -144,12 +144,24 @@ def update_rfc_metadata(rfc_numbers=[], *, rpcapi: rpcapi_client.RedApi) -> None
                     group_list_email=r.group_list_email,
                     area_acronym=r.area.acronym if r.area else "",
                     stream=r.stream.slug,
-                    obsoleted_by=", ".join([f"RFC{o.number}" for o in sorted(r.obsoleted_by, key=lambda x: x.number)]),
-                    updated_by=", ".join([f"RFC{u.number}" for u in sorted(r.updated_by, key=lambda x: x.number)]),
+                    obsoleted_by=", ".join(
+                        [
+                            f"RFC{o.number}"
+                            for o in sorted(r.obsoleted_by, key=lambda x: x.number)
+                        ]
+                    ),
+                    updated_by=", ".join(
+                        [
+                            f"RFC{u.number}"
+                            for u in sorted(r.updated_by, key=lambda x: x.number)
+                        ]
+                    ),
                 ),
             )
         offset += len(page.results)
-        page = rpcapi.red_doc_list(sort=["published"], limit=500, offset=offset)
+        api_kwargs["offset"] = offset
+        if offset < page.count:
+            page = rpcapi.red_doc_list(**api_kwargs)
     return
 
 

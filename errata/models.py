@@ -203,7 +203,7 @@ class RfcMetadata(models.Model):
     def display_source(self):
         if self.group_acronym != "":
             result = self.group_acronym
-            if self.stream=="ietf" and self.area_acronym != "":
+            if self.stream == "ietf" and self.area_acronym != "":
                 result += f" ({self.area_acronym})"
             elif self.stream != "":
                 result += f" ({self.stream})"

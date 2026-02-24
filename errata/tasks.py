@@ -6,6 +6,7 @@ from django.db.models import F
 from utils.task_utils import RetryTask
 
 from .models import MailMessage
+from .utils import update_rfc_metadata
 
 logger = get_task_logger(__name__)
 
@@ -40,3 +41,9 @@ def send_mail_task(message_id):
         # Always increment this
         MailMessage.objects.filter(pk=message_id).update(attempts=F("attempts") + 1)
     message.delete()
+
+
+@shared_task
+def update_rfc_metadata_task(rfc_numbers=()):
+    # print(f"DEBUG Starting update_rfc_metadata_task for RFCs: {rfc_numbers if rfc_numbers else 'all RFCs'}") # TODO log instead
+    update_rfc_metadata(rfc_numbers)

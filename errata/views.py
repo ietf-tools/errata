@@ -14,6 +14,7 @@ from .forms import (
     ErrataSearchForm,
     ChooseRfcForm,
     ConfirmExistingErrataReadForm,
+    RfcNumberListForm,
 )
 from .mail import send_erratum_classified_notification, send_new_erratum_notification
 from .models import (
@@ -25,6 +26,7 @@ from .models import (
     Status,
 )
 from .search import search_errata
+from .tasks import update_rfc_metadata_task
 from .utils import can_classify, unverified_errata
 
 
@@ -182,7 +184,6 @@ def staged_list(request):
         uuid = request.POST.get("uuid")
         action = request.POST.get("action")
         staged_erratum = get_object_or_404(StagedErratum, id=uuid)
-        print(action)
         if action == "delete":
             return redirect(
                 "errata_staged_confirm_delete", staged_erratum_id=staged_erratum.id
@@ -348,3 +349,20 @@ def reported_classify(request, erratum_id: int):
     else:
         form = EditErratumForm(instance=erratum)
     return render(request, "errata/reported_classify.html", dict(form=form))
+
+
+@role_required("rpc")
+def rpc_force_metadata_update(request):
+    if request.method == "POST":
+        form = RfcNumberListForm(request.POST)
+        if form.is_valid():
+            rfc_numbers = form.cleaned_data["rfc_numbers"]
+            update_rfc_metadata_task.delay(rfc_numbers)
+            return redirect("errata_rpc_force_metadata_update_accepted")
+    else:
+        form = RfcNumberListForm()
+    return render(request, "errata/rpc_force_metadata_update.html", dict(form=form))
+    
+@role_required("rpc")
+def rpc_force_metadata_update_accepted(request):
+    return render(request, "errata/rpc_force_metadata_update_accepted.html")
