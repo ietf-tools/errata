@@ -81,4 +81,9 @@ urlpatterns = [
         views.rpc_force_metadata_update_accepted,
         name="errata_rpc_force_metadata_update_accepted",
     ),
+    path(
+        "api/rfc_metadata_update/",
+        views.api_rfc_metadata_update,
+        name="errata_api_rfc_metadata_update",
+    ),
 ]
