@@ -225,6 +225,9 @@ LOGGING = {
     },
 }
 
+# Simple API keys
+APP_API_TOKENS = {}
+
 # Celery
 CELERY_TIMEZONE = "UTC"
 CELERY_BROKER_URL = os.environ.get("ERRATA_BROKER_URL", "amqp://mq/")

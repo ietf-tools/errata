@@ -1,11 +1,14 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 
 import datetime
+import json
 
-from django.http import Http404
-from django.views.decorators.http import require_GET
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET
 
+from errata.utils_api import requires_api_token
 from errata_auth.utils import role_required
 
 from .forms import (
@@ -362,7 +365,36 @@ def rpc_force_metadata_update(request):
     else:
         form = RfcNumberListForm()
     return render(request, "errata/rpc_force_metadata_update.html", dict(form=form))
-    
+
+
 @role_required("rpc")
 def rpc_force_metadata_update_accepted(request):
     return render(request, "errata/rpc_force_metadata_update_accepted.html")
+
+
+@requires_api_token
+@csrf_exempt
+def api_rfc_metadata_update(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST requests are allowed."}, status=405)
+    try:
+        data = json.loads(request.body)
+        rfc_number_list = data.get("rfc_number_list", None)
+        if rfc_number_list is None:
+            return JsonResponse({"error": "rfc_number_list is required."}, status=400)
+        if type(rfc_number_list) is not list:
+            return JsonResponse(
+                {"error": "rfc_number_list must be a list."},
+                status=400,
+            )
+        if any([type(num) is not int or num <= 0 for num in rfc_number_list]):
+            return JsonResponse(
+                {"error": "rfc_number_list must be a list of postitive integers."},
+                status=400,
+            )
+        update_rfc_metadata_task.delay(rfc_number_list)
+        return JsonResponse(
+            {"message": f"Metadata update for RFCs {rfc_number_list} has been queued."}
+        )
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON."}, status=400)
