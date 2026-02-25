@@ -204,9 +204,12 @@ class EditErratumForm(forms.ModelForm):
                 "corrected_text", "Corrected Text must be different from Original Text."
             )
 
+
 class RfcNumberListForm(forms.Form):
     rfc_numbers = forms.CharField(
-        widget=forms.TextInput(attrs={"placeholder": "e.g. 1234, 5678-5680  Leave blank for all RFCs"}),
+        widget=forms.TextInput(
+            attrs={"placeholder": "e.g. 1234, 5678-5680  Leave blank for all RFCs"}
+        ),
         required=False,
         label="RFC Numbers",
     )

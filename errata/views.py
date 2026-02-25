@@ -362,7 +362,8 @@ def rpc_force_metadata_update(request):
     else:
         form = RfcNumberListForm()
     return render(request, "errata/rpc_force_metadata_update.html", dict(form=form))
-    
+
+
 @role_required("rpc")
 def rpc_force_metadata_update_accepted(request):
     return render(request, "errata/rpc_force_metadata_update_accepted.html")
