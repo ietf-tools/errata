@@ -998,9 +998,6 @@ components:
         name:
           type: string
           maxLength: 80
-        type:
-          type: string
-          nullable: true
         ads:
           type: array
           items:
@@ -3114,7 +3111,9 @@ components:
         group:
           $ref: '#/components/schemas/Group'
         area:
-          $ref: '#/components/schemas/Area'
+          allOf:
+          - $ref: '#/components/schemas/Area'
+          readOnly: true
         stream:
           $ref: '#/components/schemas/StreamName'
         ad:
@@ -3321,7 +3320,9 @@ components:
         group:
           $ref: '#/components/schemas/Group'
         area:
-          $ref: '#/components/schemas/Area'
+          allOf:
+          - $ref: '#/components/schemas/Area'
+          readOnly: true
         stream:
           $ref: '#/components/schemas/StreamName'
         ad:
@@ -3612,7 +3613,9 @@ components:
         group:
           $ref: '#/components/schemas/Group'
         area:
-          $ref: '#/components/schemas/Area'
+          allOf:
+          - $ref: '#/components/schemas/Area'
+          readOnly: true
         stream:
           $ref: '#/components/schemas/StreamName'
         ad:
