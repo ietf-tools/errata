@@ -1,4 +1,5 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
+
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.db.models import F
@@ -45,5 +46,7 @@ def send_mail_task(message_id):
 
 @shared_task
 def update_rfc_metadata_task(rfc_numbers=()):
-    # print(f"DEBUG Starting update_rfc_metadata_task for RFCs: {rfc_numbers if rfc_numbers else 'all RFCs'}") # TODO log instead
+    logger.info(
+        f"Starting update_rfc_metadata_task for RFCs: {rfc_numbers if rfc_numbers else 'all RFCs'}"
+    )
     update_rfc_metadata(rfc_numbers)

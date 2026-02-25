@@ -47,7 +47,7 @@ def get_ad_emails(erratum):
     if target_acronym is not None:
         proxy_meta = RfcMetadata.objects.filter(area_acronym=target_acronym).first()
         if proxy_meta is None:
-            # TODO log complaint
+            logger.warning(f"Can not find AD addresses for area {target_acronym}")
             return []
         return proxy_meta.area_ad_emails
     else:

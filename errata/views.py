@@ -1,6 +1,7 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 
 import datetime
+import logging
 import json
 
 from django.http import Http404, JsonResponse
@@ -31,6 +32,8 @@ from .models import (
 from .search import search_errata
 from .tasks import update_rfc_metadata_task
 from .utils import can_classify, unverified_errata
+
+logger = logging.getLogger(__name__)
 
 
 def user_info(request):
@@ -219,7 +222,7 @@ def staged_confirm_delete(request, staged_erratum_id):
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "delete":
-            # TODO: log that we deleted the object
+            logger.info(f"Deleted staged erratum {staged_erratum.pk}")
             staged_erratum.delete()
             return redirect("errata_staged_list)")
         else:
@@ -281,8 +284,6 @@ def staged_rpc_add_to_unverified(request, staged_erratum_id, erratum_type):
         action = request.POST.get("action", "")
         if action == "confirm":
             reported = Status.objects.get(slug="reported")
-            # Will need `erratum=` on this create for logging
-            # and email.
             erratum = Erratum.objects.create(
                 rfc_number=staged_erratum.rfc_number,
                 rfc_metadata_id=staged_erratum.rfc_number,
@@ -300,7 +301,9 @@ def staged_rpc_add_to_unverified(request, staged_erratum_id, erratum_type):
                 formats=staged_erratum.formats,
             )
             staged_erratum.delete()
-            # TODO: log what happened
+            logger.info(
+                f"Promoted staged erratum {staged_erratum_id} to Erratum {erratum.pk}"
+            )
             send_new_erratum_notification(erratum, request.user)
             return redirect("errata_staged_list")
         else:
