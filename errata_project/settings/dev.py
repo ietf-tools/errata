@@ -11,6 +11,8 @@ DATABASES = {
     }
 }
 
+ALLOWED_HOSTS = ["*"]
+
 # OIDC configuration (see also base.py)
 OIDC_RP_CLIENT_ID = os.environ["ERRATA_OIDC_RP_CLIENT_ID"]
 OIDC_RP_CLIENT_SECRET = os.environ["ERRATA_OIDC_RP_CLIENT_SECRET"]
@@ -34,3 +36,7 @@ EMAIL_PORT = int(os.getenv("ERRATA_EMAIL_PORT", 1025))
 DATATRACKER_BASE = "http://localhost:8000"
 DATATRACKER_RPC_API_BASE = "http://host.docker.internal:8000"
 DATATRACKER_RPC_API_TOKEN = "redtoken"  # not a real secret
+
+APP_API_TOKENS = {
+    "errata.views.api_rfc_metadata_update": ["not a real secret"],
+}
