@@ -74,24 +74,6 @@ def can_classify(user, erratum_id):
 
 
 @with_rpcapi
-def test_datatracker_api(*, rpcapi: rpcapi_client.RedApi):
-    """Demo of datatracker API usage
-
-    todo remove this
-    """
-    # Example: retrieve all sip / sipcore RFCs using default pagination
-    results = []
-    page = rpcapi.red_doc_list(group=["sip", "sipcore"])
-    results.extend([r.number, r.title, r.group.acronym] for r in page.results)
-    offset = len(page.results)
-    while offset < page.count:
-        page = rpcapi.red_doc_list(group=["sip", "sipcore"], offset=offset)
-        results.extend([r.number, r.title, r.group.acronym] for r in page.results)
-        offset += len(page.results)
-    return results
-
-
-@with_rpcapi
 def update_rfc_metadata(rfc_numbers=(), *, rpcapi: rpcapi_client.RedApi) -> None:
     """Update the rfc_metadata table for a given list of rfc numbers.
 
