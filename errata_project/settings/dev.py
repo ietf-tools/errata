@@ -43,14 +43,15 @@ APP_API_TOKENS = {
     "errata.views.api_rfc_metadata_update": ["not a real secret"],
 }
 
-STORAGES["blobstore"] = {
-    "BACKEND": "storages.backends.s3.S3Storage",
-    "OPTIONS": {
-        "bucket_name": "errata",
-        "endpoint_url": "http://blobstore:9000",
-        "access_key": "minioroot",
-        "secret_key": "miniopass",
-        "security_token": None,
-        "verify": False,
-    },
-}
+for _bucket in STORAGE_BUCKETS:
+    STORAGES[f"{_bucket}_bucket"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": _bucket,
+            "endpoint_url": "http://blobstore:9000",
+            "access_key": "minioroot",
+            "secret_key": "miniopass",
+            "security_token": None,
+            "verify": False,
+        },
+    }

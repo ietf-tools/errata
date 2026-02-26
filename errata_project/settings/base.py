@@ -243,6 +243,7 @@ CELERY_BEAT_SYNC_EVERY = 1  # update DB after every event
 CELERY_BEAT_CRON_STARTING_DEADLINE = 1800  # seconds
 
 # Storage
+STORAGE_BUCKETS = ["red"]
 STORAGES = {
     # Django defaults
     "default": {
@@ -251,9 +252,11 @@ STORAGES = {
     "staticfiles": {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
+} | {
     # Custom entries start here
-    "blobstore": {
-        # dev / prod both replace this - this is a fallback for other situations
+    f"{bucket}_bucket": {
+        # dev / prod both replace these - this is a fallback for other situations
         "BACKEND": "django.core.files.storage.InMemoryStorage",
-    },
+    }
+    for bucket in BUCKETS
 }
