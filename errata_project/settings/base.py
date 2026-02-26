@@ -251,14 +251,7 @@ STORAGES = {
     },
     # Custom entries start here
     "blobstore": {
-        "BACKEND": "storages.backends.s3.S3Storage",
-        "OPTIONS": {
-            "bucket_name": "errata",
-            "endpoint_url": "http://blobstore:9000",
-            "access_key": "minioroot",
-            "secret_key": "miniopass",
-            "security_token": None,
-            "verify": False,
-        }
-    }
+        # dev / prod both replace this - this is a fallback for other situations
+        "BACKEND": "django.core.files.storage.InMemoryStorage",
+    },
 }
