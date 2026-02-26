@@ -241,3 +241,22 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_BEAT_SYNC_EVERY = 1  # update DB after every event
 # Window after after a missed deadline before abandoning a cron task
 CELERY_BEAT_CRON_STARTING_DEADLINE = 1800  # seconds
+
+# Storage
+STORAGE_BUCKETS = ["red"]
+STORAGES = {
+    # Django defaults
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+} | {
+    # Custom entries start here
+    f"{bucket}_bucket": {
+        # dev / prod both replace these - this is a fallback for other situations
+        "BACKEND": "django.core.files.storage.InMemoryStorage",
+    }
+    for bucket in STORAGE_BUCKETS
+}
