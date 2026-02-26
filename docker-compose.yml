@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: docker/errata.Dockerfile
-      target: app-dev
+#      target: app-dev
     init: true
     command: sleep infinity
     depends_on:
@@ -14,6 +14,8 @@ services:
     user: notroot
     volumes:
       - .:/workspace
+    ports:
+      - "8808:8808"
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -48,6 +50,18 @@ services:
     ports:
       - "8825:8025"
 
+  blobstore:
+    image: quay.io/minio/minio:latest
+    entrypoint: bash
+    command: -c "mkdir -p /data/errata && minio server /data --console-address :9002"
+    environment:
+      - MINIO_ROOT_USER=minioroot
+      - MINIO_ROOT_PASSWORD=miniopass
+    volumes:
+      - blob_data:/data
+    ports:
+      - "9002:9002" # dodge datatracker's use of 9001
 
 volumes:
   errata_data:
+  blob_data:
