@@ -111,7 +111,9 @@ if None in (_blob_store_endpoint_url, _blob_store_access_key, _blob_store_secret
         "All of ERRATA_BLOB_STORE_ENDPOINT_URL, ERRATA_BLOB_STORE_ACCESS_KEY, "
         "and ERRATA_BLOB_STORE_SECRET_KEY must be set"
     )
-_blob_store_bucket_prefix = os.environ.get("ERRATA_BLOB_STORE_BUCKET_PREFIX", "")
+_blob_store_bucket_name = os.environ.get(
+    "ERRATA_BLOB_STORE_BUCKET_NAME", "errata"
+).strip()
 _blob_store_max_attempts = int(os.environ.get("ERRATA_BLOB_STORE_MAX_ATTEMPTS", 5))
 _blob_store_connect_timeout = float(
     os.environ.get("ERRATA_BLOB_STORE_CONNECT_TIMEOUT", 10)
@@ -121,7 +123,7 @@ _blob_store_read_timeout = float(os.environ.get("ERRATA_BLOB_STORE_READ_TIMEOUT"
 STORAGES["blobstore"] = {
     "BACKEND": "storages.backends.s3.S3Storage",
     "OPTIONS": dict(
-        bucket_name=f"{_blob_store_bucket_prefix}errata".strip(),
+        bucket_name=_blob_store_bucket_name,
         endpoint_url=_blob_store_endpoint_url,
         access_key=_blob_store_access_key,
         secret_key=_blob_store_secret_key,
