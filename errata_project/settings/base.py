@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "django_bootstrap5",
     "django_celery_beat",
     "rules.apps.AutodiscoverRulesConfig",
+    "simple_history",
     "errata_auth.apps.ErrataAuthConfig",
     "errata.apps.ErrataConfig",
 ]
@@ -49,6 +50,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",
 ]
 
 ROOT_URLCONF = "errata_project.urls"
