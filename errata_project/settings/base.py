@@ -258,5 +258,5 @@ STORAGES = {
         # dev / prod both replace these - this is a fallback for other situations
         "BACKEND": "django.core.files.storage.InMemoryStorage",
     }
-    for bucket in BUCKETS
+    for bucket in STORAGE_BUCKETS
 }
