@@ -3,6 +3,8 @@ import uuid
 from collections.abc import Iterable
 from email.policy import EmailPolicy
 
+from simple_history.models import HistoricalRecords
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import ArrayField
@@ -82,6 +84,7 @@ class Erratum(models.Model):
         blank=True,
         help_text="A list of formats. Possible values: 'HTML', 'PDF', and 'TXT'.",
     )
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"Erratum {self.id} for RFC {self.rfc_number}"
@@ -99,41 +102,6 @@ class Status(Name):
 
 class ErratumType(Name):
     pass
-
-
-class Log(models.Model):
-    """
-    Model representing the log of changes to errata objects.
-
-    If designed from scratch, this would be SimpleHistory instead.
-    """
-
-    erratum = models.ForeignKey(
-        "Erratum", on_delete=models.PROTECT, related_name="logs_erratum"
-    )
-    verifier_name = models.CharField(max_length=80, blank=True, null=True)
-    verifier_email = models.EmailField(max_length=120, blank=True, null=True)
-    status = models.ForeignKey(
-        "Status",
-        on_delete=models.PROTECT,
-        related_name="logs_status",
-        db_column="status_slug",
-    )
-    erratum_type = models.ForeignKey(
-        "ErratumType",
-        on_delete=models.PROTECT,
-        related_name="logs_erratum_type",
-        db_column="erratum_type_slug",
-    )
-    editor_email = models.EmailField(max_length=120, blank=True)
-    section = models.TextField(blank=True)
-    orig_text = models.TextField(blank=True)
-    corrected_text = models.TextField(blank=True)
-    notes = models.TextField(blank=True)
-    created_at = models.DateTimeField(default=timezone.now)
-
-    def __str__(self):
-        return f"Log {self.id} for Erratum {self.erratum_id}"
 
 
 class AddressListField(models.CharField):
