@@ -32,7 +32,7 @@ class Name(models.Model):
 class AutoDateTimeField(models.DateTimeField):
     def pre_save(self, model_instance, add):
         value = getattr(model_instance, self.attname)
-        if value is None:
+        if not add or value is None:
             value = timezone.now()
         return value
 
