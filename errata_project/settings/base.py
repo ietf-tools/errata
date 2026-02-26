@@ -239,3 +239,26 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_BEAT_SYNC_EVERY = 1  # update DB after every event
 # Window after after a missed deadline before abandoning a cron task
 CELERY_BEAT_CRON_STARTING_DEADLINE = 1800  # seconds
+
+# Storage
+STORAGES = {
+    # Django defaults
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+    # Custom entries start here
+    "blobstore": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": "errata",
+            "endpoint_url": "http://blobstore:9000",
+            "access_key": "minioroot",
+            "secret_key": "miniopass",
+            "security_token": None,
+            "verify": False,
+        }
+    }
+}
