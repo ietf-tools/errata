@@ -2,7 +2,7 @@
 import botocore.config
 
 from .base import *  # noqa
-from .base import STORAGES
+from .base import STORAGES, STORAGE_BUCKETS
 from email.utils import parseaddr
 import json
 import os

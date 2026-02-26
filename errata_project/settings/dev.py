@@ -1,6 +1,6 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 from .base import *  # noqa
-from .base import STORAGES
+from .base import STORAGES, STORAGE_BUCKETS
 import os
 
 DATABASES = {
