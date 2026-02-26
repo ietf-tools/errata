@@ -5,6 +5,7 @@ import django.db.models.deletion
 import django.utils.timezone
 import errata.models
 import errata_project.mail
+import simple_history.models
 import uuid
 from django.conf import settings
 from django.db import migrations, models
@@ -263,17 +264,23 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name="Log",
+            name="HistoricalErratum",
             fields=[
                 (
                     "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
+                    models.BigIntegerField(
+                        auto_created=True, blank=True, db_index=True, verbose_name="ID"
                     ),
                 ),
+                ("rfc_number", models.PositiveIntegerField()),
+                ("section", models.TextField(blank=True)),
+                ("orig_text", models.TextField(blank=True)),
+                ("corrected_text", models.TextField(blank=True)),
+                ("submitter_name", models.CharField(blank=True, max_length=80)),
+                ("submitter_email", models.EmailField(blank=True, max_length=120)),
+                ("notes", models.TextField(blank=True)),
+                ("submitted_at", models.DateTimeField(blank=True, null=True)),
+                ("verified_at", models.DateTimeField(blank=True, null=True)),
                 (
                     "verifier_name",
                     models.CharField(blank=True, max_length=80, null=True),
@@ -282,38 +289,83 @@ class Migration(migrations.Migration):
                     "verifier_email",
                     models.EmailField(blank=True, max_length=120, null=True),
                 ),
-                ("editor_email", models.EmailField(blank=True, max_length=120)),
-                ("section", models.TextField(blank=True)),
-                ("orig_text", models.TextField(blank=True)),
-                ("corrected_text", models.TextField(blank=True)),
-                ("notes", models.TextField(blank=True)),
                 ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("updated_at", errata.models.AutoDateTimeField()),
                 (
-                    "erratum",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="logs_erratum",
-                        to="errata.erratum",
+                    "formats",
+                    django.contrib.postgres.fields.ArrayField(
+                        base_field=models.CharField(
+                            choices=[("HTML", "HTML"), ("PDF", "PDF"), ("TXT", "TXT")],
+                            max_length=10,
+                        ),
+                        blank=True,
+                        default=list,
+                        help_text="A list of formats. Possible values: 'HTML', 'PDF', and 'TXT'.",
+                        size=None,
+                    ),
+                ),
+                ("history_id", models.AutoField(primary_key=True, serialize=False)),
+                ("history_date", models.DateTimeField(db_index=True)),
+                ("history_change_reason", models.CharField(max_length=100, null=True)),
+                (
+                    "history_type",
+                    models.CharField(
+                        choices=[("+", "Created"), ("~", "Changed"), ("-", "Deleted")],
+                        max_length=1,
                     ),
                 ),
                 (
                     "erratum_type",
                     models.ForeignKey(
+                        blank=True,
                         db_column="erratum_type_slug",
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="logs_erratum_type",
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
                         to="errata.erratumtype",
+                    ),
+                ),
+                (
+                    "history_user",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "rfc_metadata",
+                    models.ForeignKey(
+                        blank=True,
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
+                        to="errata.rfcmetadata",
                     ),
                 ),
                 (
                     "status",
                     models.ForeignKey(
+                        blank=True,
                         db_column="status_slug",
-                        on_delete=django.db.models.deletion.PROTECT,
-                        related_name="logs_status",
+                        db_constraint=False,
+                        default="reported",
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
                         to="errata.status",
                     ),
                 ),
             ],
+            options={
+                "verbose_name": "historical erratum",
+                "verbose_name_plural": "historical Errata",
+                "ordering": ("-history_date", "-history_id"),
+                "get_latest_by": ("history_date", "history_id"),
+            },
+            bases=(simple_history.models.HistoricalChanges, models.Model),
         ),
     ]

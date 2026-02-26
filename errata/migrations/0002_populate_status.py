@@ -25,12 +25,12 @@ def add_status_data(apps, schema_editor):
             "updated or deprecated.",
             "order": 3,
         },
-        # TODO: Is sort_fix really needed going forward?
         {
             "slug": "sort_fix",
             "name": "Sort-Fix",
             "desc": "Fixing sort order.",
             "order": 4,
+            "used": False,
         },
         {
             "slug": "rejected",

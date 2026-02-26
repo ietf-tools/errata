@@ -1,10 +1,11 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 
+from simple_history.admin import SimpleHistoryAdmin
+
 from django.contrib import admin
 
 from .models import (
     Erratum,
-    Log,
     StagedErratum,
     Status,
     ErratumType,
@@ -12,7 +13,7 @@ from .models import (
 )
 
 
-class ErratumAdmin(admin.ModelAdmin):
+class ErratumAdmin(SimpleHistoryAdmin):
     search_fields = ["rfc_number", "verifier_name", "verifier_email", "submitter_email"]
     list_display = [
         "pk",
@@ -42,22 +43,6 @@ class StatusAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Status, StatusAdmin)
-
-
-class LogAdmin(admin.ModelAdmin):
-    list_display = [
-        "erratum",
-        "verifier_email",
-        "status",
-        "erratum_type",
-        "editor_email",
-        "created_at",
-    ]
-    raw_id_fields = ["erratum"]
-    list_filter = ["erratum"]
-
-
-admin.site.register(Log, LogAdmin)
 
 
 class RfcMetadataAdmin(admin.ModelAdmin):
