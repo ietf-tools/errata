@@ -82,7 +82,9 @@ class Erratum(models.Model):
         return f"Erratum {self.id} for RFC {self.rfc_number}"
 
     def save(self, *args, **kwargs):
-        if self.pk is not None and self.updated_at is None:
+        """Allow a newly minted object to specify an updated_at that is not now,
+        otherwise force updated_at to now."""
+        if self.pk is not None or self.updated_at is None:
             self.updated_at = timezone.now()
         super().save(*args, **kwargs)
 
