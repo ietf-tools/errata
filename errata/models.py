@@ -29,14 +29,6 @@ class Name(models.Model):
         return self.name
 
 
-class AutoDateTimeField(models.DateTimeField):
-    def pre_save(self, model_instance, add):
-        value = getattr(model_instance, self.attname)
-        if not add or value is None:
-            value = timezone.now()
-        return value
-
-
 class Erratum(models.Model):
     """
     Model representing an erratum.
@@ -75,7 +67,7 @@ class Erratum(models.Model):
     verifier_name = models.CharField(max_length=80, blank=True, null=True)
     verifier_email = models.EmailField(max_length=120, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = AutoDateTimeField()
+    updated_at = models.DateTimeField(null=True, blank=True)
     formats = ArrayField(
         models.CharField(
             max_length=10, choices=[("HTML", "HTML"), ("PDF", "PDF"), ("TXT", "TXT")]
@@ -88,6 +80,11 @@ class Erratum(models.Model):
 
     def __str__(self):
         return f"Erratum {self.id} for RFC {self.rfc_number}"
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None and self.updated_at is None:
+            self.updated_at = timezone.now()
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name_plural = "Errata"

@@ -114,7 +114,7 @@ class Migration(migrations.Migration):
                     models.EmailField(blank=True, max_length=120, null=True),
                 ),
                 ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
-                ("updated_at", errata.models.AutoDateTimeField()),
+                ("updated_at", models.DateTimeField(blank=True, null=True)),
                 (
                     "formats",
                     django.contrib.postgres.fields.ArrayField(
@@ -290,7 +290,7 @@ class Migration(migrations.Migration):
                     models.EmailField(blank=True, max_length=120, null=True),
                 ),
                 ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
-                ("updated_at", errata.models.AutoDateTimeField()),
+                ("updated_at", models.DateTimeField(blank=True, null=True)),
                 (
                     "formats",
                     django.contrib.postgres.fields.ArrayField(
