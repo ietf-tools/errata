@@ -67,6 +67,7 @@ class Erratum(models.Model):
     verifier_name = models.CharField(max_length=80, blank=True, null=True)
     verifier_email = models.EmailField(max_length=120, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
+    # updated_at has additional behavior in self.save
     updated_at = models.DateTimeField(null=True, blank=True)
     formats = ArrayField(
         models.CharField(
@@ -83,8 +84,10 @@ class Erratum(models.Model):
 
     def save(self, *args, **kwargs):
         """Allow a newly minted object to specify an updated_at that is not now,
-        otherwise force updated_at to now."""
-        if self.pk is not None or self.updated_at is None:
+        or is even None. Otherwise force updated_at to now."""
+        if self.updated_at is None and not getattr(
+            self, "_allow_null_updated_at", False
+        ):
             self.updated_at = timezone.now()
         super().save(*args, **kwargs)
 
