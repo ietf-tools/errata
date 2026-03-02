@@ -77,7 +77,7 @@ def update_errata_json():
             f"Refreshing errata.json: dirty_time >= processed_time: {dirty_work.dirty_time} >= {dirty_work.processed_time}"
         )
         DirtyBits.objects.filter(slug="errata_json").update(
-            processed_time=datetime.datetime.now().astimezone(datetime.UTC)
+            processed_time=datetime.datetime.now(datetime.UTC)
         )
         try:
             red_bucket = storages["red_bucket"]
