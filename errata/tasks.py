@@ -65,7 +65,9 @@ def update_errata_json():
     An initial period of 5m is suggested."""
     dirty_work = DirtyBits.objects.get(slug="errata_json")
     if dirty_work.dirty_time is None:
-        logger.error("DirtyWork `errata_json` object has unexpected dirty_time of None, skipping update")
+        logger.error(
+            "DirtyWork `errata_json` object has unexpected dirty_time of None, skipping update"
+        )
     elif (
         dirty_work.processed_time is None
         or dirty_work.dirty_time > dirty_work.processed_time
