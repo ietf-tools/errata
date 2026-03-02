@@ -20,6 +20,23 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
+            name="DirtyBits",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("slug", models.CharField(max_length=40)),
+                ("dirty_time", models.DateTimeField(blank=True, null=True)),
+                ("processed_time", models.DateTimeField(blank=True, null=True)),
+            ],
+        ),
+        migrations.CreateModel(
             name="ErratumType",
             fields=[
                 (
