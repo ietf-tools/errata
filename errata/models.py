@@ -92,7 +92,7 @@ class Erratum(models.Model):
             self.updated_at = timezone.now()
         super().save(*args, **kwargs)
         DirtyBits.objects.filter(slug="errata_json").update(
-            dirty_time=datetime.datetime.now().astimezone(datetime.UTC)
+            dirty_time=datetime.datetime.now(datetime.UTC)
         )
         # Keeping this as proof_of_concept, but as the app is currently written,
         # updated_at will change on every save in production, so the extra calculation
@@ -128,7 +128,7 @@ class Erratum(models.Model):
         #         mark_errata_json_dirty = True
         #     if mark_errata_json_dirty:
         #         DirtyBits.objects.filter(slug="errata_json").update(
-        #             dirty_time=datetime.datetime.now().astimezone(datetime.UTC)
+        #             dirty_time=datetime.datetime.now(datetime.UTC)
         #         )
 
     class Meta:

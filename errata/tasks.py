@@ -64,21 +64,30 @@ def update_errata_json():
     N.B. This task MUST be set up to run periodically.
     An initial period of 5m is suggested."""
     dirty_work = DirtyBits.objects.get(slug="errata_json")
+    old_processed_time = dirty_work.processed_time
     if dirty_work.dirty_time is None:
         logger.error(
             "DirtyWork `errata_json` object has unexpected dirty_time of None, skipping update"
         )
     elif (
         dirty_work.processed_time is None
-        or dirty_work.dirty_time > dirty_work.processed_time
+        or dirty_work.dirty_time >= dirty_work.processed_time
     ):
         logger.info(
-            f"Refreshing errata.json: dirty_time > processed_time: {dirty_work.dirty_time} > {dirty_work.processed_time}"
+            f"Refreshing errata.json: dirty_time >= processed_time: {dirty_work.dirty_time} >= {dirty_work.processed_time}"
         )
         DirtyBits.objects.filter(slug="errata_json").update(
             processed_time=datetime.datetime.now().astimezone(datetime.UTC)
         )
-        red_bucket = storages["red_bucket"]
-        red_bucket.save("other/errata.json", io.StringIO(errata_json()))
+        try:
+            red_bucket = storages["red_bucket"]
+            red_bucket.save("other/errata.json", io.StringIO(errata_json()))
+        except Exception as e:
+            # Log the error and swallow it.
+            logger.error(f"Attempt to push to red_bucket failed: {e}")
+            # put. the processed_time. back.
+            DirtyBits.objects.filter(slug="errata_json").update(
+                processed_time=old_processed_time
+            )
     else:
         pass
