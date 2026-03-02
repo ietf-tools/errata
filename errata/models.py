@@ -1,5 +1,8 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
+
+import datetime
 import uuid
+
 from collections.abc import Iterable
 from email.policy import EmailPolicy
 
@@ -83,13 +86,50 @@ class Erratum(models.Model):
         return f"Erratum {self.id} for RFC {self.rfc_number}"
 
     def save(self, *args, **kwargs):
-        """Use decoration to allow specifying an updated_at that is not now, 
+        """Use decoration to allow specifying an updated_at that is not now,
         or is even None. Otherwise force updated_at to now."""
-        if not getattr(
-            self, "_take_given_updated_at_value", False
-        ):
+        if not getattr(self, "_take_given_updated_at_value", False):
             self.updated_at = timezone.now()
         super().save(*args, **kwargs)
+        DirtyBits.objects.filter(slug="errata_json").update(
+            dirty_time=datetime.datetime.now(datetime.UTC)
+        )
+        # Keeping this as proof_of_concept, but as the app is currently written,
+        # updated_at will change on every save in production, so the extra calculation
+        # here is unnecessary.
+        #
+        # h = self.history.last()
+        # if h.prev_record is None:
+        #     mark_errata_json_dirty = True
+        # else:
+        #     delta = h.diff_against(h.prev_record)
+        #     fields = [change.field for change in delta.changes]
+        #     if (
+        #         len(
+        #             set(fields).intersection(
+        #                 set(
+        #                     [
+        #                         "status",
+        #                         "erratum_type",
+        #                         "section",
+        #                         "orig_text",
+        #                         "corrected_text",
+        #                         "notes",
+        #                         "submitted_at",
+        #                         "submitter_name",
+        #                         "verifier_name",
+        #                         "updated_at",
+        #                     ]
+        #                 )
+        #             )
+        #         )
+        #         > 0
+        #     ):
+        #         mark_errata_json_dirty = True
+        #     if mark_errata_json_dirty:
+        #         DirtyBits.objects.filter(slug="errata_json").update(
+        #             dirty_time=datetime.datetime.now(datetime.UTC)
+        #         )
 
     class Meta:
         verbose_name_plural = "Errata"
@@ -289,3 +329,16 @@ class MailMessage(models.Model):
             cc=self.cc,
             headers={"message-id": self.message_id},
         )
+
+
+class DirtyBits(models.Model):
+    """A weak semaphore mechanism for coordination with celery beat tasks
+
+    Web workers will set the "dirty_time" value for a given dirtybit slug.
+    Celery workers will do work if "processed_time" < "dirty_time" and update
+    "processed_time".
+    """
+
+    slug = models.CharField(max_length=40, blank=False)
+    dirty_time = models.DateTimeField(null=True, blank=True)
+    processed_time = models.DateTimeField(null=True, blank=True)

@@ -1,13 +1,18 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 
+import datetime
+import io
+
 from celery import shared_task
 from celery.utils.log import get_task_logger
+
+from django.core.files.storage import storages
 from django.db.models import F
 
 from utils.task_utils import RetryTask
 
-from .models import MailMessage
-from .utils import update_rfc_metadata
+from .models import DirtyBits, MailMessage
+from .utils import errata_json, update_rfc_metadata
 
 logger = get_task_logger(__name__)
 
@@ -50,3 +55,39 @@ def update_rfc_metadata_task(rfc_numbers=()):
         f"Starting update_rfc_metadata_task for RFCs: {rfc_numbers if rfc_numbers else 'all RFCs'}"
     )
     update_rfc_metadata(rfc_numbers)
+
+
+@shared_task
+def update_errata_json():
+    """Periodically update errata.json based on `errata_json` DirtyBits
+
+    N.B. This task MUST be set up to run periodically.
+    An initial period of 5m is suggested."""
+    dirty_work = DirtyBits.objects.get(slug="errata_json")
+    old_processed_time = dirty_work.processed_time
+    if dirty_work.dirty_time is None:
+        logger.error(
+            "DirtyWork `errata_json` object has unexpected dirty_time of None, skipping update"
+        )
+    elif (
+        dirty_work.processed_time is None
+        or dirty_work.dirty_time >= dirty_work.processed_time
+    ):
+        logger.info(
+            f"Refreshing errata.json: dirty_time >= processed_time: {dirty_work.dirty_time} >= {dirty_work.processed_time}"
+        )
+        DirtyBits.objects.filter(slug="errata_json").update(
+            processed_time=datetime.datetime.now(datetime.UTC)
+        )
+        try:
+            red_bucket = storages["red_bucket"]
+            red_bucket.save("other/errata.json", io.StringIO(errata_json()))
+        except Exception as e:
+            # Log the error and swallow it.
+            logger.error(f"Attempt to push to red_bucket failed: {e}")
+            # put. the processed_time. back.
+            DirtyBits.objects.filter(slug="errata_json").update(
+                processed_time=old_processed_time
+            )
+    else:
+        pass
