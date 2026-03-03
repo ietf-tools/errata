@@ -58,7 +58,7 @@ def update_rfc_metadata_task(rfc_numbers=()):
 
 
 @shared_task
-def update_errata_json():
+def update_errata_json_task():
     """Periodically update errata.json based on `errata_json` DirtyBits
 
     N.B. This task MUST be set up to run periodically.
@@ -91,3 +91,19 @@ def update_errata_json():
             )
     else:
         pass
+
+
+@shared_task
+def mail_monthly_report_task():
+    """Send a monthly report to the stream managere.
+
+    This must be scheduled for the 1st of each month.
+    Suggested time is 12:00 UTC."""
+
+    # Avoid a circular import
+    from errata.mail import build_monthly_report
+
+    moment = datetime.datetime.now(datetime.UTC)
+    message = build_monthly_report(moment)
+    # We're already in a task.
+    send_mail_task(message.id)

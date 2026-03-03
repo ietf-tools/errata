@@ -1,0 +1,23 @@
+<html>
+    <head><title>Reported Errata Summary</title></head>
+    <body>
+        <p>Below is a summary of technical errata awaiting review (as of today).</p>
+        <p>Log in to <a href="{{base_url}}">{{base_url}}</a> to verify any errata.</p>
+        <table border='0' width=''>
+        <tr>
+            <th>Errata #</th><th>    Source of RFC</th>
+        </tr>
+        {% for row in authority_data %}
+            <tr>
+                <td>{{ row.count }}</td><td>{{ row.authority }} <a href="{{ row.search_link }}">public page</a></td>
+            </tr>
+        {% endfor %}
+        </table>
+        <p>The links above are to the relevant results on <a href="{{base_url}}">{{base_url}}</a></p>
+        <p>It includes RFCs that have a source of Legacy or Non-WG with an area assignment.</p>
+        <p>For an overview of how to verify errata, please see https://www.rfc-editor.org/how-to-verify/.</p>
+        <p>Please let us know if you have questions.</p>
+        <p>Thank you.</p>
+        <p>RFC Editor</p>
+    </body>
+</html>

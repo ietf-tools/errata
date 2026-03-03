@@ -29,6 +29,8 @@ OIDC_OP_END_SESSION_ENDPOINT = "http://localhost:8000/api/openid/end-session/"
 
 DEPLOYMENT_MODE = "development"
 
+BASE_URL = "http://localhost:8808"
+
 # email
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("ERRATA_EMAIL_HOST", "mailpit")

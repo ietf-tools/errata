@@ -1,5 +1,6 @@
 # Copyright The IETF Trust 2026, All Rights Reserved
 
+import datetime
 import logging
 
 from email.policy import EmailPolicy
@@ -7,6 +8,9 @@ from email.policy import EmailPolicy
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.template.loader import render_to_string
+
+from errata.utils import counts_per_authority
+from errata_auth.models import User
 
 from .models import MailMessage, RfcMetadata
 from .tasks import send_mail_task
@@ -293,3 +297,63 @@ def send_erratum_classified_notification(erratum, user):
         )
     if mail_message is not None:
         send_mail_task.delay(mail_message.pk)
+
+
+def build_monthly_report(moment: datetime.datetime = None):
+    if moment is None:
+        moment = datetime.datetime.now(datetime.UTC)
+    ordered_authorities = [
+        "art",
+        "gen",
+        "int",
+        "ops",
+        "rtg",
+        "sec",
+        "wit",
+        "iab",
+        "ise",
+        "irtf",
+        "legacy",
+        "editorial",
+    ]
+    search_links = {}
+    for authority in ["art", "gen", "int", "ops", "rtg", "sec", "wit"]:
+        search_links[authority] = (
+            f"{settings.BASE_URL}/search/?status=reported&errata_type=technical&area={authority}&presentation=records"
+        )
+    for authority in ["iab", "ise", "irtf", "legacy", "editorial"]:
+        search_links[authority] = (
+            f"{settings.BASE_URL}/search/?status=reported&errata_type=technical&stream={authority}&presentation=records"
+        )
+    authority_counts = counts_per_authority()
+    authority_data = []
+    for authority in ordered_authorities:
+        authority_data.append(
+            {
+                "authority": authority,
+                "count": authority_counts[authority],
+                "search_link": search_links[authority],
+            }
+        )
+    # HTML ONLY BODY IS HORRIBLE.
+    body = render_to_string(
+        "errata/email/monthly_report.html",
+        context=dict(
+            authority_data=authority_data,
+            base_url=settings.BASE_URL,
+        ),
+    )
+    message = MailMessage.objects.create(
+        subject=f"Reported Errata Summary for {moment.strftime('%B, %Y')}",
+        body=body,
+        sender=User.objects.get(username="(System)"),
+        to=[
+            "iesg@ietf.org",
+            "rfc-editor@rfc-editor.org",
+            "iab@iab.org",
+            "irsg@irtf.org",
+            "rfc-ise@rfc-editor.org",
+            "rsab@rfc-editor.org",
+        ],
+    )
+    return message

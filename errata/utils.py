@@ -1,6 +1,7 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 
 import json
+import datetime
 import operator
 # from zoneinfo import ZoneInfo # used to test emitting errata.json in pacifc time
 
@@ -173,3 +174,49 @@ def errata_json():
         for e in Erratum.objects.select_related("rfc_metadata").all()
     ]
     return json.dumps(rows)
+
+
+def counts_per_authority(as_of: datetime.datetime = None):
+    """Return a JSON object of counts of errata by authority as of a given date."""
+    if as_of is None:
+        qs = Erratum.objects.filter(erratum_type_id="technical", status_id="reported")
+    else:
+        qs = Erratum.history.as_of(as_of).filter(
+            erratum_type_id="technical",
+            status_id="reported",
+        )
+    results = {}
+    for authority in [
+        "art",
+        "gen",
+        "int",
+        "ops",
+        "rtg",
+        "sec",
+        "wit",
+        "iab",
+        "ise",
+        "irtf",
+        "legacy",
+        "editorial",
+    ]:
+        if authority == "art":
+            authority_q = Q(
+                rfc_metadata__area_acronym__in=["art", "app", "rai"],
+                rfc_metadata__area_assignment="",
+            ) | Q(rfc_metadata__area_assignment__in=["art", "app", "rai"])
+        elif authority == "legacy":
+            authority_q = Q(
+                rfc_metadata__stream=authority,
+                rfc_metadata__area_assignment="",
+            )
+        elif authority in ["iab", "ise", "irtf", "editorial"]:
+            authority_q = Q(rfc_metadata__stream=authority)
+        else:
+            authority_q = Q(
+                rfc_metadata__area_acronym=authority,
+                rfc_metadata__area_assignment="",
+            ) | Q(rfc_metadata__area_assignment=authority)
+        count = qs.filter(authority_q).count()
+        results[authority] = count
+    return results

@@ -211,21 +211,24 @@ class RfcMetadata(models.Model):
         return f"RFC {self.rfc_number}: {self.title}"
 
     def display_source(self):
-        if self.group_acronym != "":
+        if self.stream == "ise":
+            result = "INDEPENDENT"
+        elif self.stream == "iab":
+            result = "IAB"
+        elif self.stream == "ietf" and (
+            self.group_acronym in ["none", "gen"] or self.area_acronym == ""
+        ):
+            result = "IETF - NON WORKING GROUP"
+        elif self.group_acronym != "none":
             result = self.group_acronym
             if self.stream == "ietf" and self.area_acronym != "":
                 result += f" ({self.area_acronym})"
             elif self.stream != "":
                 result += f" ({self.stream})"
-        elif self.area_acronym != "":
-            result = f"{self.area_acronym} ({self.stream})"
+        # This is intentionally separated from the first branches on stream
         elif self.stream != "":
-            if (
-                self.stream == "ietf"
-                and self.group_acronym == ""
-                and self.area_acronym == ""
-            ):
-                result = "IETF - NON WORKING GROUP"
+            if self.stream == "legacy":
+                result = "Legacy"
             else:
                 result = self.stream.upper()
         else:
@@ -322,13 +325,21 @@ class MailMessage(models.Model):
 
     def as_emailmessage(self):
         """Instantiate an EmailMessage for delivery"""
-        return EmailMessage(
+        # Horrible hack for content-type - if it has to be touched,
+        # refactor the class to make content-type explicit.
+
+        msg = EmailMessage(
             subject=self.subject,
             body=self.body,
             to=self.to,
             cc=self.cc,
             headers={"message-id": self.message_id},
         )
+
+        if self.body.strip().startswith("<html"):
+            msg.content_subtype = "html"
+
+        return msg
 
 
 class DirtyBits(models.Model):
