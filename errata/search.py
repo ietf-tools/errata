@@ -28,7 +28,10 @@ def search_errata(form: ErrataSearchForm):
             search_areas = ["art", "app", "rai"]
         errata = errata.filter(
             Q(rfc_metadata__area_assignment__in=search_areas)
-            | Q(rfc_metadata__area_acronym__in=search_areas)
+            | Q(
+                rfc_metadata__area_acronym__in=search_areas,
+                rfc_metadata__area_assignment="",
+            )
         )
     if (
         form.cleaned_data.get("errata_type")
