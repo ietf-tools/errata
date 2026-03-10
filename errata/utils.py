@@ -114,7 +114,7 @@ def update_rfc_metadata(rfc_numbers=(), *, rpcapi: rpcapi_client.RedApi) -> None
                     draft_name=r.draft.name if r.draft else "",
                     author_names=", ".join(authors),
                     author_emails=", ".join(author_emails),
-                    sheperd_email=r.draft.shepherd.email
+                    shepherd_email=r.draft.shepherd.email
                     if r.draft and r.draft.shepherd and r.draft.shepherd.email
                     else "",
                     doc_ad_email=r.ad.email if r.ad and r.ad.email else "",
