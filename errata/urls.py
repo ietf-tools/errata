@@ -25,6 +25,7 @@ urlpatterns = [
     path("user-info/", views.user_info, name="errata_user_info"),
     path("search/", views.search, name="errata_search"),
     path("eid<int:pk>/", views.detail, name="errata_detail"),
+    path("rfc<int:rfc_number>/", RedirectView.as_view(url="/search/?rfc_number=%(rfc_number)s&presentation=records"), name="errata_rfc_detail"),
     path(
         "new/entry-instructions/",
         views.new_entry_instructions,
