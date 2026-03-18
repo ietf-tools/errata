@@ -122,7 +122,6 @@ def mail_monthly_report_task():
 def trigger_red_precompute_multiple_task(rfc_number_list=()):
     url = getattr(settings, "TRIGGER_RED_PRECOMPUTE_MULTIPLE_URL", None)
     if url is not None:
-        headers = {"Content-Type": "application/json"}
         payload = {
             "rfcs": ",".join([str(n) for n in rfc_number_list]),
         }
@@ -134,7 +133,6 @@ def trigger_red_precompute_multiple_task(rfc_number_list=()):
                 url,
                 json=payload,
                 timeout=settings.DEFAULT_REQUESTS_TIMEOUT,
-                headers=headers,
             )
         except requests.Timeout as e:
             logger.error(f"POST request timed out for {url} ]: {e}")
