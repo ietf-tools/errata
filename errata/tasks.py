@@ -78,27 +78,24 @@ def update_errata_json_task():
         logger.info(
             f"Refreshing errata.json: dirty_time >= processed_time: {dirty_work.dirty_time} >= {dirty_work.processed_time}"
         )
+        new_processed_time_start = datetime.datetime.now(datetime.UTC)
         dirty_rfc_numbers = list(
             Erratum.history.filter(history_date__gt=dirty_work.processed_time)
             .values_list("rfc_number", flat=True)
             .distinct()
             .order_by("rfc_number")
         )
-        DirtyBits.objects.filter(slug="errata_json").update(
-            processed_time=datetime.datetime.now(datetime.UTC)
-        )
         try:
             red_bucket = storages["red_bucket"]
             red_bucket.save("other/errata.json", io.StringIO(errata_json()))
             # Intentionally not using .delay()
             trigger_red_precompute_multiple_task(rfc_number_list=dirty_rfc_numbers)
+            DirtyBits.objects.filter(slug="errata_json").update(
+                processed_time=new_processed_time_start
+            )
         except Exception as e:
             # Log the error and swallow it.
             logger.error(f"Attempt to push to red_bucket failed: {e}")
-            # put. the processed_time. back.
-            DirtyBits.objects.filter(slug="errata_json").update(
-                processed_time=old_processed_time
-            )
     else:
         pass
 
