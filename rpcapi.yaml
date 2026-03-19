@@ -1144,24 +1144,75 @@ components:
     EditableRfc:
       type: object
       properties:
-        id:
-          type: integer
-          readOnly: true
+        title:
+          type: string
+          pattern: "^[^\x01-\x1F]*$"
+          maxLength: 255
         authors:
           type: array
           items:
             $ref: '#/components/schemas/RfcAuthor'
+        stream:
+          type: string
+          nullable: true
+        abstract:
+          type: string
+        pages:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        std_level:
+          type: string
+          nullable: true
+          title: Standardization level
       required:
       - authors
+      - title
     EditableRfcRequest:
       type: object
       properties:
+        published:
+          type: string
+          format: date-time
+          writeOnly: true
+        title:
+          type: string
+          minLength: 1
+          pattern: "^[^\x01-\x1F]*$"
+          maxLength: 255
         authors:
           type: array
           items:
             $ref: '#/components/schemas/RfcAuthorRequest'
+        stream:
+          type: string
+          minLength: 1
+          nullable: true
+        abstract:
+          type: string
+        pages:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        std_level:
+          type: string
+          minLength: 1
+          nullable: true
+          title: Standardization level
+        subseries:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            pattern: ^(bcp|std|fyi)[1-9][0-9]{0,4}$
+          writeOnly: true
       required:
       - authors
+      - published
+      - subseries
+      - title
     EmailPerson:
       type: object
       properties:
@@ -1252,6 +1303,10 @@ components:
           maxLength: 255
         group:
           type: string
+          readOnly: true
+        area:
+          allOf:
+          - $ref: '#/components/schemas/Area'
           readOnly: true
         abstract:
           type: string
@@ -1479,34 +1534,6 @@ components:
       - attr
       - code
       - detail
-    NotifyRfcPublishedAuthorsINDEXDatatrackerPersonPathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - authors.INDEX.datatracker_person_path
-          type: string
-          description: '* `authors.INDEX.datatracker_person_path` - authors.INDEX.datatracker_person_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     NotifyRfcPublishedAuthorsINDEXIsEditorErrorComponent:
       type: object
       properties:
@@ -1702,7 +1729,6 @@ components:
       - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXPersonErrorComponent'
       - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXAffiliationErrorComponent'
       - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXCountryErrorComponent'
-      - $ref: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXDatatrackerPersonPathErrorComponent'
       - $ref: '#/components/schemas/NotifyRfcPublishedGroupErrorComponent'
       - $ref: '#/components/schemas/NotifyRfcPublishedStreamErrorComponent'
       - $ref: '#/components/schemas/NotifyRfcPublishedAbstractErrorComponent'
@@ -1729,7 +1755,6 @@ components:
           authors.INDEX.person: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXPersonErrorComponent'
           authors.INDEX.affiliation: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXAffiliationErrorComponent'
           authors.INDEX.country: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXCountryErrorComponent'
-          authors.INDEX.datatracker_person_path: '#/components/schemas/NotifyRfcPublishedAuthorsINDEXDatatrackerPersonPathErrorComponent'
           group: '#/components/schemas/NotifyRfcPublishedGroupErrorComponent'
           stream: '#/components/schemas/NotifyRfcPublishedStreamErrorComponent'
           abstract: '#/components/schemas/NotifyRfcPublishedAbstractErrorComponent'
@@ -2170,10 +2195,42 @@ components:
     PatchedEditableRfcRequest:
       type: object
       properties:
+        published:
+          type: string
+          format: date-time
+          writeOnly: true
+        title:
+          type: string
+          minLength: 1
+          pattern: "^[^\x01-\x1F]*$"
+          maxLength: 255
         authors:
           type: array
           items:
             $ref: '#/components/schemas/RfcAuthorRequest'
+        stream:
+          type: string
+          minLength: 1
+          nullable: true
+        abstract:
+          type: string
+        pages:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        std_level:
+          type: string
+          minLength: 1
+          nullable: true
+          title: Standardization level
+        subseries:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            pattern: ^(bcp|std|fyi)[1-9][0-9]{0,4}$
+          writeOnly: true
     Person:
       type: object
       properties:
@@ -2217,6 +2274,32 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    PurpleRfcPartialUpdateAbstractErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - abstract
+          type: string
+          description: '* `abstract` - abstract'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     PurpleRfcPartialUpdateAuthorsINDEXAffiliationErrorComponent:
       type: object
       properties:
@@ -2264,34 +2347,6 @@ components:
           description: |-
             * `invalid` - invalid
             * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    PurpleRfcPartialUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - authors.INDEX.datatracker_person_path
-          type: string
-          description: '* `authors.INDEX.datatracker_person_path` - authors.INDEX.datatracker_person_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -2428,6 +2483,8 @@ components:
     PurpleRfcPartialUpdateError:
       oneOf:
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdatePublishedErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateTitleErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXTitlepageNameErrorComponent'
@@ -2435,11 +2492,18 @@ components:
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXPersonErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXAffiliationErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXCountryErrorComponent'
-      - $ref: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateStreamErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateAbstractErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdatePagesErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateStdLevelErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateSubseriesErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateSubseriesINDEXErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/PurpleRfcPartialUpdateNonFieldErrorsErrorComponent'
+          published: '#/components/schemas/PurpleRfcPartialUpdatePublishedErrorComponent'
+          title: '#/components/schemas/PurpleRfcPartialUpdateTitleErrorComponent'
           authors.non_field_errors: '#/components/schemas/PurpleRfcPartialUpdateAuthorsNonFieldErrorsErrorComponent'
           authors.INDEX.non_field_errors: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXNonFieldErrorsErrorComponent'
           authors.INDEX.titlepage_name: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXTitlepageNameErrorComponent'
@@ -2447,7 +2511,12 @@ components:
           authors.INDEX.person: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXPersonErrorComponent'
           authors.INDEX.affiliation: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXAffiliationErrorComponent'
           authors.INDEX.country: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXCountryErrorComponent'
-          authors.INDEX.datatracker_person_path: '#/components/schemas/PurpleRfcPartialUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent'
+          stream: '#/components/schemas/PurpleRfcPartialUpdateStreamErrorComponent'
+          abstract: '#/components/schemas/PurpleRfcPartialUpdateAbstractErrorComponent'
+          pages: '#/components/schemas/PurpleRfcPartialUpdatePagesErrorComponent'
+          std_level: '#/components/schemas/PurpleRfcPartialUpdateStdLevelErrorComponent'
+          subseries: '#/components/schemas/PurpleRfcPartialUpdateSubseriesErrorComponent'
+          subseries.INDEX: '#/components/schemas/PurpleRfcPartialUpdateSubseriesINDEXErrorComponent'
     PurpleRfcPartialUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateValidationError'
@@ -2479,6 +2548,190 @@ components:
       - attr
       - code
       - detail
+    PurpleRfcPartialUpdatePagesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - pages
+          type: string
+          description: '* `pages` - pages'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdatePublishedErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - published
+          type: string
+          description: '* `published` - published'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - 'null'
+          - overflow
+          - required
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `null` - null
+            * `overflow` - overflow
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateStdLevelErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - std_level
+          type: string
+          description: '* `std_level` - std_level'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateStreamErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - stream
+          type: string
+          description: '* `stream` - stream'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateSubseriesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - subseries
+          type: string
+          description: '* `subseries` - subseries'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateSubseriesINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - subseries.INDEX
+          type: string
+          description: '* `subseries.INDEX` - subseries.INDEX'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateTitleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - title
+          type: string
+          description: '* `title` - title'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     PurpleRfcPartialUpdateValidationError:
       type: object
       properties:
@@ -2491,6 +2744,32 @@ components:
       required:
       - errors
       - type
+    PurpleRfcUpdateAbstractErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - abstract
+          type: string
+          description: '* `abstract` - abstract'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     PurpleRfcUpdateAuthorsINDEXAffiliationErrorComponent:
       type: object
       properties:
@@ -2538,34 +2817,6 @@ components:
           description: |-
             * `invalid` - invalid
             * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    PurpleRfcUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - authors.INDEX.datatracker_person_path
-          type: string
-          description: '* `authors.INDEX.datatracker_person_path` - authors.INDEX.datatracker_person_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -2702,6 +2953,8 @@ components:
     PurpleRfcUpdateError:
       oneOf:
       - $ref: '#/components/schemas/PurpleRfcUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdatePublishedErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateTitleErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXTitlepageNameErrorComponent'
@@ -2709,11 +2962,18 @@ components:
       - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXPersonErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXAffiliationErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXCountryErrorComponent'
-      - $ref: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateStreamErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateAbstractErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdatePagesErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateStdLevelErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateSubseriesErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateSubseriesINDEXErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/PurpleRfcUpdateNonFieldErrorsErrorComponent'
+          published: '#/components/schemas/PurpleRfcUpdatePublishedErrorComponent'
+          title: '#/components/schemas/PurpleRfcUpdateTitleErrorComponent'
           authors.non_field_errors: '#/components/schemas/PurpleRfcUpdateAuthorsNonFieldErrorsErrorComponent'
           authors.INDEX.non_field_errors: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXNonFieldErrorsErrorComponent'
           authors.INDEX.titlepage_name: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXTitlepageNameErrorComponent'
@@ -2721,7 +2981,12 @@ components:
           authors.INDEX.person: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXPersonErrorComponent'
           authors.INDEX.affiliation: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXAffiliationErrorComponent'
           authors.INDEX.country: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXCountryErrorComponent'
-          authors.INDEX.datatracker_person_path: '#/components/schemas/PurpleRfcUpdateAuthorsINDEXDatatrackerPersonPathErrorComponent'
+          stream: '#/components/schemas/PurpleRfcUpdateStreamErrorComponent'
+          abstract: '#/components/schemas/PurpleRfcUpdateAbstractErrorComponent'
+          pages: '#/components/schemas/PurpleRfcUpdatePagesErrorComponent'
+          std_level: '#/components/schemas/PurpleRfcUpdateStdLevelErrorComponent'
+          subseries: '#/components/schemas/PurpleRfcUpdateSubseriesErrorComponent'
+          subseries.INDEX: '#/components/schemas/PurpleRfcUpdateSubseriesINDEXErrorComponent'
     PurpleRfcUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/PurpleRfcUpdateValidationError'
@@ -2747,6 +3012,190 @@ components:
           description: |-
             * `invalid` - invalid
             * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdatePagesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - pages
+          type: string
+          description: '* `pages` - pages'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdatePublishedErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - published
+          type: string
+          description: '* `published` - published'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - 'null'
+          - overflow
+          - required
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `null` - null
+            * `overflow` - overflow
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateStdLevelErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - std_level
+          type: string
+          description: '* `std_level` - std_level'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateStreamErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - stream
+          type: string
+          description: '* `stream` - stream'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateSubseriesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - subseries
+          type: string
+          description: '* `subseries` - subseries'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateSubseriesINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - subseries.INDEX
+          type: string
+          description: '* `subseries.INDEX` - subseries.INDEX'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateTitleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - title
+          type: string
+          description: '* `title` - title'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -3213,6 +3662,7 @@ components:
         datatracker_person_path:
           type: string
           format: uri
+          readOnly: true
           description: URL for person link (relative to datatracker base URL)
       required:
       - titlepage_name
@@ -3237,11 +3687,6 @@ components:
           type: string
           description: Country used by author for submission
           maxLength: 255
-        datatracker_person_path:
-          type: string
-          format: uri
-          minLength: 1
-          description: URL for person link (relative to datatracker base URL)
       required:
       - titlepage_name
     RfcFileRequest:
