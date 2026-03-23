@@ -2,16 +2,18 @@
 
 import datetime
 import io
+import requests
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
+from django.conf import settings
 from django.core.files.storage import storages
 from django.db.models import F
 
 from utils.task_utils import RetryTask
 
-from .models import DirtyBits, MailMessage
+from .models import DirtyBits, Erratum, MailMessage
 from .utils import errata_json, update_rfc_metadata
 
 logger = get_task_logger(__name__)
@@ -76,19 +78,24 @@ def update_errata_json_task():
         logger.info(
             f"Refreshing errata.json: dirty_time >= processed_time: {dirty_work.dirty_time} >= {dirty_work.processed_time}"
         )
-        DirtyBits.objects.filter(slug="errata_json").update(
-            processed_time=datetime.datetime.now(datetime.UTC)
+        new_processed_time_start = datetime.datetime.now(datetime.UTC)
+        dirty_rfc_numbers = list(
+            Erratum.history.filter(history_date__gt=dirty_work.processed_time)
+            .values_list("rfc_number", flat=True)
+            .distinct()
+            .order_by("rfc_number")
         )
         try:
             red_bucket = storages["red_bucket"]
             red_bucket.save("other/errata.json", io.StringIO(errata_json()))
+            # Intentionally not using .delay()
+            trigger_red_precompute_multiple_task(rfc_number_list=dirty_rfc_numbers)
+            DirtyBits.objects.filter(slug="errata_json").update(
+                processed_time=new_processed_time_start
+            )
         except Exception as e:
             # Log the error and swallow it.
             logger.error(f"Attempt to push to red_bucket failed: {e}")
-            # put. the processed_time. back.
-            DirtyBits.objects.filter(slug="errata_json").update(
-                processed_time=old_processed_time
-            )
     else:
         pass
 
@@ -107,3 +114,34 @@ def mail_monthly_report_task():
     message = build_monthly_report(moment)
     # We're already in a task.
     send_mail_task(message.id)
+
+
+# Providing this as a shared task even though its only currently used directly from
+# the update_errata_json_task, to allow it to be run from the admin if needed.
+@shared_task
+def trigger_red_precompute_multiple_task(rfc_number_list=()):
+    url = getattr(settings, "TRIGGER_RED_PRECOMPUTE_MULTIPLE_URL", None)
+    if url is not None:
+        payload = {
+            "rfcs": ",".join([str(n) for n in rfc_number_list]),
+        }
+        try:
+            logger.info(
+                f"Triggering red precompute multiple for RFCs {rfc_number_list}"
+            )
+            response = requests.post(
+                url,
+                json=payload,
+                timeout=settings.DEFAULT_REQUESTS_TIMEOUT,
+            )
+        except requests.Timeout as e:
+            logger.error(f"POST request timed out for {url} ]: {e}")
+            return
+        if response.status_code != 200:
+            logger.error(
+                f"POST request failed for {url} ]: {response.status_code} {response.text}"
+            )
+    else:
+        logger.error(
+            "No URL configured for triggering red precompute multiple, skipping"
+        )
