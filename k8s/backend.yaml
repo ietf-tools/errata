@@ -7,13 +7,15 @@ spec:
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: backend
+      app: errata
+      workload: backend
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: backend
+        app: errata
+        workload: backend
     spec:
       securityContext:
         runAsNonRoot: true
@@ -145,4 +147,5 @@ spec:
       protocol: TCP
       name: http
   selector:
-    app: backend
+    app: errata
+    workload: backend
