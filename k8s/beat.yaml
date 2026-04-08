@@ -9,13 +9,15 @@ spec:
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: beat
+      app: errata
+      workload: beat
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: beat
+        app: errata
+        workload: beat
     spec:
       securityContext:
         runAsNonRoot: true

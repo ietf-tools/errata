@@ -9,13 +9,15 @@ spec:
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: celery
+      app: errata
+      workload: celery
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: celery
+        app: errata
+        workload: celery
     spec:
       securityContext:
         runAsNonRoot: true

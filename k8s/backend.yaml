@@ -8,12 +8,14 @@ spec:
   selector:
     matchLabels:
       app: errata
+      workload: backend
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
         app: errata
+        workload: backend
     spec:
       securityContext:
         runAsNonRoot: true
@@ -146,3 +148,4 @@ spec:
       name: http
   selector:
     app: errata
+    workload: backend
