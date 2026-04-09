@@ -260,3 +260,5 @@ STORAGES = {
     }
     for bucket in STORAGE_BUCKETS
 }
+
+DEFAULT_REQUESTS_TIMEOUT = 10

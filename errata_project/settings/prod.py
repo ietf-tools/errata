@@ -147,3 +147,7 @@ for _bucket in STORAGE_BUCKETS:
             verify=False,
         ),
     }
+
+DEFAULT_REQUESTS_TIMEOUT = int(
+    os.environ.get("ERRATA_DEFAULT_REQUESTS_TIMEOUT", "10")
+)
