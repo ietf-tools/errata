@@ -101,7 +101,7 @@ else:
     raise RuntimeError("ERRATA_ADMINS must be set")
 
 # Red precomputer configuration
-RED_PRECOMPUTER_URL = os.environ.get("ERRATA_RED_PRECOMPUTER_URL", None)
+TRIGGER_RED_PRECOMPUTE_MULTIPLE_URL = os.environ.get("ERRATA_RED_PRECOMPUTE_MULTIPLE_URL", None)
 
 # Storages configuration
 # Configure storages for the replica blob store
