@@ -1,4 +1,6 @@
 # Copyright The IETF Trust 2026, All Rights Reserved
+from base64 import b64decode
+
 import botocore.config
 
 from .base import *  # noqa
@@ -151,3 +153,32 @@ for _bucket in STORAGE_BUCKETS:
 DEFAULT_REQUESTS_TIMEOUT = int(
     os.environ.get("ERRATA_DEFAULT_REQUESTS_TIMEOUT", "10")
 )
+
+# Guard to ensure insecure development APP_API_TOKENS value is replaced for production
+try:
+    del APP_API_TOKENS
+except NameError:
+    pass
+
+# For APP_API_TOKENS, accept either base64-encoded JSON or raw JSON, but not both.
+# To decode / pretty-print the encoded form, run:
+#    base64 -d | jq .
+# paste the encoded secret into stdin. Copy/paste that into an editor you trust not
+# to leave a copy lying around. When done editing, copy/paste the final JSON through
+#    jq -c | base64
+# and copy/paste the output into the secret store.
+_app_api_tokens_json_b64 = os.environ.get("ERRATA_APP_API_TOKENS_JSON_B64", None)
+if _app_api_tokens_json_b64 is not None:
+    if "ERRATA_APP_API_TOKENS_JSON" in os.environ:
+        raise RuntimeError(
+            "Only one of ERRATA_APP_API_TOKENS_JSON and ERRATA_APP_API_TOKENS_JSON_B64 "
+            "may be set"
+        )
+    _app_api_tokens_json = b64decode(_app_api_tokens_json_b64)
+else:
+    _app_api_tokens_json = os.environ.get("ERRATA_APP_API_TOKENS_JSON", None)
+
+if _app_api_tokens_json is not None:
+    APP_API_TOKENS = json.loads(_app_api_tokens_json)
+else:
+    APP_API_TOKENS = {}
