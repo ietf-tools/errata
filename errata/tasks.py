@@ -66,7 +66,6 @@ def update_errata_json_task():
     N.B. This task MUST be set up to run periodically.
     An initial period of 5m is suggested."""
     dirty_work = DirtyBits.objects.get(slug="errata_json")
-    old_processed_time = dirty_work.processed_time
     if dirty_work.dirty_time is None:
         logger.error(
             "DirtyWork `errata_json` object has unexpected dirty_time of None, skipping update"
@@ -79,8 +78,14 @@ def update_errata_json_task():
             f"Refreshing errata.json: dirty_time >= processed_time: {dirty_work.dirty_time} >= {dirty_work.processed_time}"
         )
         new_processed_time_start = datetime.datetime.now(datetime.UTC)
+        if dirty_work.processed_time is None:
+            dirty_errata_histories = Erratum.history.all()
+        else:
+            dirty_errata_histories = Erratum.history.filter(
+                history_date__gt=dirty_work.processed_time
+            )
         dirty_rfc_numbers = list(
-            Erratum.history.filter(history_date__gt=dirty_work.processed_time)
+            dirty_errata_histories
             .values_list("rfc_number", flat=True)
             .distinct()
             .order_by("rfc_number")
