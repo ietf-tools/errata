@@ -72,7 +72,7 @@ class ErrataSearchForm(forms.Form):
     date = forms.CharField(
         required=False,
         label="Date Submitted",
-        widget=forms.TextInput(attrs={"placeholder": "YYYY-MM-DD"}),
+        widget=forms.TextInput(attrs={"placeholder": "YYYY-MM-DD, YYYY-MM, or YYYY"}),
     )
     presentation = forms.ChoiceField(
         choices=PRESENTATION_CHOICES,
