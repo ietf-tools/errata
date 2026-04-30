@@ -54,7 +54,8 @@ def send_mail_task(message_id):
 @shared_task
 def update_rfc_metadata_task(rfc_numbers=()):
     logger.info(
-        f"Starting update_rfc_metadata_task for RFCs: {rfc_numbers if rfc_numbers else 'all RFCs'}"
+        f"Starting update_rfc_metadata_task for RFCs: "
+        f"{rfc_numbers if rfc_numbers else 'all RFCs'}"
     )
     update_rfc_metadata(rfc_numbers)
 
@@ -68,14 +69,16 @@ def update_errata_json_task():
     dirty_work = DirtyBits.objects.get(slug=DirtyBits.Slugs.ERRATA_JSON)
     if dirty_work.dirty_time is None:
         logger.error(
-            "DirtyWork `errata_json` object has unexpected dirty_time of None, skipping update"
+            f"DirtyBits `{DirtyBits.Slugs.ERRATA_JSON}` object has unexpected "
+            f"dirty_time of None, skipping update"
         )
     elif (
         dirty_work.processed_time is None
         or dirty_work.dirty_time >= dirty_work.processed_time
     ):
         logger.info(
-            f"Refreshing errata.json: dirty_time >= processed_time: {dirty_work.dirty_time} >= {dirty_work.processed_time}"
+            f"Refreshing errata.json: dirty_time >= processed_time: "
+            f"{dirty_work.dirty_time} >= {dirty_work.processed_time}"
         )
         new_processed_time_start = datetime.datetime.now(datetime.UTC)
         if dirty_work.processed_time is None:
