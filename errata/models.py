@@ -91,7 +91,7 @@ class Erratum(models.Model):
         if not getattr(self, "_take_given_updated_at_value", False):
             self.updated_at = timezone.now()
         super().save(*args, **kwargs)
-        DirtyBits.objects.filter(slug="errata_json").update(
+        DirtyBits.objects.filter(slug=DirtyBits.Slugs.ERRATA_JSON).update(
             dirty_time=datetime.datetime.now(datetime.UTC)
         )
         # Keeping this as proof_of_concept, but as the app is currently written,
@@ -127,7 +127,7 @@ class Erratum(models.Model):
         #     ):
         #         mark_errata_json_dirty = True
         #     if mark_errata_json_dirty:
-        #         DirtyBits.objects.filter(slug="errata_json").update(
+        #         DirtyBits.objects.filter(slug=DirtyBits.Slugs.ERRATA_JSON).update(
         #             dirty_time=datetime.datetime.now(datetime.UTC)
         #         )
 
@@ -350,6 +350,12 @@ class DirtyBits(models.Model):
     "processed_time".
     """
 
-    slug = models.CharField(max_length=40, blank=False)
+    class Slugs(models.TextChoices):
+        ERRATA_JSON = "errata_json", "Errata JSON"
+
+    slug = models.CharField(max_length=40, blank=False, choices=Slugs, unique=True)
     dirty_time = models.DateTimeField(null=True, blank=True)
     processed_time = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name_plural = "dirty bits"
