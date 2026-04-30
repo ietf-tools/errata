@@ -85,8 +85,7 @@ def update_errata_json_task():
                 history_date__gt=dirty_work.processed_time
             )
         dirty_rfc_numbers = list(
-            dirty_errata_histories
-            .values_list("rfc_number", flat=True)
+            dirty_errata_histories.values_list("rfc_number", flat=True)
             .distinct()
             .order_by("rfc_number")
         )

@@ -105,7 +105,9 @@ else:
     raise RuntimeError("ERRATA_ADMINS must be set")
 
 # Red precomputer configuration
-TRIGGER_RED_PRECOMPUTE_MULTIPLE_URL = os.environ.get("ERRATA_RED_PRECOMPUTE_MULTIPLE_URL", None)
+TRIGGER_RED_PRECOMPUTE_MULTIPLE_URL = os.environ.get(
+    "ERRATA_RED_PRECOMPUTE_MULTIPLE_URL", None
+)
 
 # Storages configuration
 # Configure storages for the replica blob store
@@ -150,9 +152,7 @@ for _bucket in STORAGE_BUCKETS:
         ),
     }
 
-DEFAULT_REQUESTS_TIMEOUT = int(
-    os.environ.get("ERRATA_DEFAULT_REQUESTS_TIMEOUT", "10")
-)
+DEFAULT_REQUESTS_TIMEOUT = int(os.environ.get("ERRATA_DEFAULT_REQUESTS_TIMEOUT", "10"))
 
 # Guard to ensure insecure development APP_API_TOKENS value is replaced for production
 try:
