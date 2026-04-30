@@ -356,3 +356,6 @@ class DirtyBits(models.Model):
     slug = models.CharField(max_length=40, blank=False, choices=Slugs, unique=True)
     dirty_time = models.DateTimeField(null=True, blank=True)
     processed_time = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name_plural = "dirty bits"

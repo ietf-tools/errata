@@ -16,4 +16,8 @@ class Migration(migrations.Migration):
                 choices=[("errata_json", "Errata JSON")], max_length=40, unique=True
             ),
         ),
+        migrations.AlterModelOptions(
+            name='dirtybits',
+            options={'verbose_name_plural': 'dirty bits'},
+        ),
     ]
