@@ -65,7 +65,7 @@ def update_errata_json_task():
 
     N.B. This task MUST be set up to run periodically.
     An initial period of 5m is suggested."""
-    dirty_work = DirtyBits.objects.get(slug="errata_json")
+    dirty_work = DirtyBits.objects.get(slug=DirtyBits.Slugs.ERRATA_JSON)
     if dirty_work.dirty_time is None:
         logger.error(
             "DirtyWork `errata_json` object has unexpected dirty_time of None, skipping update"
@@ -95,7 +95,7 @@ def update_errata_json_task():
             red_bucket.save("other/errata.json", io.StringIO(errata_json()))
             # Intentionally not using .delay()
             trigger_red_precompute_multiple_task(rfc_number_list=dirty_rfc_numbers)
-            DirtyBits.objects.filter(slug="errata_json").update(
+            DirtyBits.objects.filter(slug=DirtyBits.Slugs.ERRATA_JSON).update(
                 processed_time=new_processed_time_start
             )
         except Exception as e:
