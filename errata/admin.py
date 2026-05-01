@@ -10,6 +10,7 @@ from .models import (
     Status,
     ErratumType,
     RfcMetadata,
+    DirtyBits,
 )
 
 
@@ -77,3 +78,8 @@ class StagedErratumAdmin(admin.ModelAdmin):
 
 
 admin.site.register(StagedErratum, StagedErratumAdmin)
+
+
+@admin.register(DirtyBits)
+class DirtyBitsAdmin(admin.ModelAdmin):
+    list_display = ["slug", "dirty_time", "processed_time"]
