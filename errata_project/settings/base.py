@@ -262,3 +262,8 @@ STORAGES = {
 }
 
 DEFAULT_REQUESTS_TIMEOUT = 10
+
+BOOTSTRAP5 = {
+    "css_url": "/static/css/bootstrap.min.css",
+    "javascript_url": "/static/js/bootstrap.bundle.min.js",
+}
