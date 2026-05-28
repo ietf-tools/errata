@@ -224,7 +224,7 @@ def staged_confirm_delete(request, staged_erratum_id):
         if action == "delete":
             logger.info(f"Deleted staged erratum {staged_erratum.pk}")
             staged_erratum.delete()
-            return redirect("errata_staged_list)")
+            return redirect("errata_staged_list")
         else:
             pass
     return render(
