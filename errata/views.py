@@ -216,7 +216,7 @@ def staged_list(request):
     )
 
 
-@role_required("rpd")
+@role_required("rpc")
 def staged_confirm_delete(request, staged_erratum_id):
     staged_erratum = get_object_or_404(StagedErratum, id=staged_erratum_id)
     if request.method == "POST":
