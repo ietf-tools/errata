@@ -58,7 +58,7 @@ def txt_errata_verifying_party(erratum):
         return "IRSG"
     elif rfc_meta.stream == "iab":
         return "IAB"
-    elif rfc_meta.stream == "independent":
+    elif rfc_meta.stream == "ise":
         return "ISE & Editorial Board"
     elif rfc_meta.stream == "editorial":
         return "RSAB"
