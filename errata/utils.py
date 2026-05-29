@@ -29,9 +29,7 @@ def unverified_errata(user):
     # consider pushing that back to that module through utility
     # access.
     user_roles = getattr(user, "roles", [])
-    queries_to_union = [
-        Q()
-    ]  # if no other queries are added, this empty Q makes reduce happpy
+    queries_to_union = []
     # IETF Stream
     if ["ad", "iesg"] in user_roles:
         for area in ["gen", "wit", "art", "ops", "rtg", "int", "sec"]:
@@ -40,8 +38,10 @@ def unverified_errata(user):
                 queries_to_union.append(Q(rfc_metadata__area_assignment=area))
                 if area == "art":
                     for oldarea in ["app", "rai"]:
-                        queries_to_union.append(Q(rfc_metadata__area_acronym=area))
-                        queries_to_union.append(Q(rfc_metadata__area_assignment=area))
+                        queries_to_union.append(Q(rfc_metadata__area_acronym=oldarea))
+                        queries_to_union.append(
+                            Q(rfc_metadata__area_assignment=oldarea)
+                        )
     # IAB
     for role in [
         ["chair", "iab"],
@@ -66,6 +66,8 @@ def unverified_errata(user):
     # Independent Stream
     if ["chair", "ise"] in user_roles:
         queries_to_union.append(Q(rfc_metadata__stream="irtf"))
+    if not queries_to_union:
+        return unverified.none()
     combined_queries = reduce(operator.or_, queries_to_union)
     return unverified.filter(combined_queries)
 
