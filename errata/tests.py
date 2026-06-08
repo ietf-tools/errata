@@ -494,10 +494,17 @@ class SearchErrataTest(TestCase):
         app_erratum = ErratumFactory(
             rfc_metadata=app_rfc, rfc_number=app_rfc.rfc_number
         )
+        rai_rfc = RfcMetadataFactory(
+            stream="ietf", area_acronym="rai", area_assignment=""
+        )
+        rai_erratum = ErratumFactory(
+            rfc_metadata=rai_rfc, rfc_number=rai_rfc.rfc_number
+        )
         form = ErrataSearchForm(data={"area": "art"})
         result = search_errata(form)
         self.assertIn(art_erratum, result)
         self.assertIn(app_erratum, result)
+        self.assertIn(rai_erratum, result)
         self.assertNotIn(self.erratum1, result)
 
     def test_search_by_stream_iab(self):
