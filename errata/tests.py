@@ -1125,4 +1125,3 @@ class UtilsTest(TestCase):
         from errata.utils import can_classify
 
         self.assertFalse(can_classify(self.rpc_user, 999999))
-
