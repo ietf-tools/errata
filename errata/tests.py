@@ -134,11 +134,14 @@ class RfcMetadataModelTest(TestCase):
 class ErratumModelTest(TestCase):
     def test_save_sets_updated_at(self):
         erratum = ErratumFactory()
+        past_time = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
+        Erratum.objects.filter(pk=erratum.pk).update(updated_at=past_time)
+        erratum.refresh_from_db()
         original = erratum.updated_at
         erratum.section = "2"
         erratum.save()
         self.assertIsNotNone(erratum.updated_at)
-        self.assertGreaterEqual(erratum.updated_at, original)
+        self.assertGreater(erratum.updated_at, original)
 
     def test_save_respects_take_given_updated_at_value(self):
         erratum = ErratumFactory()
