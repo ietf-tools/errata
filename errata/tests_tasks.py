@@ -54,7 +54,7 @@ class SendMailTaskTest(TestCase):
         self.assertIn("Sending with subject", cm.output[0])
         self.assertIn("SMTP error", cm.output[0])
 
-    def test_success_increments_attempts(self):
+    def test_success_deletes_message(self):
         msg = MailMessageFactory()
         mock_email = MagicMock()
         with self.assertNoLogs("errata.tasks", level="DEBUG"):

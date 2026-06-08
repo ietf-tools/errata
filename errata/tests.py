@@ -570,7 +570,7 @@ class PublicViewTest(TestCase):
             ),
         )
 
-    def test_new_entry_instructions_post_nonexistent_rfc_shows_errors(self):
+    def test_new_entry_instructions_post_nonexistent_rfc_returns_invalid_form(self):
         response = self.client.post(
             reverse("errata_new_entry_instructions"),
             {"rfc_number": 999999},
@@ -748,7 +748,7 @@ class RpcViewTest(TestCase):
             ),
         )
 
-    def test_staged_list_post_post_technical_redirects(self):
+    def test_staged_list_post_post_technical_redirects_to_add_to_unverified(self):
         self.client.force_login(self.rpc_user)
         response = self.client.post(
             reverse("errata_staged_list"),
