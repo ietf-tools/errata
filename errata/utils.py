@@ -65,7 +65,7 @@ def unverified_errata(user):
             queries_to_union.append(Q(rfc_metadata__stream="editorial"))
     # Independent Stream
     if ["chair", "ise"] in user_roles:
-        queries_to_union.append(Q(rfc_metadata__stream="irtf"))
+        queries_to_union.append(Q(rfc_metadata__stream="ise"))
     if not queries_to_union:
         return unverified.none()
     combined_queries = reduce(operator.or_, queries_to_union)

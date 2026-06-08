@@ -83,13 +83,15 @@ class UnverifiedErratumVerifierTest(TestCase):
         result = unverified_errata(user)
         self.assertIn(self.editorial_erratum, result)
 
-    def test_ise_chair_sees_irtf_errata(self):
-        # Note: the code adds Q(stream="irtf") for the ISE chair role — this
-        # appears to be a bug (should be "ise"), but the test documents actual
-        # behaviour.
+    def test_ise_chair_sees_ise_errata(self):
         user = UserFactory(roles=[["chair", "ise"]])
         result = unverified_errata(user)
-        self.assertIn(self.irtf_erratum, result)
+        self.assertIn(self.ise_erratum, result)
+
+    def test_ise_chair_does_not_see_irtf_errata(self):
+        user = UserFactory(roles=[["chair", "ise"]])
+        result = unverified_errata(user)
+        self.assertNotIn(self.irtf_erratum, result)
 
     def test_iesg_ad_sees_own_area_errata(self):
         user = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"]])
