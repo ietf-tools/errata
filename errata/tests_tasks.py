@@ -21,7 +21,7 @@ class SendMailTaskTest(TestCase):
     def test_success_sends_email_and_deletes_message(self):
         msg = MailMessageFactory()
         mock_email = MagicMock()
-        with self.assertNoLogs("errata.tasks", level="DEBUG"):
+        with self.assertNoLogs("errata.tasks", level="INFO"):
             with patch.object(MailMessage, "as_emailmessage", return_value=mock_email):
                 send_mail_task(msg.pk)
         mock_email.send.assert_called_once()
@@ -57,7 +57,7 @@ class SendMailTaskTest(TestCase):
     def test_success_deletes_message(self):
         msg = MailMessageFactory()
         mock_email = MagicMock()
-        with self.assertNoLogs("errata.tasks", level="DEBUG"):
+        with self.assertNoLogs("errata.tasks", level="INFO"):
             with patch.object(MailMessage, "as_emailmessage", return_value=mock_email):
                 send_mail_task(msg.pk)
         self.assertFalse(MailMessage.objects.filter(pk=msg.pk).exists())
@@ -142,7 +142,7 @@ class UpdateErrataJsonTaskTest(TestCase):
         dirty.processed_time = datetime.datetime(2020, 1, 2, tzinfo=datetime.UTC)
         dirty.save()
 
-        with self.assertNoLogs("errata.tasks", level="DEBUG"):
+        with self.assertNoLogs("errata.tasks", level="INFO"):
             update_errata_json_task()
 
         mock_storages.__getitem__.assert_not_called()
