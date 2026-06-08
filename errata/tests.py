@@ -709,7 +709,10 @@ class RpcViewTest(TestCase):
     def setUp(self):
         self.rpc_user = RpcUserFactory()
         self.regular_user = UserFactory()
-        self.rfc = RfcMetadataFactory()
+        # Verifier for ops-area IETF errata: needs ["ad", "iesg"] to enter the
+        # IESG block in unverified_errata, and ["ad", "ops"] to match ops-area RFCs.
+        self.ops_verifier = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"]])
+        self.rfc = RfcMetadataFactory()  # defaults to stream="ietf", area_acronym="ops"
         self.staged = StagedErratumFactory(
             rfc_metadata=self.rfc,
             rfc_number=self.rfc.rfc_number,
@@ -896,7 +899,7 @@ class RpcViewTest(TestCase):
 
     @patch("errata.views.send_erratum_classified_notification")
     def test_reported_classify_post_mark_verified(self, mock_notify):
-        self.client.force_login(self.rpc_user)
+        self.client.force_login(self.ops_verifier)
         data = {
             "erratum_type": "technical",
             "section": "1",
@@ -945,7 +948,7 @@ class RpcViewTest(TestCase):
 
     @patch("errata.views.send_erratum_classified_notification")
     def test_reported_classify_post_mark_rejected(self, mock_notify):
-        self.client.force_login(self.rpc_user)
+        self.client.force_login(self.ops_verifier)
         data = {
             "erratum_type": "technical",
             "section": "1",
@@ -969,7 +972,7 @@ class RpcViewTest(TestCase):
 
     @patch("errata.views.send_erratum_classified_notification")
     def test_reported_classify_post_mark_held_for_doc_update(self, mock_notify):
-        self.client.force_login(self.rpc_user)
+        self.client.force_login(self.ops_verifier)
         data = {
             "erratum_type": "technical",
             "section": "1",
