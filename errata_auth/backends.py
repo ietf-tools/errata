@@ -163,7 +163,7 @@ class ErrataOIDCAuthBackend(ServiceTokenOIDCAuthenticationBackend):
             user.name = claims["name"]
             updated = True
         if user.avatar != claims.get("picture", ""):
-            user.avatar = claims.get("picture")
+            user.avatar = claims.get("picture", "")
             updated = True
         if user.roles != claims.get("roles", []):
             user.roles = claims.get("roles", [])

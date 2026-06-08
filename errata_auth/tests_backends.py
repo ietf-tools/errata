@@ -230,6 +230,21 @@ class ErrataAuthBackendUserTest(TestCase):
         user.refresh_from_db()
         self.assertEqual(user.avatar, "https://example.com/new.jpg")
 
+    def test_update_user_clears_avatar_when_picture_claim_absent(self):
+        user = UserFactory(email="u@e.com", roles=[])
+        user.avatar = "https://example.com/old.jpg"
+        user.save()
+        claims = self._claims(
+            sub=user.datatracker_subject_id,
+            name=user.name,
+            roles=[],
+            email="u@e.com",
+        )
+        del claims["picture"]
+        self.backend.update_user(user, claims)
+        user.refresh_from_db()
+        self.assertEqual(user.avatar, "")
+
     def test_update_user_updates_roles_when_changed(self):
         user = UserFactory(roles=[], email="u@e.com")
         claims = self._claims(
