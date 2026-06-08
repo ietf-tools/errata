@@ -86,7 +86,7 @@ class RfcMetadataModelTest(TestCase):
         self.assertEqual(rfc.display_source(), "IETF - NON WORKING GROUP")
 
     def test_display_source_ietf_group_gen(self):
-        rfc = RfcMetadataFactory(stream="ietf", group_acronym="gen", area_acronym="gen")
+        rfc = RfcMetadataFactory(stream="ietf", group_acronym="gen", area_acronym="")
         self.assertEqual(rfc.display_source(), "IETF - NON WORKING GROUP")
 
     def test_display_source_ietf_wg_with_area(self):
