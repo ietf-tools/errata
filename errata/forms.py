@@ -10,7 +10,7 @@ STATUS_CHOICES = [
     ("verified_reported", "Verified+Reported"),
     ("verified", "Verified"),
     ("reported", "Reported"),
-    ("held", "Held for Document Update"),
+    ("held_for_doc_update", "Held for Document Update"),
     ("rejected", "Rejected"),
 ]
 

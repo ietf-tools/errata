@@ -427,6 +427,19 @@ class SearchErrataTest(TestCase):
         self.assertIn(self.erratum1, result)
         self.assertIn(self.erratum2, result)
 
+    def test_search_by_status_held_for_doc_update(self):
+        held = Status.objects.get(slug="held_for_doc_update")
+        held_erratum = ErratumFactory(
+            rfc_metadata=self.rfc1,
+            rfc_number=self.rfc1.rfc_number,
+            status=held,
+        )
+        form = ErrataSearchForm(data={"status": "held_for_doc_update"})
+        result = search_errata(form)
+        self.assertIn(held_erratum, result)
+        self.assertNotIn(self.erratum1, result)
+        self.assertNotIn(self.erratum2, result)
+
     def test_search_by_errata_type_technical(self):
         form = ErrataSearchForm(data={"errata_type": "technical"})
         result = search_errata(form)
@@ -929,6 +942,54 @@ class RpcViewTest(TestCase):
             reverse("errata_reported_classify", kwargs={"erratum_id": self.erratum.id}),
         )
         mock_notify.assert_not_called()
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_reported_classify_post_mark_rejected(self, mock_notify):
+        self.client.force_login(self.rpc_user)
+        data = {
+            "erratum_type": "technical",
+            "section": "1",
+            "orig_text": "Original text",
+            "corrected_text": "Corrected text",
+            "submitter_name": "Test Submitter",
+            "submitter_email": "submitter@example.com",
+            "notes": "",
+            "action": "mark_rejected",
+        }
+        if self.rfc.rfc_number >= 8650:
+            data["formats"] = ["TXT"]
+        response = self.client.post(
+            reverse("errata_reported_classify", kwargs={"erratum_id": self.erratum.id}),
+            data,
+        )
+        self.assertRedirects(response, reverse("errata_reported_list"))
+        self.erratum.refresh_from_db()
+        self.assertEqual(self.erratum.status_id, "rejected")
+        mock_notify.assert_called_once()
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_reported_classify_post_mark_held_for_doc_update(self, mock_notify):
+        self.client.force_login(self.rpc_user)
+        data = {
+            "erratum_type": "technical",
+            "section": "1",
+            "orig_text": "Original text",
+            "corrected_text": "Corrected text",
+            "submitter_name": "Test Submitter",
+            "submitter_email": "submitter@example.com",
+            "notes": "",
+            "action": "mark_held_for_doc_update",
+        }
+        if self.rfc.rfc_number >= 8650:
+            data["formats"] = ["TXT"]
+        response = self.client.post(
+            reverse("errata_reported_classify", kwargs={"erratum_id": self.erratum.id}),
+            data,
+        )
+        self.assertRedirects(response, reverse("errata_reported_list"))
+        self.erratum.refresh_from_db()
+        self.assertEqual(self.erratum.status_id, "held_for_doc_update")
+        mock_notify.assert_called_once()
 
     def test_rpc_force_metadata_update_get_returns_200(self):
         self.client.force_login(self.rpc_user)
