@@ -15,7 +15,8 @@ jobs:
   run-tests:
     name: Run Tests
     runs-on: ubuntu-latest
-
+    container: python:3.12-trixie
+    
     services:
       db:
         image: 'postgres:17'
@@ -24,17 +25,14 @@ jobs:
           POSTGRES_USER: 'django'
           POSTGRES_DB: 'errata'
           POSTGRES_HOST_AUTH_METHOD: 'trust'
+        ports:
+          - '5432:5432'
     
     steps:
     - uses: actions/checkout@v6
 
-    - name: Setup Python
-      uses: actions/setup-python@v6.2.0
-      with:
-        python-version: '3.12'
-
     - name: Setup Node.js environment
-      uses: actions/setup-node@v6.4.0
+      uses: actions/setup-node@v6
       with:
         node-version: '24.x'
 
