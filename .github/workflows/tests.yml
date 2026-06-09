@@ -35,5 +35,9 @@ jobs:
         pip3 --disable-pip-version-check --no-cache-dir install --no-warn-script-location -r requirements.txt
     
     - name: Run all tests
+      env:
+        DJANGO_SETTINGS_MODULE: 'errata_project.settings.test'
+        ERRATA_OIDC_RP_CLIENT_ID: '079065'
+        ERRATA_OIDC_RP_CLIENT_SECRET: '788eb5a13ee8e233e91a42c88b5ad1736342c5b98e3bcec834d01074'
       run: |
         ./manage.py test
