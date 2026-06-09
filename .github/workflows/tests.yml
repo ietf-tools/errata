@@ -23,7 +23,11 @@ jobs:
       uses: actions/setup-python@v6.2.0
       with:
         python-version: '3.12'
+
+    - name: Install pip packages
+      run: |
+        pip3 --disable-pip-version-check --no-cache-dir install --no-warn-script-location -r requirements.txt
     
     - name: Run all tests
       run: |
-          ./manage.py test
+        ./manage.py test
