@@ -6,7 +6,12 @@ from unittest.mock import patch
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from errata.factories import ErratumFactory, RfcMetadataFactory, UserFactory
+from errata.factories import (
+    ErratumFactory,
+    RfcMetadataFactory,
+    RpcUserFactory,
+    UserFactory,
+)
 from errata.mail import (
     build_monthly_report,
     get_ad_emails,
@@ -309,7 +314,7 @@ class SendNewErratumNotificationTest(TestCase):
 
 class SendErratumClassifiedNotificationTest(TestCase):
     def setUp(self):
-        self.user = UserFactory()
+        self.user = UserFactory(email="verifier@example.com")
 
     def _make_erratum(
         self,
@@ -492,6 +497,36 @@ class SendErratumClassifiedNotificationTest(TestCase):
         self.assertIn("rsab-list@rfc-editor.org", msg.cc)
         self.assertIn("iana@iana.org", msg.cc)
         self.assertIn("rfc-editor@rfc-editor.org", msg.cc)
+
+    @patch("errata.mail.send_mail_task")
+    def test_rpc_classifying_editorial_errata_omits_verifier_email_and_uses_rfc_production_center(
+        self, mock_task
+    ):
+        stream_expected_ccs = {
+            "legacy": ["iesg@ietf.org", "iana@iana.org"],
+            "ietf": ["iesg@ietf.org", "iana@iana.org", "list@example.com"],
+            "iab": ["iab@iab.org", "chair@iab.org"],
+            "irtf": ["irsg@irtf.org", "iana@iana.org", "list@example.com"],
+            "ise": ["rfc-ise@rfc-editor.org", "iana@iana.org"],
+            "editorial": ["rsab@rfc-editor.org", "iana@iana.org", "list@example.com"],
+        }
+        rpc_user = RpcUserFactory(email="verifier@example.com")
+        for stream in ["ietf", "iab", "irtf", "ise", "editorial", "legacy"]:
+            with self.subTest(stream=stream):
+                erratum = self._make_erratum(
+                    stream=stream,
+                    erratum_type_slug="editorial",
+                    group_list_email="list@example.com",
+                    shepherd_email="shepherd@example.com",
+                )
+                self.assertEqual(rpc_user.email, erratum.verifier_email)
+                send_erratum_classified_notification(erratum, rpc_user)
+                msg = MailMessage.objects.latest("id")
+                self.assertNotIn(rpc_user.email, msg.cc)
+                self.assertIn("rfc-editor@rfc-editor.org", msg.cc)
+                self.assertIn("RFC Production Center", msg.body)
+                for addr in stream_expected_ccs[stream]:
+                    self.assertIn(addr, msg.cc)
 
     @patch("errata.mail.send_mail_task")
     def test_always_ccs_rfc_editor(self, mock_task):

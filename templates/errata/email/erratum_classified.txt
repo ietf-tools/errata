@@ -11,7 +11,7 @@ Status: {{ erratum.status.name }}
 {% if erratum.erratum_type %}Type: {{erratum.erratum_type.name}}
 {% endif %}Reported by: {{ erratum.submitter_name }} <{{ erratum.submitter_email }}>
 Date Reported: {{ erratum.submitted_at }}
-{% if erratum.status.slug == "held_for_doc_update" %}Held{% else %}{{ erratum.status.name }}{% endif %} by: {{ erratum.verifier_name }} ({{ erratum|txt_errata_verifying_party }})
+{% if erratum.status.slug == "held_for_doc_update" %}Held{% else %}{{ erratum.status.name }}{% endif %} by: {{ erratum.verifier_name }} ({{ verifying_party }})
 
 {{ erratum|txt_errata_section }}
 

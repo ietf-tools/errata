@@ -11,8 +11,10 @@ from django.template.loader import render_to_string
 
 from errata.utils import counts_per_authority
 from errata_auth.models import User
+from errata_auth.utils import is_rpc
 
 from .models import MailMessage, RfcMetadata
+from .templatetags.filters import txt_errata_verifying_party
 from .tasks import send_mail_task
 
 logger = logging.getLogger(__name__)
@@ -175,24 +177,34 @@ def send_new_erratum_notification(erratum, user):
 
 def send_erratum_classified_notification(erratum, user):
     subject = f"[Errata {erratum.status.name}] RFC{erratum.rfc_metadata.rfc_number} ({erratum.id})"
+    metadata = erratum.rfc_metadata
+    stream = metadata.stream
+    rpc_classifying_editorial = (
+        is_rpc(user) and erratum.erratum_type.slug == "editorial"
+    )
+    verifying_party = txt_errata_verifying_party(erratum, rpc_classifying_editorial)
     body = render_to_string(
         "errata/email/erratum_classified.txt",
-        {"erratum": erratum, "base_url": settings.BASE_URL},
+        {
+            "erratum": erratum,
+            "base_url": settings.BASE_URL,
+            "verifying_party": verifying_party,
+        },
     )
     to = []
     cc = []
-    metadata = erratum.rfc_metadata
-    stream = erratum.rfc_metadata.stream
+    verifier_email = user.email
+    assert verifier_email == erratum.verifier_email
     if erratum.erratum_type.slug == "technical":
         if stream == "legacy":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
-            cc.append(erratum.verifier_email)
+            cc.append(verifier_email)
             cc.append("iesg@ietf.org")
         elif stream == "ietf":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
-            cc.append(erratum.verifier_email)
+            cc.append(verifier_email)
             cc.append("iesg@ietf.org")
             if metadata.group_list_email:
                 cc.append(metadata.group_list_email)
@@ -200,13 +212,13 @@ def send_erratum_classified_notification(erratum, user):
         elif stream == "iab":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
-            cc.append(erratum.verifier_email)
+            cc.append(verifier_email)
             cc.append("iab@iab.org")
             cc.append("chair@iab.org")
         elif stream == "irtf":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
-            cc.append(erratum.verifier_email)
+            cc.append(verifier_email)
             cc.append("irsg@irtf.org")
             if metadata.group_list_email:
                 cc.append(metadata.group_list_email)
@@ -214,29 +226,29 @@ def send_erratum_classified_notification(erratum, user):
         elif stream == "ise":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
-            cc.append(erratum.verifier_email)
+            cc.append(verifier_email)
             cc.append("rfc-ise@rfc-editor.org")
             cc.append(metadata.shepherd_email)
             cc.append("iana@iana.org")
         elif stream == "editorial":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
-            cc.append(erratum.verifier_email)
+            cc.append(verifier_email)
             cc.append("rsab@rfc-editor.org")
             if metadata.group_list_email:
                 cc.append(metadata.group_list_email)
             cc.append("iana@iana.org")
     else:
+        if not rpc_classifying_editorial:
+            cc.append(verifier_email)
         if stream == "legacy":
             to.append(erratum.submitter_email)
             cc.extend(metadata.author_emails)
-            cc.append(erratum.verifier_email)
             cc.append("iesg@ietf.org")
             cc.append("iana@iana.org")
         elif stream == "ietf":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
-            cc.append(erratum.verifier_email)
             cc.append("iesg@ietf.org")
             if metadata.group_list_email:
                 cc.append(metadata.group_list_email)
@@ -244,13 +256,11 @@ def send_erratum_classified_notification(erratum, user):
         elif stream == "iab":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
-            cc.append(erratum.verifier_email)
             cc.append("iab@iab.org")
             cc.append("chair@iab.org")
         elif stream == "irtf":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
-            cc.append(erratum.verifier_email)
             cc.append("irsg@irtf.org")
             if metadata.group_list_email:
                 cc.append(metadata.group_list_email)
@@ -258,13 +268,11 @@ def send_erratum_classified_notification(erratum, user):
         elif stream == "ise":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
-            cc.append(erratum.verifier_email)
             cc.append("rfc-ise@rfc-editor.org")
             cc.append("iana@iana.org")
         elif stream == "editorial":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
-            cc.append(erratum.verifier_email)
             cc.append("rsab@rfc-editor.org")
             if metadata.group_list_email:
                 cc.append(metadata.group_list_email)

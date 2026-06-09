@@ -50,7 +50,9 @@ def txt_errata_section(erratum):
 
 
 @register.filter
-def txt_errata_verifying_party(erratum):
+def txt_errata_verifying_party(erratum, rpc_classifying=False):
+    if rpc_classifying:
+        return "RFC Production Center"
     rfc_meta = erratum.rfc_metadata
     if rfc_meta.area_assignment != "" or rfc_meta.stream == "ietf":
         return "IESG"
