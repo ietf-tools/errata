@@ -24,8 +24,14 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Install pip packages
+    - name: Setup Node.js environment
+      uses: actions/setup-node@v6.4.0
+      with:
+        node-version: '24.x'
+
+    - name: Install dependencies
       run: |
+        npx --yes @openapitools/openapi-generator-cli generate --generator-key datatracker
         pip3 --disable-pip-version-check --no-cache-dir install --no-warn-script-location -r requirements.txt
     
     - name: Run all tests
