@@ -15,6 +15,15 @@ jobs:
   run-tests:
     name: Run Tests
     runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: 'postgres:17'
+        env:
+          POSTGRES_PASSWORD: 'dev-not-a-secret'
+          POSTGRES_USER: 'django'
+          POSTGRES_DB: 'errata'
+          POSTGRES_HOST_AUTH_METHOD: 'trust'
     
     steps:
     - uses: actions/checkout@v6
