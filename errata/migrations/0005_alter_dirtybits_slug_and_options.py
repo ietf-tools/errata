@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.AlterModelOptions(
-            name='dirtybits',
-            options={'verbose_name_plural': 'dirty bits'},
+            name="dirtybits",
+            options={"verbose_name_plural": "dirty bits"},
         ),
     ]

@@ -112,7 +112,7 @@ def send_new_erratum_notification(erratum, user):
             cc.append(erratum.submitter_email)
             if metadata.group_list_email:
                 cc.append(metadata.group_list_email)
-        elif stream == "independent":
+        elif stream == "ise":
             to.extend(metadata.author_emails)
             to.append("rfc-ise@rfc-editor.org")
             cc.append(erratum.submitter_email)
@@ -136,7 +136,7 @@ def send_new_erratum_notification(erratum, user):
             cc.extend(metadata.author_emails)
             if metadata.group_list_email:
                 cc.append(metadata.group_list_email)
-        elif stream == "independent":
+        elif stream == "ise":
             cc.append("rfc-ise@rfc-editor.org")
             cc.extend(metadata.author_emails)
         elif stream == "editorial":
@@ -211,7 +211,7 @@ def send_erratum_classified_notification(erratum, user):
             if metadata.group_list_email:
                 cc.append(metadata.group_list_email)
             cc.append("iana@iana.org")
-        elif stream == "independent":
+        elif stream == "ise":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
             cc.append(erratum.verifier_email)
@@ -255,7 +255,7 @@ def send_erratum_classified_notification(erratum, user):
             if metadata.group_list_email:
                 cc.append(metadata.group_list_email)
             cc.append("iana@iana.org")
-        elif stream == "independent":
+        elif stream == "ise":
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
             cc.append(erratum.verifier_email)

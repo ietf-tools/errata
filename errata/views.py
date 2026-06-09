@@ -167,7 +167,7 @@ def new_preview(request, staged_erratum_id):
             return redirect("errata_new_edit", staged_erratum_id=staged_erratum.id)
         elif "submit_for_screening" in request.POST:
             staged_erratum.entry_status = StagedErratumStatus.SUBMITTED
-            staged_erratum.submitted_at = datetime.datetime.now()
+            staged_erratum.submitted_at = datetime.datetime.now(datetime.UTC)
             staged_erratum.save()
             return render(
                 request,
@@ -346,7 +346,7 @@ def reported_classify(request, erratum_id: int):
                 erratum.status_id = action[5:]
                 erratum.verifier_name = request.user.name
                 erratum.verifier_email = request.user.email
-                erratum.verified_at = datetime.datetime.now()
+                erratum.verified_at = datetime.datetime.now(datetime.UTC)
                 erratum.save()
                 send_erratum_classified_notification(erratum, request.user)
                 return redirect("errata_reported_list")
