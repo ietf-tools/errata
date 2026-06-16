@@ -111,6 +111,36 @@ class ConfirmExistingErrataReadForm(forms.Form):
     )
 
 
+class StagedErrataFilterForm(forms.Form):
+    rfc_number = forms.IntegerField(required=False, label="RFC Number")
+    submitter = forms.CharField(
+        max_length=120,
+        required=False,
+        label="Submitter",
+        widget=forms.TextInput(attrs={"placeholder": "Name or email"}),
+    )
+    date_from = forms.DateField(
+        required=False,
+        label="Submitted On or After",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    date_to = forms.DateField(
+        required=False,
+        label="Submitted On or Before",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        date_from = cleaned_data.get("date_from")
+        date_to = cleaned_data.get("date_to")
+        if date_from and date_to and date_from > date_to:
+            self.add_error(
+                "date_to", "End date must not be earlier than the start date."
+            )
+        return cleaned_data
+
+
 class EditStagedErratumForm(forms.Form):
     submitter_name = forms.CharField(max_length=80, required=True, label="Your Name")
     submitter_email = forms.EmailField(

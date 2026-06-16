@@ -54,6 +54,11 @@ urlpatterns = [
         name="errata_staged_list",
     ),
     path(
+        "staged/bulk-delete/",
+        views.staged_bulk_delete,
+        name="errata_staged_bulk_delete",
+    ),
+    path(
         "staged/confirm-delete/<uuid:staged_erratum_id>",
         views.staged_confirm_delete,
         name="errata_staged_confirm_delete",

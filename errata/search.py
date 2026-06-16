@@ -2,8 +2,8 @@
 
 from django.db.models import Q
 
-from .forms import ErrataSearchForm
-from .models import Erratum
+from .forms import ErrataSearchForm, StagedErrataFilterForm
+from .models import Erratum, StagedErratum, StagedErratumStatus
 
 
 def search_errata(form: ErrataSearchForm):
@@ -66,3 +66,33 @@ def search_errata(form: ErrataSearchForm):
                 submitted_at__day=day,
             )
     return errata
+
+
+def filter_staged_errata(form: StagedErrataFilterForm):
+    """Return submitted StagedErrata narrowed by the filter form.
+
+    An unbound or invalid form yields the unfiltered set of submitted
+    staged errata so the view still has something sensible to show.
+    """
+    staged_errata = StagedErratum.objects.filter(
+        entry_status=StagedErratumStatus.SUBMITTED
+    ).order_by("submitted_at")
+    if not (form.is_bound and form.is_valid()):
+        return staged_errata
+    if form.cleaned_data.get("rfc_number") is not None:
+        staged_errata = staged_errata.filter(rfc_number=form.cleaned_data["rfc_number"])
+    if form.cleaned_data.get("submitter"):
+        submitter = form.cleaned_data["submitter"]
+        staged_errata = staged_errata.filter(
+            Q(submitter_name__icontains=submitter)
+            | Q(submitter_email__icontains=submitter)
+        )
+    if form.cleaned_data.get("date_from"):
+        staged_errata = staged_errata.filter(
+            submitted_at__date__gte=form.cleaned_data["date_from"]
+        )
+    if form.cleaned_data.get("date_to"):
+        staged_errata = staged_errata.filter(
+            submitted_at__date__lte=form.cleaned_data["date_to"]
+        )
+    return staged_errata

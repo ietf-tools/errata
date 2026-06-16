@@ -20,6 +20,7 @@ from errata.forms import (
     EditStagedErratumForm,
     ErrataSearchForm,
     RfcNumberListForm,
+    StagedErrataFilterForm,
 )
 from errata.models import (
     AddressListField,
@@ -29,7 +30,7 @@ from errata.models import (
     StagedErratumStatus,
     Status,
 )
-from errata.search import search_errata
+from errata.search import filter_staged_errata, search_errata
 
 
 class AddressListFieldTest(TestCase):
@@ -1125,3 +1126,212 @@ class UtilsTest(TestCase):
         from errata.utils import can_classify
 
         self.assertFalse(can_classify(self.rpc_user, 999999))
+
+
+class StagedErrataFilterFormTest(TestCase):
+    def test_empty_form_is_valid(self):
+        form = StagedErrataFilterForm({})
+        self.assertTrue(form.is_valid())
+
+    def test_valid_filters(self):
+        form = StagedErrataFilterForm(
+            {
+                "rfc_number": "1234",
+                "submitter": "alice",
+                "date_from": "2026-01-01",
+                "date_to": "2026-02-01",
+            }
+        )
+        self.assertTrue(form.is_valid())
+
+    def test_reversed_date_range_is_invalid(self):
+        form = StagedErrataFilterForm(
+            {"date_from": "2026-02-01", "date_to": "2026-01-01"}
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("date_to", form.errors)
+
+
+class FilterStagedErrataTest(TestCase):
+    def setUp(self):
+        self.rfc_a = RfcMetadataFactory()
+        self.rfc_b = RfcMetadataFactory()
+        self.alice = StagedErratumFactory(
+            rfc_metadata=self.rfc_a,
+            rfc_number=self.rfc_a.rfc_number,
+            entry_status=StagedErratumStatus.SUBMITTED,
+            submitter_name="Alice Example",
+            submitter_email="alice@example.com",
+            submitted_at=datetime.datetime(2026, 1, 15, tzinfo=datetime.UTC),
+        )
+        self.bob = StagedErratumFactory(
+            rfc_metadata=self.rfc_b,
+            rfc_number=self.rfc_b.rfc_number,
+            entry_status=StagedErratumStatus.SUBMITTED,
+            submitter_name="Bob Sample",
+            submitter_email="bob@sample.net",
+            submitted_at=datetime.datetime(2026, 3, 20, tzinfo=datetime.UTC),
+        )
+        # An incomplete entry must never appear in the staged list.
+        self.incomplete = StagedErratumFactory(
+            rfc_metadata=self.rfc_a,
+            rfc_number=self.rfc_a.rfc_number,
+            entry_status=StagedErratumStatus.INCOMPLETE,
+        )
+
+    def test_no_filter_returns_only_submitted(self):
+        form = StagedErrataFilterForm({})
+        result = filter_staged_errata(form)
+        self.assertCountEqual(result, [self.alice, self.bob])
+
+    def test_unbound_form_returns_only_submitted(self):
+        result = filter_staged_errata(StagedErrataFilterForm())
+        self.assertCountEqual(result, [self.alice, self.bob])
+
+    def test_filter_by_rfc_number(self):
+        form = StagedErrataFilterForm({"rfc_number": str(self.rfc_a.rfc_number)})
+        self.assertCountEqual(filter_staged_errata(form), [self.alice])
+
+    def test_filter_by_submitter_name(self):
+        form = StagedErrataFilterForm({"submitter": "alice"})
+        self.assertCountEqual(filter_staged_errata(form), [self.alice])
+
+    def test_filter_by_submitter_email(self):
+        form = StagedErrataFilterForm({"submitter": "sample.net"})
+        self.assertCountEqual(filter_staged_errata(form), [self.bob])
+
+    def test_filter_by_date_from(self):
+        form = StagedErrataFilterForm({"date_from": "2026-02-01"})
+        self.assertCountEqual(filter_staged_errata(form), [self.bob])
+
+    def test_filter_by_date_to(self):
+        form = StagedErrataFilterForm({"date_to": "2026-02-01"})
+        self.assertCountEqual(filter_staged_errata(form), [self.alice])
+
+    def test_filter_by_date_range(self):
+        form = StagedErrataFilterForm(
+            {"date_from": "2026-01-01", "date_to": "2026-02-01"}
+        )
+        self.assertCountEqual(filter_staged_errata(form), [self.alice])
+
+
+class StagedBulkDeleteViewTest(TestCase):
+    def setUp(self):
+        self.rpc_user = RpcUserFactory()
+        self.regular_user = UserFactory()
+        self.rfc_a = RfcMetadataFactory()
+        self.rfc_b = RfcMetadataFactory()
+        self.alice = StagedErratumFactory(
+            rfc_metadata=self.rfc_a,
+            rfc_number=self.rfc_a.rfc_number,
+            entry_status=StagedErratumStatus.SUBMITTED,
+            submitter_name="Alice Example",
+            submitter_email="alice@example.com",
+            submitted_at=datetime.datetime(2026, 1, 15, tzinfo=datetime.UTC),
+        )
+        self.bob = StagedErratumFactory(
+            rfc_metadata=self.rfc_b,
+            rfc_number=self.rfc_b.rfc_number,
+            entry_status=StagedErratumStatus.SUBMITTED,
+            submitter_name="Bob Sample",
+            submitter_email="bob@sample.net",
+            submitted_at=datetime.datetime(2026, 3, 20, tzinfo=datetime.UTC),
+        )
+        self.client.force_login(self.rpc_user)
+
+    def test_unauthenticated_returns_403(self):
+        self.client.logout()
+        response = self.client.get(reverse("errata_staged_bulk_delete"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_regular_user_returns_403(self):
+        self.client.force_login(self.regular_user)
+        response = self.client.get(reverse("errata_staged_bulk_delete"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_get_returns_200(self):
+        response = self.client.get(reverse("errata_staged_bulk_delete"))
+        self.assertEqual(response.status_code, 200)
+        self.assertCountEqual(response.context["staged_errata"], [self.alice, self.bob])
+
+    def test_get_with_filter_narrows_list(self):
+        response = self.client.get(
+            reverse("errata_staged_bulk_delete"), {"submitter": "alice"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertCountEqual(response.context["staged_errata"], [self.alice])
+
+    def test_get_shows_matching_count(self):
+        response = self.client.get(reverse("errata_staged_bulk_delete"))
+        self.assertContains(response, "2 matching staged errata")
+        response = self.client.get(
+            reverse("errata_staged_bulk_delete"), {"submitter": "alice"}
+        )
+        self.assertContains(response, "1 matching staged erratum")
+
+    def test_get_with_invalid_filter_still_renders(self):
+        response = self.client.get(
+            reverse("errata_staged_bulk_delete"),
+            {"date_from": "2026-03-01", "date_to": "2026-01-01"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["filter_form"].is_valid())
+
+    def test_bulk_delete_selected(self):
+        response = self.client.post(
+            reverse("errata_staged_bulk_delete"),
+            {"selected": [str(self.alice.id)]},
+        )
+        self.assertRedirects(response, reverse("errata_staged_bulk_delete"))
+        self.assertFalse(StagedErratum.objects.filter(id=self.alice.id).exists())
+        self.assertTrue(StagedErratum.objects.filter(id=self.bob.id).exists())
+
+    def test_bulk_delete_multiple_selected(self):
+        with self.assertLogs("errata.views", level="INFO") as cm:
+            self.client.post(
+                reverse("errata_staged_bulk_delete"),
+                {"selected": [str(self.alice.id), str(self.bob.id)]},
+            )
+        self.assertFalse(
+            StagedErratum.objects.filter(id__in=[self.alice.id, self.bob.id]).exists()
+        )
+        self.assertTrue(any("Bulk deleted 2" in line for line in cm.output))
+
+    def test_bulk_delete_all_matching_filter(self):
+        # Selecting "all matching" with a submitter filter only deletes matches.
+        response = self.client.post(
+            reverse("errata_staged_bulk_delete"),
+            {"select_all_matching": "1", "submitter": "alice"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(StagedErratum.objects.filter(id=self.alice.id).exists())
+        self.assertTrue(StagedErratum.objects.filter(id=self.bob.id).exists())
+
+    def test_bulk_delete_all_matching_no_filter_deletes_all(self):
+        self.client.post(
+            reverse("errata_staged_bulk_delete"),
+            {"select_all_matching": "1"},
+        )
+        self.assertEqual(
+            StagedErratum.objects.filter(
+                entry_status=StagedErratumStatus.SUBMITTED
+            ).count(),
+            0,
+        )
+
+    def test_bulk_delete_nothing_selected_is_noop(self):
+        response = self.client.post(reverse("errata_staged_bulk_delete"), {})
+        self.assertRedirects(response, reverse("errata_staged_bulk_delete"))
+        self.assertEqual(StagedErratum.objects.count(), 2)
+
+    def test_bulk_delete_preserves_filter_querystring(self):
+        response = self.client.post(
+            reverse("errata_staged_bulk_delete"),
+            {
+                "selected": [str(self.alice.id)],
+                "querystring": "submitter=alice",
+            },
+        )
+        self.assertRedirects(
+            response, f"{reverse('errata_staged_bulk_delete')}?submitter=alice"
+        )
