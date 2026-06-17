@@ -18,6 +18,7 @@ from .forms import (
     ErrataSearchForm,
     ChooseRfcForm,
     ConfirmExistingErrataReadForm,
+    ReclassifyErratumForm,
     RfcNumberListForm,
 )
 from .mail import send_erratum_classified_notification, send_new_erratum_notification
@@ -355,6 +356,48 @@ def reported_classify(request, erratum_id: int):
     else:
         form = EditErratumForm(instance=erratum)
     return render(request, "errata/reported_classify.html", dict(form=form))
+
+
+@role_required("rpc")
+def rpc_reclassify(request, erratum_id: int):
+    # Let the RPC edit and reclassify an erratum that has already been
+    # classified (i.e. is no longer in the "reported" state). Newly reported
+    # errata go through reported_classify instead.
+    erratum = get_object_or_404(
+        Erratum.objects.exclude(status_id="reported"), id=erratum_id
+    )
+    if request.method == "POST":
+        action = request.POST.get("action", "")
+        form = ReclassifyErratumForm(data=request.POST, instance=erratum, action=action)
+        if form.is_valid():
+            if action == "save":
+                form.save()
+                return redirect("errata_rpc_reclassify", erratum_id=erratum.id)
+            elif action.startswith("mark_") and action[5:] in (
+                "verified",
+                "rejected",
+                "held_for_doc_update",
+            ):
+                erratum = form.save(commit=False)
+                erratum.status_id = action[5:]
+                if (
+                    form.cleaned_data["on_behalf_of"]
+                    == ReclassifyErratumForm.ON_BEHALF_OF_MYSELF
+                ):
+                    erratum.verifier_name = request.user.name
+                    erratum.verifier_email = request.user.email
+                else:
+                    erratum.verifier_name = form.cleaned_data["verifier_name"]
+                    erratum.verifier_email = form.cleaned_data["verifier_email"]
+                erratum.verified_at = datetime.datetime.now(datetime.UTC)
+                erratum.save()
+                send_erratum_classified_notification(erratum, request.user)
+                return redirect("errata_detail", pk=erratum.id)
+            else:
+                pass
+    else:
+        form = ReclassifyErratumForm(instance=erratum)
+    return render(request, "errata/rpc_reclassify.html", dict(form=form))
 
 
 @role_required("rpc")

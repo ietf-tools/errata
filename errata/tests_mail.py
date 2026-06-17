@@ -324,6 +324,7 @@ class SendErratumClassifiedNotificationTest(TestCase):
         group_acronym="testgroup",
         group_list_email="",
         shepherd_email="",
+        verifier_email="verifier@example.com",
     ):
         rfc = RfcMetadataFactory(
             stream=stream,
@@ -340,7 +341,7 @@ class SendErratumClassifiedNotificationTest(TestCase):
             erratum_type=ErratumType.objects.get(slug=erratum_type_slug),
             status=Status.objects.get(slug="verified"),
             submitter_email="submitter@example.com",
-            verifier_email="verifier@example.com",
+            verifier_email=verifier_email,
         )
         return _fetch(erratum)
 
@@ -527,6 +528,48 @@ class SendErratumClassifiedNotificationTest(TestCase):
                 self.assertIn("RFC Production Center", msg.body)
                 for addr in stream_expected_ccs[stream]:
                     self.assertIn(addr, msg.cc)
+
+    @patch("errata.mail.send_mail_task")
+    def test_ccs_acting_user_when_they_are_the_recorded_verifier(self, mock_task):
+        # The common case: the user classifying is also the recorded verifier.
+        erratum = self._make_erratum(stream="ietf")
+        send_erratum_classified_notification(erratum, self.user)
+        msg = MailMessage.objects.latest("id")
+        self.assertIn(self.user.email, msg.cc)
+        mock_task.delay.assert_called_once_with(msg.pk)
+
+    @patch("errata.mail.send_mail_task")
+    def test_ccs_recorded_verifier_not_acting_user_when_they_differ(self, mock_task):
+        # When the RPC reclassifies on behalf of someone else, the recorded
+        # verifier differs from the acting user. The CC must go to the recorded
+        # party, and building the message must not assume they are the same.
+        rpc_user = RpcUserFactory(email="rpc@example.com")
+        erratum = self._make_erratum(stream="ietf", verifier_email="ad@example.com")
+        send_erratum_classified_notification(erratum, rpc_user)
+        msg = MailMessage.objects.latest("id")
+        self.assertIn("ad@example.com", msg.cc)
+        self.assertNotIn("rpc@example.com", msg.cc)
+        mock_task.delay.assert_called_once_with(msg.pk)
+
+    @patch("errata.mail.send_mail_task")
+    def test_rpc_reclassifying_editorial_on_behalf_of_other_ccs_named_party(
+        self, mock_task
+    ):
+        # Editorial errata are normally the RPC's own authority (no individual
+        # verifier CC'd, body credits "RFC Production Center"). But when the RPC
+        # reclassifies on behalf of a named party, that party is the verifier,
+        # so they must be CC'd and credited instead.
+        rpc_user = RpcUserFactory(email="rpc@example.com")
+        erratum = self._make_erratum(
+            stream="editorial",
+            erratum_type_slug="editorial",
+            verifier_email="ad@example.com",
+        )
+        send_erratum_classified_notification(erratum, rpc_user)
+        msg = MailMessage.objects.latest("id")
+        self.assertIn("ad@example.com", msg.cc)
+        self.assertNotIn("rpc@example.com", msg.cc)
+        self.assertNotIn("RFC Production Center", msg.body)
 
     @patch("errata.mail.send_mail_task")
     def test_always_ccs_rfc_editor(self, mock_task):

@@ -79,6 +79,11 @@ urlpatterns = [
         name="errata_reported_classify",
     ),
     path(
+        "rpc/reclassify/<int:erratum_id>",
+        views.rpc_reclassify,
+        name="errata_rpc_reclassify",
+    ),
+    path(
         "rpc/force-metadata-update/",
         views.rpc_force_metadata_update,
         name="errata_rpc_force_metadata_update",
