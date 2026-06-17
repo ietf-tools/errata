@@ -193,8 +193,10 @@ def send_erratum_classified_notification(erratum, user):
     )
     to = []
     cc = []
-    verifier_email = user.email
-    assert verifier_email == erratum.verifier_email
+    # The verifier of record is whoever is recorded on the erratum, which is
+    # not necessarily the user triggering the notification (e.g. an admin may
+    # record a classification performed by someone else).
+    verifier_email = erratum.verifier_email
     if erratum.erratum_type.slug == "technical":
         if stream == "legacy":
             to.append(erratum.submitter_email)
