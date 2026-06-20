@@ -203,6 +203,7 @@ class EditErratumForm(forms.ModelForm):
             self.add_error(
                 "corrected_text", "Corrected Text must be different from Original Text."
             )
+        return cleaned_data
 
 
 class ReclassifyErratumForm(EditErratumForm):
@@ -248,10 +249,7 @@ class ReclassifyErratumForm(EditErratumForm):
         self.fields["verifier_email"].initial = self.instance.verifier_email
 
     def clean(self):
-        # EditErratumForm.clean() validates orig/corrected text but does not
-        # return cleaned_data, so read from self.cleaned_data here.
-        super().clean()
-        cleaned_data = self.cleaned_data
+        cleaned_data = super().clean()
         # The verifying party is only recorded when the status changes. A plain
         # "save" leaves the existing verifier untouched, so don't make the RPC
         # name someone just to save edits.
