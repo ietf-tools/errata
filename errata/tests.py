@@ -1323,15 +1323,9 @@ class StagedBulkDeleteViewTest(TestCase):
             {"select_all_matching": "1", "submitter": "alice"},
         )
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(
-            StagedErratum.objects.filter(
-                id=self.alice.id, entry_status=StagedErratumStatus.SUBMITTED
-            ).exists()
-        )
+        self.assertFalse(StagedErratum.objects.filter(id=self.alice.id).exists())
         self.assertTrue(
-            StagedErratum.objects.filter(
-                id=self.alice.id, entry_status=StagedErratumStatus.INCOMPLETE
-            ).exists()
+            StagedErratum.objects.filter(id=self.alice_incomplete.id).exists()
         )
         self.assertTrue(StagedErratum.objects.filter(id=self.bob.id).exists())
 
@@ -1356,7 +1350,7 @@ class StagedBulkDeleteViewTest(TestCase):
     def test_bulk_delete_nothing_selected_is_noop(self):
         response = self.client.post(reverse("errata_staged_bulk_delete"), {})
         self.assertRedirects(response, reverse("errata_staged_bulk_delete"))
-        self.assertEqual(StagedErratum.objects.count(), 2)
+        self.assertEqual(StagedErratum.objects.count(), 3)
 
     def test_bulk_delete_preserves_filter_querystring(self):
         response = self.client.post(
