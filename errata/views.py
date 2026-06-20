@@ -3,6 +3,7 @@
 import datetime
 import logging
 import json
+import urllib.parse
 
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -247,10 +248,21 @@ def staged_bulk_delete(request):
                 f"Bulk deleted {len(deleted_ids)} staged errata: "
                 f"{', '.join(str(pk) for pk in deleted_ids)}"
             )
+        # Reconstruct the GET URL with the incoming querystring. Sanitize the
+        # querystring against StagedErrataFilterForm to prevent arbitrary fields
+        # being injected. This does not interact with the `selected` or
+        # `select_all_matching` parameters, which are only used on the POST.
         url = reverse("errata_staged_bulk_delete")
-        querystring = request.POST.get("querystring", "")
-        if querystring:
-            url = f"{url}?{querystring}"
+        raw_qs = request.POST.get("querystring", "")
+        if raw_qs:
+            # n.b. this will need attention if we use multi-valued params in the form
+            flat = {k: v[0] for k, v in urllib.parse.parse_qs(raw_qs).items() if v}
+            qs_form = StagedErrataFilterForm(flat)
+            if qs_form.is_valid():
+                # Add querystring if valid, else fall back to empty
+                safe_params = {k: v for k, v in qs_form.cleaned_data.items() if v}
+                if safe_params:
+                    url = f"{url}?{urllib.parse.urlencode(safe_params)}"
         return redirect(url)
     filter_form = StagedErrataFilterForm(request.GET or None)
     staged_errata = filter_staged_errata(filter_form)
@@ -383,9 +395,9 @@ def reported_classify(request, erratum_id: int):
                 form.save()
                 return redirect("errata_reported_classify", erratum_id=erratum.id)
             elif action.startswith("mark_") and action[5:] in (
-                "verified",
-                "rejected",
-                "held_for_doc_update",
+                    "verified",
+                    "rejected",
+                    "held_for_doc_update",
             ):
                 erratum = form.save(commit=False)
                 erratum.status_id = action[5:]

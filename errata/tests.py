@@ -1329,9 +1329,20 @@ class StagedBulkDeleteViewTest(TestCase):
             reverse("errata_staged_bulk_delete"),
             {
                 "selected": [str(self.alice.id)],
-                "querystring": "submitter=alice",
+                "querystring": "submitter=alice&invalidparam=value",
             },
         )
         self.assertRedirects(
             response, f"{reverse('errata_staged_bulk_delete')}?submitter=alice"
         )
+
+    def test_bulk_delete_invalid_querystring_is_dropped(self):
+        response = self.client.post(
+            reverse("errata_staged_bulk_delete"),
+            {
+                "selected": [str(self.alice.id)],
+                "querystring": "date_from=2026-03-01&date_to=2026-01-01",
+                # reversed range
+            },
+        )
+        self.assertRedirects(response, reverse("errata_staged_bulk_delete"))
