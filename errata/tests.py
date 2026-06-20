@@ -1229,6 +1229,14 @@ class StagedBulkDeleteViewTest(TestCase):
             submitter_email="alice@example.com",
             submitted_at=datetime.datetime(2026, 1, 15, tzinfo=datetime.UTC),
         )
+        self.alice_incomplete = StagedErratumFactory(
+            rfc_metadata=self.rfc_b,
+            rfc_number=self.rfc_b.rfc_number,
+            entry_status=StagedErratumStatus.INCOMPLETE,  # not SUBMITTED status
+            submitter_name="Alice Example",
+            submitter_email="alice@example.com",
+            submitted_at=datetime.datetime(2026, 4, 23, tzinfo=datetime.UTC),
+        )
         self.bob = StagedErratumFactory(
             rfc_metadata=self.rfc_b,
             rfc_number=self.rfc_b.rfc_number,
@@ -1287,13 +1295,24 @@ class StagedBulkDeleteViewTest(TestCase):
         self.assertTrue(StagedErratum.objects.filter(id=self.bob.id).exists())
 
     def test_bulk_delete_multiple_selected(self):
+        # The incomplete erratum is selected, but should not be deleted because it does
+        # not have SUBMITTED status.
         with self.assertLogs("errata.views", level="INFO") as cm:
             self.client.post(
                 reverse("errata_staged_bulk_delete"),
-                {"selected": [str(self.alice.id), str(self.bob.id)]},
+                {
+                    "selected": [
+                        str(self.alice.id),
+                        str(self.bob.id),
+                        str(self.alice_incomplete.id),
+                    ]
+                },
             )
         self.assertFalse(
             StagedErratum.objects.filter(id__in=[self.alice.id, self.bob.id]).exists()
+        )
+        self.assertTrue(
+            StagedErratum.objects.filter(id=self.alice_incomplete.id).exists()
         )
         self.assertTrue(any("Bulk deleted 2" in line for line in cm.output))
 
@@ -1304,7 +1323,16 @@ class StagedBulkDeleteViewTest(TestCase):
             {"select_all_matching": "1", "submitter": "alice"},
         )
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(StagedErratum.objects.filter(id=self.alice.id).exists())
+        self.assertFalse(
+            StagedErratum.objects.filter(
+                id=self.alice.id, entry_status=StagedErratumStatus.SUBMITTED
+            ).exists()
+        )
+        self.assertTrue(
+            StagedErratum.objects.filter(
+                id=self.alice.id, entry_status=StagedErratumStatus.INCOMPLETE
+            ).exists()
+        )
         self.assertTrue(StagedErratum.objects.filter(id=self.bob.id).exists())
 
     def test_bulk_delete_all_matching_no_filter_deletes_all(self):
@@ -1317,6 +1345,12 @@ class StagedBulkDeleteViewTest(TestCase):
                 entry_status=StagedErratumStatus.SUBMITTED
             ).count(),
             0,
+        )
+        self.assertEqual(
+            StagedErratum.objects.filter(
+                entry_status=StagedErratumStatus.INCOMPLETE
+            ).count(),
+            1,
         )
 
     def test_bulk_delete_nothing_selected_is_noop(self):
