@@ -233,6 +233,72 @@ class EditErratumForm(forms.ModelForm):
             self.add_error(
                 "corrected_text", "Corrected Text must be different from Original Text."
             )
+        return cleaned_data
+
+
+class ReclassifyErratumForm(EditErratumForm):
+    """EditErratumForm plus a record of who the reclassification is on behalf of.
+
+    The RPC can reclassify on behalf of themselves or name another verifying
+    party. The verifier name/email are only consulted when a status-changing
+    action is taken; a plain "save" leaves the existing verifier untouched.
+    """
+
+    ON_BEHALF_OF_MYSELF = "myself"
+    ON_BEHALF_OF_OTHER = "other"
+    ON_BEHALF_OF_CHOICES = [
+        (ON_BEHALF_OF_MYSELF, "Myself (RFC Production Center)"),
+        (ON_BEHALF_OF_OTHER, "Someone else"),
+    ]
+
+    on_behalf_of = forms.ChoiceField(
+        choices=ON_BEHALF_OF_CHOICES,
+        widget=forms.RadioSelect,
+        initial=ON_BEHALF_OF_MYSELF,
+        label="Reclassifying on behalf of",
+    )
+    verifier_name = forms.CharField(
+        max_length=80,
+        required=False,
+        label="Verifying party name",
+    )
+    verifier_email = forms.EmailField(
+        max_length=120,
+        required=False,
+        label="Verifying party email",
+    )
+
+    def __init__(self, *args, action="", **kwargs):
+        # The submitted action determines whether the status is changing, which
+        # in turn determines whether the verifying party is actually used.
+        self.action = action
+        super().__init__(*args, **kwargs)
+        # Prefill the "someone else" fields with the current verifying party so
+        # the RPC can keep or edit it.
+        self.fields["verifier_name"].initial = self.instance.verifier_name
+        self.fields["verifier_email"].initial = self.instance.verifier_email
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # The verifying party is only recorded when the status changes. A plain
+        # "save" leaves the existing verifier untouched, so don't make the RPC
+        # name someone just to save edits.
+        changing_status = self.action.startswith("mark_")
+        if (
+            changing_status
+            and cleaned_data.get("on_behalf_of") == self.ON_BEHALF_OF_OTHER
+        ):
+            if not cleaned_data.get("verifier_name"):
+                self.add_error(
+                    "verifier_name",
+                    "Provide a name when reclassifying on behalf of someone else.",
+                )
+            if not cleaned_data.get("verifier_email"):
+                self.add_error(
+                    "verifier_email",
+                    "Provide an email when reclassifying on behalf of someone else.",
+                )
+        return cleaned_data
 
 
 class RfcNumberListForm(forms.Form):

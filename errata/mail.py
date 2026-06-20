@@ -179,8 +179,15 @@ def send_erratum_classified_notification(erratum, user):
     subject = f"[Errata {erratum.status.name}] RFC{erratum.rfc_metadata.rfc_number} ({erratum.id})"
     metadata = erratum.rfc_metadata
     stream = metadata.stream
+    # The RFC Production Center is the verifying authority for editorial errata
+    # it classifies itself. But when the RPC reclassifies on behalf of a named
+    # other party (recorded as a verifier_email that isn't the acting user's),
+    # that party is the verifier, so fall back to the normal handling that CCs
+    # them and names the stream's verifying party.
     rpc_classifying_editorial = (
-        is_rpc(user) and erratum.erratum_type.slug == "editorial"
+        is_rpc(user)
+        and erratum.erratum_type.slug == "editorial"
+        and erratum.verifier_email == user.email
     )
     verifying_party = txt_errata_verifying_party(erratum, rpc_classifying_editorial)
     body = render_to_string(
@@ -193,8 +200,10 @@ def send_erratum_classified_notification(erratum, user):
     )
     to = []
     cc = []
-    verifier_email = user.email
-    assert verifier_email == erratum.verifier_email
+    # CC the verifying party recorded on the erratum. This is usually the
+    # classifying user, but when the RPC reclassifies on behalf of someone
+    # else it is that other party, so trust the erratum rather than the user.
+    verifier_email = erratum.verifier_email
     if erratum.erratum_type.slug == "technical":
         if stream == "legacy":
             to.append(erratum.submitter_email)

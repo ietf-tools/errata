@@ -26,6 +26,7 @@ from errata.models import (
     AddressListField,
     Erratum,
     ErratumType,
+    MailMessage,
     StagedErratum,
     StagedErratumStatus,
     Status,
@@ -994,6 +995,202 @@ class RpcViewTest(TestCase):
         self.erratum.refresh_from_db()
         self.assertEqual(self.erratum.status_id, "held_for_doc_update")
         mock_notify.assert_called_once()
+
+    def _verified_erratum(self):
+        return ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            status=Status.objects.get(slug="verified"),
+            verifier_name="Original Verifier",
+            verifier_email="original@example.com",
+            verified_at=datetime.datetime.now(datetime.UTC),
+        )
+
+    def test_rpc_reclassify_unauthenticated_returns_403(self):
+        erratum = self._verified_erratum()
+        response = self.client.get(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id})
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_rpc_reclassify_regular_user_returns_403(self):
+        erratum = self._verified_erratum()
+        self.client.force_login(self.regular_user)
+        response = self.client.get(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id})
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_rpc_reclassify_verifier_returns_403(self):
+        # Reclassifying an already-classified erratum is an RPC-only function;
+        # stream verifiers only handle newly reported errata.
+        erratum = self._verified_erratum()
+        self.client.force_login(self.ops_verifier)
+        response = self.client.get(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id})
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_rpc_reclassify_get_returns_200(self):
+        erratum = self._verified_erratum()
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id})
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_rpc_reclassify_reported_erratum_returns_404(self):
+        # Newly reported errata go through reported_classify, not reclassify.
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": self.erratum.id})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def _reclassify_post_data(self, **overrides):
+        data = {
+            "erratum_type": "technical",
+            "section": "1",
+            "orig_text": "Original text",
+            "corrected_text": "Corrected text",
+            "submitter_name": "Test Submitter",
+            "submitter_email": "submitter@example.com",
+            "notes": "",
+            "on_behalf_of": "myself",
+        }
+        data.update(overrides)
+        if self.rfc.rfc_number >= 8650:
+            data["formats"] = ["TXT"]
+        return data
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_rpc_reclassify_post_on_behalf_of_self_records_rpc_as_verifier(
+        self, mock_notify
+    ):
+        erratum = self._verified_erratum()
+        self.client.force_login(self.rpc_user)
+        response = self.client.post(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+            self._reclassify_post_data(on_behalf_of="myself", action="mark_rejected"),
+        )
+        self.assertRedirects(
+            response, reverse("errata_detail", kwargs={"pk": erratum.id})
+        )
+        erratum.refresh_from_db()
+        self.assertEqual(erratum.status_id, "rejected")
+        self.assertEqual(erratum.verifier_name, self.rpc_user.name)
+        self.assertEqual(erratum.verifier_email, self.rpc_user.email)
+        mock_notify.assert_called_once()
+
+    @patch("errata.mail.send_mail_task")
+    def test_rpc_reclassify_post_on_behalf_of_other_records_and_notifies_named_party(
+        self, mock_send_mail
+    ):
+        # End-to-end (notification not mocked): the named party is recorded on
+        # the erratum and is the one CC'd on the real notification message.
+        erratum = self._verified_erratum()
+        self.client.force_login(self.rpc_user)
+        response = self.client.post(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+            self._reclassify_post_data(
+                on_behalf_of="other",
+                verifier_name="Area Director",
+                verifier_email="ad@example.com",
+                action="mark_verified",
+            ),
+        )
+        self.assertRedirects(
+            response, reverse("errata_detail", kwargs={"pk": erratum.id})
+        )
+        erratum.refresh_from_db()
+        self.assertEqual(erratum.status_id, "verified")
+        self.assertEqual(erratum.verifier_name, "Area Director")
+        self.assertEqual(erratum.verifier_email, "ad@example.com")
+        message = MailMessage.objects.latest("id")
+        self.assertIn("ad@example.com", message.cc)
+        self.assertNotIn(self.rpc_user.email, message.cc)
+        mock_send_mail.delay.assert_called_once_with(message.pk)
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_rpc_reclassify_post_on_behalf_of_other_requires_identity_when_marking(
+        self, mock_notify
+    ):
+        # Choosing "someone else" without a name/email is invalid for a
+        # status-changing action; nothing changes and no notification is sent.
+        erratum = self._verified_erratum()
+        self.client.force_login(self.rpc_user)
+        response = self.client.post(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+            self._reclassify_post_data(
+                on_behalf_of="other",
+                verifier_name="",
+                verifier_email="",
+                action="mark_rejected",
+            ),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(
+            response.context["form"],
+            "verifier_name",
+            ["Provide a name when reclassifying on behalf of someone else."],
+        )
+        erratum.refresh_from_db()
+        self.assertEqual(erratum.status_id, "verified")
+        self.assertEqual(erratum.verifier_name, "Original Verifier")
+        mock_notify.assert_not_called()
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_rpc_reclassify_post_save_does_not_require_named_party(self, mock_notify):
+        # A plain save does not change the verifier, so "someone else" with
+        # blank name/email must not block saving edits.
+        erratum = self._verified_erratum()
+        self.client.force_login(self.rpc_user)
+        response = self.client.post(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+            self._reclassify_post_data(
+                on_behalf_of="other",
+                verifier_name="",
+                verifier_email="",
+                section="7",
+                action="save",
+            ),
+        )
+        self.assertRedirects(
+            response,
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+        )
+        erratum.refresh_from_db()
+        self.assertEqual(erratum.section, "7")
+        # Verifier is left untouched by a plain save.
+        self.assertEqual(erratum.verifier_name, "Original Verifier")
+        self.assertEqual(erratum.verifier_email, "original@example.com")
+        mock_notify.assert_not_called()
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_rpc_reclassify_post_save_preserves_status_and_verifier(self, mock_notify):
+        erratum = self._verified_erratum()
+        self.client.force_login(self.rpc_user)
+        response = self.client.post(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+            self._reclassify_post_data(
+                erratum_type="editorial",
+                section="2",
+                corrected_text="Different corrected text",
+                on_behalf_of="myself",
+                action="save",
+            ),
+        )
+        self.assertRedirects(
+            response,
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+        )
+        erratum.refresh_from_db()
+        # status and verifier are unchanged by a plain save, but edits persist
+        self.assertEqual(erratum.status_id, "verified")
+        self.assertEqual(erratum.verifier_name, "Original Verifier")
+        self.assertEqual(erratum.erratum_type_id, "editorial")
+        self.assertEqual(erratum.section, "2")
+        mock_notify.assert_not_called()
 
     def test_rpc_force_metadata_update_get_returns_200(self):
         self.client.force_login(self.rpc_user)
