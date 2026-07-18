@@ -80,7 +80,7 @@ def is_rpc(user):
 def is_verifier(user):
     user_roles = getattr(user, "roles", [])
     # "delegate_stream_manager" is a datatracker role
-    # that is coming into existance to support the
+    # that is coming into existence to support the
     # errata system. It will have to created as a
     # RoleName and roles assigned before the related
     # passing_roles below will have effect.

@@ -2,7 +2,7 @@
 
 This is a simple django re-implementation of the current errata system.
 It is not intended to add features beyond these two:
-* Verifiers will login via datatracker credentals
+* Verifiers will login via datatracker credentials
 * The RPC will vet all new filed errata (and handle spam) before verifiers are asked to look
 
 ## Development

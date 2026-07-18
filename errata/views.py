@@ -529,7 +529,7 @@ def api_rfc_metadata_update(request):
             )
         if any([type(num) is not int or num <= 0 for num in rfc_number_list]):
             return JsonResponse(
-                {"error": "rfc_number_list must be a list of postitive integers."},
+                {"error": "rfc_number_list must be a list of positive integers."},
                 status=400,
             )
         update_rfc_metadata_task.delay(rfc_number_list)
