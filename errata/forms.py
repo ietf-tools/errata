@@ -129,6 +129,32 @@ class ConfirmExistingErrataReadForm(forms.Form):
     )
 
 
+REPORTED_WITHIN_CHOICES = [
+    ("7", "Last 7 days"),
+    ("14", "Last 14 days"),
+    ("30", "Last 30 days"),
+    ("90", "Last 90 days"),
+    ("365", "Last 365 days"),
+    ("all", "All"),
+]
+
+
+class ReportedErrataFilterForm(forms.Form):
+    """Narrow the reported errata list to recently reported entries.
+
+    Long-standing reported errata accumulate for reasons unrelated to how
+    promptly anyone works the list, so the default is "all" and narrowing is
+    something the reader opts into to see what has arrived recently.
+    """
+
+    within = CaseInsensitiveChoiceField(
+        choices=REPORTED_WITHIN_CHOICES,
+        required=False,
+        initial="all",
+        label="Reported within",
+    )
+
+
 class StagedErrataFilterForm(forms.Form):
     rfc_number = forms.IntegerField(required=False, label="RFC Number")
     submitter = forms.CharField(

@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from errata.factories import (
     ErratumFactory,
@@ -19,6 +20,7 @@ from errata.forms import (
     EditErratumForm,
     EditStagedErratumForm,
     ErrataSearchForm,
+    ReportedErrataFilterForm,
     RfcNumberListForm,
     StagedErrataFilterForm,
 )
@@ -31,7 +33,11 @@ from errata.models import (
     StagedErratumStatus,
     Status,
 )
-from errata.search import filter_staged_errata, search_errata
+from errata.search import (
+    filter_reported_errata,
+    filter_staged_errata,
+    search_errata,
+)
 from errata.utils import with_rfc_has_verified
 from errata.views import REPORTED_LIST_TOC_THRESHOLD
 
@@ -1070,6 +1076,115 @@ class RpcViewTest(TestCase):
         self.assertContains(response, 'href="#reported-technical"')
         self.assertContains(response, 'href="#reported-editorial"')
 
+    def test_reported_list_defaults_to_all(self):
+        old = ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=400),
+        )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"))
+        self.assertContains(response, "Total reported errata: 2")
+        self.assertContains(response, f"Errata-ID: {old.id}</h4>")
+        self.assertContains(response, f"Errata-ID: {self.erratum.id}</h4>")
+
+    def test_reported_list_within_excludes_older_errata(self):
+        old = ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=45),
+        )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "30"})
+        self.assertNotContains(response, f"Errata-ID: {old.id}</h4>")
+        self.assertContains(response, f"Errata-ID: {self.erratum.id}</h4>")
+        self.assertContains(response, "Showing 1 of 2 reported errata.")
+        self.assertContains(response, "the 1 reported earlier")
+
+    def test_reported_list_within_boundaries(self):
+        # Each erratum falls inside exactly the windows at least as wide as its age.
+        ages = {7: 3, 14: 10, 30: 20, 90: 60, 365: 200}
+        errata = {
+            window: ErratumFactory(
+                rfc_metadata=self.rfc,
+                rfc_number=self.rfc.rfc_number,
+                submitted_at=timezone.now() - datetime.timedelta(days=age),
+            )
+            for window, age in ages.items()
+        }
+        self.client.force_login(self.rpc_user)
+        for window in ages:
+            response = self.client.get(
+                reverse("errata_reported_list"), {"within": str(window)}
+            )
+            for other, erratum in errata.items():
+                if other <= window:
+                    self.assertContains(response, f"Errata-ID: {erratum.id}</h4>")
+                else:
+                    self.assertNotContains(response, f"Errata-ID: {erratum.id}</h4>")
+
+    def test_reported_list_section_counts_reflect_filter(self):
+        editorial = ErratumType.objects.get(slug="editorial")
+        ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            erratum_type=editorial,
+            submitted_at=timezone.now() - datetime.timedelta(days=400),
+        )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "30"})
+        # setUp's technical erratum is recent; the editorial one is not.
+        self.assertContains(response, "Reported Technical (1)")
+        self.assertContains(response, "Reported Editorial (0)")
+
+    def test_reported_list_unknown_within_shows_all(self):
+        ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=400),
+        )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "bogus"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Total reported errata: 2")
+
+    def test_reported_list_within_is_case_insensitive(self):
+        ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=400),
+        )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "ALL"})
+        self.assertContains(response, "Total reported errata: 2")
+
+    def test_reported_list_marks_selected_window(self):
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "90"})
+        self.assertContains(
+            response, '<a href="?within=90" class="btn btn-outline-primary active"'
+        )
+        self.assertContains(
+            response, '<a href="?within=all" class="btn btn-outline-primary"'
+        )
+
+    def test_reported_list_toc_threshold_uses_filtered_count(self):
+        # Enough old errata to cross the threshold, but none of them recent.
+        for _ in range(REPORTED_LIST_TOC_THRESHOLD):
+            ErratumFactory(
+                rfc_metadata=self.rfc,
+                rfc_number=self.rfc.rfc_number,
+                submitted_at=timezone.now() - datetime.timedelta(days=400),
+            )
+        self.client.force_login(self.rpc_user)
+        self.assertContains(
+            self.client.get(reverse("errata_reported_list")), "On this page"
+        )
+        self.assertNotContains(
+            self.client.get(reverse("errata_reported_list"), {"within": "30"}),
+            "On this page",
+        )
+
     def test_reported_classify_get_returns_200(self):
         self.client.force_login(self.rpc_user)
         response = self.client.get(
@@ -1080,6 +1195,88 @@ class RpcViewTest(TestCase):
             response,
             f'href="https://www.rfc-editor.org/info/rfc{self.erratum.rfc_number}"',
         )
+
+    def classify_url(self, query=""):
+        return (
+            reverse("errata_reported_classify", kwargs={"erratum_id": self.erratum.id})
+            + query
+        )
+
+    def classify_post_data(self, action):
+        data = {
+            "erratum_type": "technical",
+            "section": "1",
+            "orig_text": "Original text",
+            "corrected_text": "Corrected text",
+            "submitter_name": "Test Submitter",
+            "submitter_email": "submitter@example.com",
+            "notes": "",
+            "action": action,
+        }
+        if self.rfc.rfc_number >= 8650:
+            data["formats"] = ["TXT"]
+        return data
+
+    def test_reported_list_classify_link_carries_filter(self):
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "30"})
+        self.assertContains(response, f'href="{self.classify_url("?within=30")}"')
+
+    def test_reported_list_classify_link_clean_when_unfiltered(self):
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"))
+        # The closing quote pins this to a link with no query string. ("within=all"
+        # does appear on this page -- it is the "All" chip's own href.)
+        self.assertContains(response, f'href="{self.classify_url()}"')
+
+    def test_reported_classify_cancel_carries_filter(self):
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(self.classify_url("?within=30"))
+        self.assertContains(
+            response, f'href="{reverse("errata_reported_list")}?within=30"'
+        )
+
+    def test_reported_classify_cancel_clean_when_unfiltered(self):
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(self.classify_url())
+        self.assertContains(response, f'href="{reverse("errata_reported_list")}"')
+        self.assertNotContains(response, "within=all")
+
+    def test_reported_classify_cancel_ignores_unknown_filter(self):
+        # A bad value must not be reflected back into the link.
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(self.classify_url("?within=bogus"))
+        self.assertContains(response, f'href="{reverse("errata_reported_list")}"')
+        self.assertNotContains(response, "within=bogus")
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_reported_classify_save_preserves_filter(self, mock_notify):
+        self.client.force_login(self.rpc_user)
+        response = self.client.post(
+            self.classify_url("?within=30"), self.classify_post_data("save")
+        )
+        self.assertRedirects(response, self.classify_url("?within=30"))
+        mock_notify.assert_not_called()
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_reported_classify_mark_returns_to_filtered_list(self, mock_notify):
+        self.client.force_login(self.ops_verifier)
+        response = self.client.post(
+            self.classify_url("?within=30"), self.classify_post_data("mark_verified")
+        )
+        self.assertRedirects(response, f"{reverse('errata_reported_list')}?within=30")
+        self.erratum.refresh_from_db()
+        self.assertEqual(self.erratum.status_id, "verified")
+        mock_notify.assert_called_once()
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_reported_classify_mark_unfiltered_returns_to_clean_list(self, mock_notify):
+        self.client.force_login(self.ops_verifier)
+        response = self.client.post(
+            self.classify_url(), self.classify_post_data("mark_verified")
+        )
+        self.assertRedirects(response, reverse("errata_reported_list"))
+        mock_notify.assert_called_once()
 
     @patch("errata.views.send_erratum_classified_notification")
     def test_reported_classify_post_mark_verified(self, mock_notify):
@@ -1534,6 +1731,70 @@ class UtilsTest(TestCase):
             rfc_inline_errata_url(42),
             "https://example.test/rfc/inline-errata/rfc42.html",
         )
+
+
+class FilterReportedErrataTest(TestCase):
+    def setUp(self):
+        self.rfc = RfcMetadataFactory()
+        self.recent = ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=2),
+        )
+        self.old = ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=400),
+        )
+
+    def filtered(self, data):
+        return filter_reported_errata(
+            Erratum.objects.all(), ReportedErrataFilterForm(data)
+        )
+
+    def test_empty_form_is_valid(self):
+        self.assertTrue(ReportedErrataFilterForm({}).is_valid())
+
+    def test_unbound_form_does_not_narrow(self):
+        result = filter_reported_errata(
+            Erratum.objects.all(), ReportedErrataFilterForm()
+        )
+        self.assertCountEqual(result, [self.recent, self.old])
+
+    def test_all_does_not_narrow(self):
+        self.assertCountEqual(self.filtered({"within": "all"}), [self.recent, self.old])
+
+    def test_missing_within_does_not_narrow(self):
+        self.assertCountEqual(self.filtered({}), [self.recent, self.old])
+
+    def test_window_narrows_to_recent(self):
+        self.assertCountEqual(self.filtered({"within": "30"}), [self.recent])
+
+    def test_window_wider_than_age_includes_both(self):
+        self.assertCountEqual(self.filtered({"within": "365"}), [self.recent])
+        self.old.submitted_at = timezone.now() - datetime.timedelta(days=100)
+        self.old.save()
+        self.assertCountEqual(self.filtered({"within": "365"}), [self.recent, self.old])
+
+    def test_invalid_within_does_not_narrow(self):
+        form = ReportedErrataFilterForm({"within": "bogus"})
+        self.assertFalse(form.is_valid())
+        self.assertCountEqual(
+            filter_reported_errata(Erratum.objects.all(), form),
+            [self.recent, self.old],
+        )
+
+    def test_within_matches_regardless_of_case(self):
+        self.assertCountEqual(self.filtered({"within": "All"}), [self.recent, self.old])
+
+    def test_errata_without_a_submitted_date_are_only_in_all(self):
+        # submitted_at is nullable in the schema; a null cannot satisfy a
+        # bounded window, so such errata surface only under "all".
+        undated = ErratumFactory(
+            rfc_metadata=self.rfc, rfc_number=self.rfc.rfc_number, submitted_at=None
+        )
+        self.assertIn(undated, self.filtered({"within": "all"}))
+        self.assertNotIn(undated, self.filtered({"within": "365"}))
 
 
 class StagedErrataFilterFormTest(TestCase):

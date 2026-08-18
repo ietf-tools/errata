@@ -21,6 +21,8 @@ from .forms import (
     ChooseRfcForm,
     ConfirmExistingErrataReadForm,
     ReclassifyErratumForm,
+    ReportedErrataFilterForm,
+    REPORTED_WITHIN_CHOICES,
     RfcNumberListForm,
     StagedErrataFilterForm,
 )
@@ -33,7 +35,7 @@ from .models import (
     StagedErratumStatus,
     Status,
 )
-from .search import filter_staged_errata, search_errata
+from .search import filter_reported_errata, filter_staged_errata, search_errata
 from .tasks import update_rfc_metadata_task
 from .utils import can_classify, unverified_errata, with_rfc_has_verified
 
@@ -382,10 +384,39 @@ def staged_rpc_add_to_unverified(request, staged_erratum_id, erratum_type):
 REPORTED_LIST_TOC_THRESHOLD = 10
 
 
+def _within_filter(request):
+    """Return the (form, value) pair for the reported list's date filter.
+
+    The value is the validated ``within`` query parameter, or "all" when it is
+    absent or unrecognized.
+    """
+    form = ReportedErrataFilterForm(request.GET or None)
+    within = "all"
+    if form.is_bound and form.is_valid():
+        within = form.cleaned_data.get("within") or "all"
+    return form, within
+
+
+def _with_within(url, within):
+    """Append the reported list's date filter to ``url``, if one is in effect.
+
+    Carrying the filter in the URL is what keeps it alive across the classify
+    round trip: the classify page links back with it, and its redirects rebuild
+    it, so a reader who narrowed to "last 7 days" returns to that same view.
+    """
+    if not within or within == "all":
+        return url
+    return f"{url}?{urllib.parse.urlencode({'within': within})}"
+
+
 @role_required("rpc", "verifier")
 def reported_list(request):
+    # An unrecognized "within" value leaves the form invalid, which the filter
+    # treats as "all" -- a bad URL shows everything rather than an error.
+    filter_form, selected_within = _within_filter(request)
+    all_reported = unverified_errata(request.user)
     reported = with_rfc_has_verified(
-        unverified_errata(request.user).order_by("rfc_number")
+        filter_reported_errata(all_reported, filter_form).order_by("rfc_number")
     )
     sections = [
         {
@@ -400,12 +431,20 @@ def reported_list(request):
         },
     ]
     total = reported.count()
+    # Unnarrowed, the two counts are the same query; only pay for it when filtering.
+    total_unfiltered = total if selected_within == "all" else all_reported.count()
     return render(
         request,
         "errata/reported_list.html",
         dict(
             sections=sections,
             total=total,
+            total_unfiltered=total_unfiltered,
+            hidden_count=total_unfiltered - total,
+            within_choices=REPORTED_WITHIN_CHOICES,
+            selected_within=selected_within,
+            # Suffix for links out to the classify page, so the filter survives.
+            within_query=_with_within("", selected_within),
             show_toc=total > REPORTED_LIST_TOC_THRESHOLD,
         ),
     )
@@ -424,13 +463,26 @@ def reported_classify(request, erratum_id: int):
     # Make sure this user can manipulate this erratum
     if not can_classify(request.user, erratum_id):
         raise Http404
+    # The list's date filter rides along in the query string. The form posts to
+    # the current URL, so it is still here on POST and can be put back on both
+    # redirect targets.
+    _, within = _within_filter(request)
+    list_url = _with_within(reverse("errata_reported_list"), within)
     if request.method == "POST":
         form = EditErratumForm(data=request.POST, instance=erratum)
         if form.is_valid():
             action = request.POST.get("action", "")
             if action == "save":
                 form.save()
-                return redirect("errata_reported_classify", erratum_id=erratum.id)
+                return redirect(
+                    _with_within(
+                        reverse(
+                            "errata_reported_classify",
+                            kwargs={"erratum_id": erratum.id},
+                        ),
+                        within,
+                    )
+                )
             elif action.startswith("mark_") and action[5:] in (
                 "verified",
                 "rejected",
@@ -443,12 +495,14 @@ def reported_classify(request, erratum_id: int):
                 erratum.verified_at = datetime.datetime.now(datetime.UTC)
                 erratum.save()
                 send_erratum_classified_notification(erratum, request.user)
-                return redirect("errata_reported_list")
+                return redirect(list_url)
             else:
                 pass
     else:
         form = EditErratumForm(instance=erratum)
-    return render(request, "errata/reported_classify.html", dict(form=form))
+    return render(
+        request, "errata/reported_classify.html", dict(form=form, list_url=list_url)
+    )
 
 
 @role_required("rpc")

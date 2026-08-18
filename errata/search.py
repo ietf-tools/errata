@@ -1,8 +1,11 @@
 # Copyright The IETF Trust 2026, All Rights Reserved
 
-from django.db.models import Q
+import datetime
 
-from .forms import ErrataSearchForm, StagedErrataFilterForm
+from django.db.models import Q
+from django.utils import timezone
+
+from .forms import ErrataSearchForm, ReportedErrataFilterForm, StagedErrataFilterForm
 from .models import Erratum, StagedErratum, StagedErratumStatus
 
 
@@ -66,6 +69,25 @@ def search_errata(form: ErrataSearchForm):
                 submitted_at__day=day,
             )
     return errata
+
+
+def filter_reported_errata(errata, form: ReportedErrataFilterForm):
+    """Narrow reported errata to those submitted within the selected window.
+
+    Takes a queryset rather than building one, because the caller's starting
+    set depends on which errata the user may classify (see
+    ``errata.utils.unverified_errata``).
+
+    An unbound or invalid form leaves the queryset unnarrowed, which matches
+    the "all" default.
+    """
+    if not (form.is_bound and form.is_valid()):
+        return errata
+    within = form.cleaned_data.get("within")
+    if not within or within == "all":
+        return errata
+    cutoff = timezone.now() - datetime.timedelta(days=int(within))
+    return errata.filter(submitted_at__gte=cutoff)
 
 
 def filter_staged_errata(form: StagedErrataFilterForm):

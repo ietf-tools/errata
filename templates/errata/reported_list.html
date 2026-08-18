@@ -3,7 +3,21 @@
 
 {% block content %}
 <h1>Reported errata you can classify</h1>
-<p class="text-muted">Total reported errata: {{ total }}</p>
+<div class="btn-group mb-2" role="group" aria-label="Show errata reported within">
+    {% for value, label in within_choices %}
+        <a href="?within={{ value }}" class="btn btn-outline-primary{% if value == selected_within %} active{% endif %}"{% if value == selected_within %} aria-current="true"{% endif %}>{{ label }}</a>
+    {% endfor %}
+</div>
+{% if selected_within == "all" %}
+    <p class="text-muted">Total reported errata: {{ total }}</p>
+{% else %}
+    <p class="text-muted">
+        Showing {{ total }} of {{ total_unfiltered }} reported errata.
+        {% if hidden_count %}
+            <a href="?within=all">Show all</a> to include the {{ hidden_count }} reported earlier.
+        {% endif %}
+    </p>
+{% endif %}
 <div class="container mt-4">
   <div class="row">
     {% if show_toc %}
@@ -58,7 +72,7 @@
                                         <div class="card mb-4">
                                             <div class="card-header bg-light text-dark">
                                                 <h4 class="mt-4">Errata-ID: {{ erratum.id }}</h4>
-                                                <a href="{% url 'errata_reported_classify' erratum_id=erratum.id%}" class="btn btn-primary">Classify</a>
+                                                <a href="{% url 'errata_reported_classify' erratum_id=erratum.id%}{{ within_query }}" class="btn btn-primary">Classify</a>
                                             </div>
                                             <div class="card-body">
                                                 <dl class="row">

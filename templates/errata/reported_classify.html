@@ -31,7 +31,7 @@
             <button class="btn btn-primary" type="submit" name="action" value="mark_verified">Save and Mark Verified</button>
             <button class="btn btn-primary" type="submit" name="action" value="mark_rejected">Save and Mark Rejected</button>
             <button class="btn btn-primary" type="submit" name="action" value="mark_held_for_doc_update">Save and Mark Hold for Document Update</button>
-            <a href="{% url 'errata_reported_list' %}" class="btn btn-info">Cancel</a>
+            <a href="{{ list_url }}" class="btn btn-info">Cancel</a>
         </form>
     </div>
 </div>
