@@ -1,9 +1,12 @@
 # Copyright The IETF Trust 2026, All Rights Reserved
 
-from django.db.models import Q
+import datetime
 
-from .forms import ErrataSearchForm
-from .models import Erratum
+from django.db.models import Q
+from django.utils import timezone
+
+from .forms import ErrataSearchForm, ReportedErrataFilterForm, StagedErrataFilterForm
+from .models import Erratum, StagedErratum, StagedErratumStatus
 
 
 def search_errata(form: ErrataSearchForm):
@@ -66,3 +69,52 @@ def search_errata(form: ErrataSearchForm):
                 submitted_at__day=day,
             )
     return errata
+
+
+def filter_reported_errata(errata, form: ReportedErrataFilterForm):
+    """Narrow reported errata to those submitted within the selected window.
+
+    Takes a queryset rather than building one, because the caller's starting
+    set depends on which errata the user may classify (see
+    ``errata.utils.unverified_errata``).
+
+    An unbound or invalid form leaves the queryset unnarrowed, which matches
+    the "all" default.
+    """
+    if not (form.is_bound and form.is_valid()):
+        return errata
+    within = form.cleaned_data.get("within")
+    if not within or within == "all":
+        return errata
+    cutoff = timezone.now() - datetime.timedelta(days=int(within))
+    return errata.filter(submitted_at__gte=cutoff)
+
+
+def filter_staged_errata(form: StagedErrataFilterForm):
+    """Return submitted StagedErrata narrowed by the filter form.
+
+    An unbound or invalid form yields the unfiltered set of submitted
+    staged errata so the view still has something sensible to show.
+    """
+    staged_errata = StagedErratum.objects.filter(
+        entry_status=StagedErratumStatus.SUBMITTED
+    ).order_by("submitted_at")
+    if not (form.is_bound and form.is_valid()):
+        return staged_errata
+    if form.cleaned_data.get("rfc_number") is not None:
+        staged_errata = staged_errata.filter(rfc_number=form.cleaned_data["rfc_number"])
+    if form.cleaned_data.get("submitter"):
+        submitter = form.cleaned_data["submitter"]
+        staged_errata = staged_errata.filter(
+            Q(submitter_name__icontains=submitter)
+            | Q(submitter_email__icontains=submitter)
+        )
+    if form.cleaned_data.get("date_from"):
+        staged_errata = staged_errata.filter(
+            submitted_at__date__gte=form.cleaned_data["date_from"]
+        )
+    if form.cleaned_data.get("date_to"):
+        staged_errata = staged_errata.filter(
+            submitted_at__date__lte=form.cleaned_data["date_to"]
+        )
+    return staged_errata

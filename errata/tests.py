@@ -20,17 +20,26 @@ from errata.forms import (
     EditErratumForm,
     EditStagedErratumForm,
     ErrataSearchForm,
+    ReportedErrataFilterForm,
     RfcNumberListForm,
+    StagedErrataFilterForm,
 )
 from errata.models import (
     AddressListField,
     Erratum,
     ErratumType,
+    MailMessage,
     StagedErratum,
     StagedErratumStatus,
     Status,
 )
-from errata.search import search_errata
+from errata.search import (
+    filter_reported_errata,
+    filter_staged_errata,
+    search_errata,
+)
+from errata.utils import with_rfc_has_verified
+from errata.views import REPORTED_LIST_TOC_THRESHOLD
 
 
 class AddressListFieldTest(TestCase):
@@ -130,6 +139,20 @@ class RfcMetadataModelTest(TestCase):
     def test_str(self):
         rfc = RfcMetadataFactory(rfc_number=4321, title="Some Protocol")
         self.assertEqual(str(rfc), "RFC 4321: Some Protocol")
+
+    def test_with_rfc_has_verified_annotation(self):
+        rfc = RfcMetadataFactory()
+        # A reported (unverified) erratum does not count.
+        reported = ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number)
+        annotated = with_rfc_has_verified(Erratum.objects.filter(pk=reported.pk)).get()
+        self.assertFalse(annotated.rfc_has_verified)
+        ErratumFactory(
+            rfc_metadata=rfc,
+            rfc_number=rfc.rfc_number,
+            status=Status.objects.get(slug="verified"),
+        )
+        annotated = with_rfc_has_verified(Erratum.objects.filter(pk=reported.pk)).get()
+        self.assertTrue(annotated.rfc_has_verified)
 
 
 class ErratumModelTest(TestCase):
@@ -527,6 +550,40 @@ class SearchErrataTest(TestCase):
         self.assertIn(self.erratum2, result)
         self.assertNotIn(self.erratum1, result)
 
+    def test_search_by_stream_is_case_insensitive(self):
+        for value in ("iab", "Iab", "IAB"):
+            form = ErrataSearchForm(data={"stream": value})
+            result = search_errata(form)
+            self.assertIn(self.erratum2, result, value)
+            self.assertNotIn(self.erratum1, result, value)
+
+    def test_search_by_status_is_case_insensitive(self):
+        for value in ("REPORTED", "Reported", "reported"):
+            form = ErrataSearchForm(data={"status": value})
+            result = search_errata(form)
+            self.assertIn(self.erratum1, result, value)
+            self.assertNotIn(self.erratum2, result, value)
+
+    def test_search_by_area_is_case_insensitive(self):
+        for value in ("OPS", "Ops", "ops"):
+            form = ErrataSearchForm(data={"area": value})
+            result = search_errata(form)
+            self.assertIn(self.erratum1, result, value)
+            self.assertNotIn(self.erratum2, result, value)
+
+    def test_search_by_errata_type_is_case_insensitive(self):
+        for value in ("TECHNICAL", "Technical", "technical"):
+            form = ErrataSearchForm(data={"errata_type": value})
+            result = search_errata(form)
+            self.assertIn(self.erratum1, result, value)
+            self.assertNotIn(self.erratum2, result, value)
+
+    def test_search_presentation_is_case_insensitive(self):
+        for value in ("RECORDS", "Records", "records"):
+            form = ErrataSearchForm(data={"presentation": value})
+            self.assertTrue(form.is_valid(), value)
+            self.assertEqual(form.cleaned_data["presentation"], "records", value)
+
     def test_search_by_stream_independent_maps_to_ise(self):
         ise_rfc = RfcMetadataFactory(stream="ise")
         ise_erratum = ErratumFactory(
@@ -561,11 +618,68 @@ class PublicViewTest(TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+    def test_search_table_links_rfc_to_rfc_editor(self):
+        response = self.client.get(
+            reverse("errata_search"),
+            {"rfc_number": self.rfc.rfc_number, "presentation": "table"},
+        )
+        self.assertContains(
+            response,
+            f'href="https://www.rfc-editor.org/info/rfc{self.rfc.rfc_number}"',
+        )
+
+    def test_search_records_links_rfc_to_rfc_editor(self):
+        response = self.client.get(
+            reverse("errata_search"),
+            {"rfc_number": self.rfc.rfc_number, "presentation": "records"},
+        )
+        self.assertContains(
+            response,
+            f'href="https://www.rfc-editor.org/info/rfc{self.rfc.rfc_number}"',
+        )
+
     def test_detail_get_returns_200(self):
         response = self.client.get(
             reverse("errata_detail", kwargs={"pk": self.erratum.pk})
         )
         self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            f'href="https://www.rfc-editor.org/info/rfc{self.erratum.rfc_number}"',
+        )
+
+    @override_settings(RFC_EDITOR_BASE="https://example.test/")
+    def test_detail_rfc_link_honors_rfc_editor_base_setting(self):
+        response = self.client.get(
+            reverse("errata_detail", kwargs={"pk": self.erratum.pk})
+        )
+        self.assertContains(
+            response,
+            f'href="https://example.test/info/rfc{self.erratum.rfc_number}"',
+        )
+
+    def test_detail_no_inline_errata_link_without_verified(self):
+        # setUp's only erratum is reported, not verified.
+        response = self.client.get(
+            reverse("errata_detail", kwargs={"pk": self.erratum.pk})
+        )
+        self.assertNotContains(response, "inline-errata")
+
+    def test_detail_shows_inline_errata_link_when_verified(self):
+        ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            status=Status.objects.get(slug="verified"),
+        )
+        response = self.client.get(
+            reverse("errata_detail", kwargs={"pk": self.erratum.pk})
+        )
+        self.assertContains(
+            response,
+            f'href="https://www.rfc-editor.org/rfc/inline-errata/'
+            f'rfc{self.rfc.rfc_number}.html"',
+        )
+        self.assertContains(response, ">inline-errata</a>")
 
     def test_new_entry_instructions_get_returns_200(self):
         response = self.client.get(reverse("errata_new_entry_instructions"))
@@ -736,6 +850,28 @@ class RpcViewTest(TestCase):
         self.client.force_login(self.rpc_user)
         response = self.client.get(reverse("errata_staged_list"))
         self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            f'href="https://www.rfc-editor.org/info/rfc{self.staged.rfc_number}"',
+        )
+
+    def test_staged_list_shows_total_reports(self):
+        # setUp already created one SUBMITTED staged erratum; add two more.
+        for _ in range(2):
+            StagedErratumFactory(
+                rfc_metadata=self.rfc,
+                rfc_number=self.rfc.rfc_number,
+                entry_status=StagedErratumStatus.SUBMITTED,
+            )
+        # An unsubmitted entry must not be counted.
+        StagedErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            entry_status=StagedErratumStatus.INCOMPLETE,
+        )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_staged_list"))
+        self.assertContains(response, "Total reports: 3")
 
     def test_staged_list_post_delete_redirects_to_confirm(self):
         self.client.force_login(self.rpc_user)
@@ -891,12 +1027,256 @@ class RpcViewTest(TestCase):
         response = self.client.get(reverse("errata_reported_list"))
         self.assertEqual(response.status_code, 200)
 
+    def test_reported_list_links_rfc_to_rfc_editor(self):
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"))
+        self.assertContains(
+            response,
+            f'href="https://www.rfc-editor.org/info/rfc{self.rfc.rfc_number}"',
+        )
+
+    def test_reported_list_shows_total(self):
+        # setUp created one technical reported erratum; add two editorial.
+        editorial = ErratumType.objects.get(slug="editorial")
+        for _ in range(2):
+            ErratumFactory(
+                rfc_metadata=self.rfc,
+                rfc_number=self.rfc.rfc_number,
+                erratum_type=editorial,
+            )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"))
+        self.assertContains(response, "Total reported errata: 3")
+
+    def test_reported_list_splits_technical_and_editorial(self):
+        # setUp created self.erratum (technical, reported). Add editorial ones.
+        editorial = ErratumType.objects.get(slug="editorial")
+        for _ in range(2):
+            ErratumFactory(
+                rfc_metadata=self.rfc,
+                rfc_number=self.rfc.rfc_number,
+                erratum_type=editorial,
+            )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"))
+        self.assertContains(response, "Reported Technical (1)")
+        self.assertContains(response, "Reported Editorial (2)")
+
+    def test_reported_list_no_toc_when_short(self):
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"))
+        self.assertNotContains(response, "On this page")
+
+    def test_reported_list_shows_toc_when_long(self):
+        for _ in range(REPORTED_LIST_TOC_THRESHOLD):
+            ErratumFactory(rfc_metadata=self.rfc, rfc_number=self.rfc.rfc_number)
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"))
+        self.assertContains(response, "On this page")
+        self.assertContains(response, 'href="#reported-technical"')
+        self.assertContains(response, 'href="#reported-editorial"')
+
+    def test_reported_list_defaults_to_all(self):
+        old = ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=400),
+        )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"))
+        self.assertContains(response, "Total reported errata: 2")
+        self.assertContains(response, f"Errata-ID: {old.id}</h4>")
+        self.assertContains(response, f"Errata-ID: {self.erratum.id}</h4>")
+
+    def test_reported_list_within_excludes_older_errata(self):
+        old = ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=45),
+        )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "30"})
+        self.assertNotContains(response, f"Errata-ID: {old.id}</h4>")
+        self.assertContains(response, f"Errata-ID: {self.erratum.id}</h4>")
+        self.assertContains(response, "Showing 1 of 2 reported errata.")
+        self.assertContains(response, "the 1 reported earlier")
+
+    def test_reported_list_within_boundaries(self):
+        # Each erratum falls inside exactly the windows at least as wide as its age.
+        ages = {7: 3, 14: 10, 30: 20, 90: 60, 365: 200}
+        errata = {
+            window: ErratumFactory(
+                rfc_metadata=self.rfc,
+                rfc_number=self.rfc.rfc_number,
+                submitted_at=timezone.now() - datetime.timedelta(days=age),
+            )
+            for window, age in ages.items()
+        }
+        self.client.force_login(self.rpc_user)
+        for window in ages:
+            response = self.client.get(
+                reverse("errata_reported_list"), {"within": str(window)}
+            )
+            for other, erratum in errata.items():
+                if other <= window:
+                    self.assertContains(response, f"Errata-ID: {erratum.id}</h4>")
+                else:
+                    self.assertNotContains(response, f"Errata-ID: {erratum.id}</h4>")
+
+    def test_reported_list_section_counts_reflect_filter(self):
+        editorial = ErratumType.objects.get(slug="editorial")
+        ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            erratum_type=editorial,
+            submitted_at=timezone.now() - datetime.timedelta(days=400),
+        )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "30"})
+        # setUp's technical erratum is recent; the editorial one is not.
+        self.assertContains(response, "Reported Technical (1)")
+        self.assertContains(response, "Reported Editorial (0)")
+
+    def test_reported_list_unknown_within_shows_all(self):
+        ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=400),
+        )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "bogus"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Total reported errata: 2")
+
+    def test_reported_list_within_is_case_insensitive(self):
+        ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=400),
+        )
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "ALL"})
+        self.assertContains(response, "Total reported errata: 2")
+
+    def test_reported_list_marks_selected_window(self):
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "90"})
+        self.assertContains(
+            response, '<a href="?within=90" class="btn btn-outline-primary active"'
+        )
+        self.assertContains(
+            response, '<a href="?within=all" class="btn btn-outline-primary"'
+        )
+
+    def test_reported_list_toc_threshold_uses_filtered_count(self):
+        # Enough old errata to cross the threshold, but none of them recent.
+        for _ in range(REPORTED_LIST_TOC_THRESHOLD):
+            ErratumFactory(
+                rfc_metadata=self.rfc,
+                rfc_number=self.rfc.rfc_number,
+                submitted_at=timezone.now() - datetime.timedelta(days=400),
+            )
+        self.client.force_login(self.rpc_user)
+        self.assertContains(
+            self.client.get(reverse("errata_reported_list")), "On this page"
+        )
+        self.assertNotContains(
+            self.client.get(reverse("errata_reported_list"), {"within": "30"}),
+            "On this page",
+        )
+
     def test_reported_classify_get_returns_200(self):
         self.client.force_login(self.rpc_user)
         response = self.client.get(
             reverse("errata_reported_classify", kwargs={"erratum_id": self.erratum.id})
         )
         self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            f'href="https://www.rfc-editor.org/info/rfc{self.erratum.rfc_number}"',
+        )
+
+    def classify_url(self, query=""):
+        return (
+            reverse("errata_reported_classify", kwargs={"erratum_id": self.erratum.id})
+            + query
+        )
+
+    def classify_post_data(self, action):
+        data = {
+            "erratum_type": "technical",
+            "section": "1",
+            "orig_text": "Original text",
+            "corrected_text": "Corrected text",
+            "submitter_name": "Test Submitter",
+            "submitter_email": "submitter@example.com",
+            "notes": "",
+            "action": action,
+        }
+        if self.rfc.rfc_number >= 8650:
+            data["formats"] = ["TXT"]
+        return data
+
+    def test_reported_list_classify_link_carries_filter(self):
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "30"})
+        self.assertContains(response, f'href="{self.classify_url("?within=30")}"')
+
+    def test_reported_list_classify_link_clean_when_unfiltered(self):
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(reverse("errata_reported_list"))
+        # The closing quote pins this to a link with no query string. ("within=all"
+        # does appear on this page -- it is the "All" chip's own href.)
+        self.assertContains(response, f'href="{self.classify_url()}"')
+
+    def test_reported_classify_cancel_carries_filter(self):
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(self.classify_url("?within=30"))
+        self.assertContains(
+            response, f'href="{reverse("errata_reported_list")}?within=30"'
+        )
+
+    def test_reported_classify_cancel_clean_when_unfiltered(self):
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(self.classify_url())
+        self.assertContains(response, f'href="{reverse("errata_reported_list")}"')
+        self.assertNotContains(response, "within=all")
+
+    def test_reported_classify_cancel_ignores_unknown_filter(self):
+        # A bad value must not be reflected back into the link.
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(self.classify_url("?within=bogus"))
+        self.assertContains(response, f'href="{reverse("errata_reported_list")}"')
+        self.assertNotContains(response, "within=bogus")
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_reported_classify_save_preserves_filter(self, mock_notify):
+        self.client.force_login(self.rpc_user)
+        response = self.client.post(
+            self.classify_url("?within=30"), self.classify_post_data("save")
+        )
+        self.assertRedirects(response, self.classify_url("?within=30"))
+        mock_notify.assert_not_called()
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_reported_classify_mark_returns_to_filtered_list(self, mock_notify):
+        self.client.force_login(self.ops_verifier)
+        response = self.client.post(
+            self.classify_url("?within=30"), self.classify_post_data("mark_verified")
+        )
+        self.assertRedirects(response, f"{reverse('errata_reported_list')}?within=30")
+        self.erratum.refresh_from_db()
+        self.assertEqual(self.erratum.status_id, "verified")
+        mock_notify.assert_called_once()
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_reported_classify_mark_unfiltered_returns_to_clean_list(self, mock_notify):
+        self.client.force_login(self.ops_verifier)
+        response = self.client.post(
+            self.classify_url(), self.classify_post_data("mark_verified")
+        )
+        self.assertRedirects(response, reverse("errata_reported_list"))
+        mock_notify.assert_called_once()
 
     @patch("errata.views.send_erratum_classified_notification")
     def test_reported_classify_post_mark_verified(self, mock_notify):
@@ -994,6 +1374,206 @@ class RpcViewTest(TestCase):
         self.erratum.refresh_from_db()
         self.assertEqual(self.erratum.status_id, "held_for_doc_update")
         mock_notify.assert_called_once()
+
+    def _verified_erratum(self):
+        return ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            status=Status.objects.get(slug="verified"),
+            verifier_name="Original Verifier",
+            verifier_email="original@example.com",
+            verified_at=datetime.datetime.now(datetime.UTC),
+        )
+
+    def test_rpc_reclassify_unauthenticated_returns_403(self):
+        erratum = self._verified_erratum()
+        response = self.client.get(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id})
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_rpc_reclassify_regular_user_returns_403(self):
+        erratum = self._verified_erratum()
+        self.client.force_login(self.regular_user)
+        response = self.client.get(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id})
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_rpc_reclassify_verifier_returns_403(self):
+        # Reclassifying an already-classified erratum is an RPC-only function;
+        # stream verifiers only handle newly reported errata.
+        erratum = self._verified_erratum()
+        self.client.force_login(self.ops_verifier)
+        response = self.client.get(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id})
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_rpc_reclassify_get_returns_200(self):
+        erratum = self._verified_erratum()
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            f'href="https://www.rfc-editor.org/info/rfc{erratum.rfc_number}"',
+        )
+
+    def test_rpc_reclassify_reported_erratum_returns_404(self):
+        # Newly reported errata go through reported_classify, not reclassify.
+        self.client.force_login(self.rpc_user)
+        response = self.client.get(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": self.erratum.id})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def _reclassify_post_data(self, **overrides):
+        data = {
+            "erratum_type": "technical",
+            "section": "1",
+            "orig_text": "Original text",
+            "corrected_text": "Corrected text",
+            "submitter_name": "Test Submitter",
+            "submitter_email": "submitter@example.com",
+            "notes": "",
+            "on_behalf_of": "myself",
+        }
+        data.update(overrides)
+        if self.rfc.rfc_number >= 8650:
+            data["formats"] = ["TXT"]
+        return data
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_rpc_reclassify_post_on_behalf_of_self_records_rpc_as_verifier(
+        self, mock_notify
+    ):
+        erratum = self._verified_erratum()
+        self.client.force_login(self.rpc_user)
+        response = self.client.post(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+            self._reclassify_post_data(on_behalf_of="myself", action="mark_rejected"),
+        )
+        self.assertRedirects(
+            response, reverse("errata_detail", kwargs={"pk": erratum.id})
+        )
+        erratum.refresh_from_db()
+        self.assertEqual(erratum.status_id, "rejected")
+        self.assertEqual(erratum.verifier_name, self.rpc_user.name)
+        self.assertEqual(erratum.verifier_email, self.rpc_user.email)
+        mock_notify.assert_called_once()
+
+    @patch("errata.mail.send_mail_task")
+    def test_rpc_reclassify_post_on_behalf_of_other_records_and_notifies_named_party(
+        self, mock_send_mail
+    ):
+        # End-to-end (notification not mocked): the named party is recorded on
+        # the erratum and is the one CC'd on the real notification message.
+        erratum = self._verified_erratum()
+        self.client.force_login(self.rpc_user)
+        response = self.client.post(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+            self._reclassify_post_data(
+                on_behalf_of="other",
+                verifier_name="Area Director",
+                verifier_email="ad@example.com",
+                action="mark_verified",
+            ),
+        )
+        self.assertRedirects(
+            response, reverse("errata_detail", kwargs={"pk": erratum.id})
+        )
+        erratum.refresh_from_db()
+        self.assertEqual(erratum.status_id, "verified")
+        self.assertEqual(erratum.verifier_name, "Area Director")
+        self.assertEqual(erratum.verifier_email, "ad@example.com")
+        message = MailMessage.objects.latest("id")
+        self.assertIn("ad@example.com", message.cc)
+        self.assertNotIn(self.rpc_user.email, message.cc)
+        mock_send_mail.delay.assert_called_once_with(message.pk)
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_rpc_reclassify_post_on_behalf_of_other_requires_identity_when_marking(
+        self, mock_notify
+    ):
+        # Choosing "someone else" without a name/email is invalid for a
+        # status-changing action; nothing changes and no notification is sent.
+        erratum = self._verified_erratum()
+        self.client.force_login(self.rpc_user)
+        response = self.client.post(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+            self._reclassify_post_data(
+                on_behalf_of="other",
+                verifier_name="",
+                verifier_email="",
+                action="mark_rejected",
+            ),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(
+            response.context["form"],
+            "verifier_name",
+            ["Provide a name when reclassifying on behalf of someone else."],
+        )
+        erratum.refresh_from_db()
+        self.assertEqual(erratum.status_id, "verified")
+        self.assertEqual(erratum.verifier_name, "Original Verifier")
+        mock_notify.assert_not_called()
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_rpc_reclassify_post_save_does_not_require_named_party(self, mock_notify):
+        # A plain save does not change the verifier, so "someone else" with
+        # blank name/email must not block saving edits.
+        erratum = self._verified_erratum()
+        self.client.force_login(self.rpc_user)
+        response = self.client.post(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+            self._reclassify_post_data(
+                on_behalf_of="other",
+                verifier_name="",
+                verifier_email="",
+                section="7",
+                action="save",
+            ),
+        )
+        self.assertRedirects(
+            response,
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+        )
+        erratum.refresh_from_db()
+        self.assertEqual(erratum.section, "7")
+        # Verifier is left untouched by a plain save.
+        self.assertEqual(erratum.verifier_name, "Original Verifier")
+        self.assertEqual(erratum.verifier_email, "original@example.com")
+        mock_notify.assert_not_called()
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_rpc_reclassify_post_save_preserves_status_and_verifier(self, mock_notify):
+        erratum = self._verified_erratum()
+        self.client.force_login(self.rpc_user)
+        response = self.client.post(
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+            self._reclassify_post_data(
+                erratum_type="editorial",
+                section="2",
+                corrected_text="Different corrected text",
+                on_behalf_of="myself",
+                action="save",
+            ),
+        )
+        self.assertRedirects(
+            response,
+            reverse("errata_rpc_reclassify", kwargs={"erratum_id": erratum.id}),
+        )
+        erratum.refresh_from_db()
+        # status and verifier are unchanged by a plain save, but edits persist
+        self.assertEqual(erratum.status_id, "verified")
+        self.assertEqual(erratum.verifier_name, "Original Verifier")
+        self.assertEqual(erratum.erratum_type_id, "editorial")
+        self.assertEqual(erratum.section, "2")
+        mock_notify.assert_not_called()
 
     def test_rpc_force_metadata_update_get_returns_200(self):
         self.client.force_login(self.rpc_user)
@@ -1226,3 +1806,340 @@ class ErratumAdminTest(TestCase):
         erratum.notes = "Edited again"
         self.admin.save_model(self.request, erratum, form=None, change=True)
         mock_notify.assert_not_called()
+
+    @override_settings(RFC_EDITOR_BASE="https://www.rfc-editor.org/")
+    def test_rfc_info_url(self):
+        from errata.utils import rfc_info_url
+
+        self.assertEqual(rfc_info_url(1234), "https://www.rfc-editor.org/info/rfc1234")
+
+    @override_settings(RFC_EDITOR_BASE="https://www.rfc-editor.org/")
+    def test_rfc_inline_errata_url(self):
+        from errata.utils import rfc_inline_errata_url
+
+        self.assertEqual(
+            rfc_inline_errata_url(1234),
+            "https://www.rfc-editor.org/rfc/inline-errata/rfc1234.html",
+        )
+
+    @override_settings(RFC_EDITOR_BASE="https://example.test")
+    def test_rfc_urls_honor_setting_without_trailing_slash(self):
+        from errata.utils import rfc_info_url, rfc_inline_errata_url
+
+        self.assertEqual(rfc_info_url(42), "https://example.test/info/rfc42")
+        self.assertEqual(
+            rfc_inline_errata_url(42),
+            "https://example.test/rfc/inline-errata/rfc42.html",
+        )
+
+
+class FilterReportedErrataTest(TestCase):
+    def setUp(self):
+        self.rfc = RfcMetadataFactory()
+        self.recent = ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=2),
+        )
+        self.old = ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=400),
+        )
+
+    def filtered(self, data):
+        return filter_reported_errata(
+            Erratum.objects.all(), ReportedErrataFilterForm(data)
+        )
+
+    def test_empty_form_is_valid(self):
+        self.assertTrue(ReportedErrataFilterForm({}).is_valid())
+
+    def test_unbound_form_does_not_narrow(self):
+        result = filter_reported_errata(
+            Erratum.objects.all(), ReportedErrataFilterForm()
+        )
+        self.assertCountEqual(result, [self.recent, self.old])
+
+    def test_all_does_not_narrow(self):
+        self.assertCountEqual(self.filtered({"within": "all"}), [self.recent, self.old])
+
+    def test_missing_within_does_not_narrow(self):
+        self.assertCountEqual(self.filtered({}), [self.recent, self.old])
+
+    def test_window_narrows_to_recent(self):
+        self.assertCountEqual(self.filtered({"within": "30"}), [self.recent])
+
+    def test_window_wider_than_age_includes_both(self):
+        self.assertCountEqual(self.filtered({"within": "365"}), [self.recent])
+        self.old.submitted_at = timezone.now() - datetime.timedelta(days=100)
+        self.old.save()
+        self.assertCountEqual(self.filtered({"within": "365"}), [self.recent, self.old])
+
+    def test_invalid_within_does_not_narrow(self):
+        form = ReportedErrataFilterForm({"within": "bogus"})
+        self.assertFalse(form.is_valid())
+        self.assertCountEqual(
+            filter_reported_errata(Erratum.objects.all(), form),
+            [self.recent, self.old],
+        )
+
+    def test_within_matches_regardless_of_case(self):
+        self.assertCountEqual(self.filtered({"within": "All"}), [self.recent, self.old])
+
+    def test_errata_without_a_submitted_date_are_only_in_all(self):
+        # submitted_at is nullable in the schema; a null cannot satisfy a
+        # bounded window, so such errata surface only under "all".
+        undated = ErratumFactory(
+            rfc_metadata=self.rfc, rfc_number=self.rfc.rfc_number, submitted_at=None
+        )
+        self.assertIn(undated, self.filtered({"within": "all"}))
+        self.assertNotIn(undated, self.filtered({"within": "365"}))
+
+
+class StagedErrataFilterFormTest(TestCase):
+    def test_empty_form_is_valid(self):
+        form = StagedErrataFilterForm({})
+        self.assertTrue(form.is_valid())
+
+    def test_valid_filters(self):
+        form = StagedErrataFilterForm(
+            {
+                "rfc_number": "1234",
+                "submitter": "alice",
+                "date_from": "2026-01-01",
+                "date_to": "2026-02-01",
+            }
+        )
+        self.assertTrue(form.is_valid())
+
+    def test_reversed_date_range_is_invalid(self):
+        form = StagedErrataFilterForm(
+            {"date_from": "2026-02-01", "date_to": "2026-01-01"}
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("date_to", form.errors)
+
+
+class FilterStagedErrataTest(TestCase):
+    def setUp(self):
+        self.rfc_a = RfcMetadataFactory()
+        self.rfc_b = RfcMetadataFactory()
+        self.alice = StagedErratumFactory(
+            rfc_metadata=self.rfc_a,
+            rfc_number=self.rfc_a.rfc_number,
+            entry_status=StagedErratumStatus.SUBMITTED,
+            submitter_name="Alice Example",
+            submitter_email="alice@example.com",
+            submitted_at=datetime.datetime(2026, 1, 15, tzinfo=datetime.UTC),
+        )
+        self.bob = StagedErratumFactory(
+            rfc_metadata=self.rfc_b,
+            rfc_number=self.rfc_b.rfc_number,
+            entry_status=StagedErratumStatus.SUBMITTED,
+            submitter_name="Bob Sample",
+            submitter_email="bob@sample.net",
+            submitted_at=datetime.datetime(2026, 3, 20, tzinfo=datetime.UTC),
+        )
+        # An incomplete entry must never appear in the staged list.
+        self.incomplete = StagedErratumFactory(
+            rfc_metadata=self.rfc_a,
+            rfc_number=self.rfc_a.rfc_number,
+            entry_status=StagedErratumStatus.INCOMPLETE,
+        )
+
+    def test_no_filter_returns_only_submitted(self):
+        form = StagedErrataFilterForm({})
+        result = filter_staged_errata(form)
+        self.assertCountEqual(result, [self.alice, self.bob])
+
+    def test_unbound_form_returns_only_submitted(self):
+        result = filter_staged_errata(StagedErrataFilterForm())
+        self.assertCountEqual(result, [self.alice, self.bob])
+
+    def test_filter_by_rfc_number(self):
+        form = StagedErrataFilterForm({"rfc_number": str(self.rfc_a.rfc_number)})
+        self.assertCountEqual(filter_staged_errata(form), [self.alice])
+
+    def test_filter_by_submitter_name(self):
+        form = StagedErrataFilterForm({"submitter": "alice"})
+        self.assertCountEqual(filter_staged_errata(form), [self.alice])
+
+    def test_filter_by_submitter_email(self):
+        form = StagedErrataFilterForm({"submitter": "sample.net"})
+        self.assertCountEqual(filter_staged_errata(form), [self.bob])
+
+    def test_filter_by_date_from(self):
+        form = StagedErrataFilterForm({"date_from": "2026-02-01"})
+        self.assertCountEqual(filter_staged_errata(form), [self.bob])
+
+    def test_filter_by_date_to(self):
+        form = StagedErrataFilterForm({"date_to": "2026-02-01"})
+        self.assertCountEqual(filter_staged_errata(form), [self.alice])
+
+    def test_filter_by_date_range(self):
+        form = StagedErrataFilterForm(
+            {"date_from": "2026-01-01", "date_to": "2026-02-01"}
+        )
+        self.assertCountEqual(filter_staged_errata(form), [self.alice])
+
+
+class StagedBulkDeleteViewTest(TestCase):
+    def setUp(self):
+        self.rpc_user = RpcUserFactory()
+        self.regular_user = UserFactory()
+        self.rfc_a = RfcMetadataFactory()
+        self.rfc_b = RfcMetadataFactory()
+        self.alice = StagedErratumFactory(
+            rfc_metadata=self.rfc_a,
+            rfc_number=self.rfc_a.rfc_number,
+            entry_status=StagedErratumStatus.SUBMITTED,
+            submitter_name="Alice Example",
+            submitter_email="alice@example.com",
+            submitted_at=datetime.datetime(2026, 1, 15, tzinfo=datetime.UTC),
+        )
+        self.alice_incomplete = StagedErratumFactory(
+            rfc_metadata=self.rfc_b,
+            rfc_number=self.rfc_b.rfc_number,
+            entry_status=StagedErratumStatus.INCOMPLETE,  # not SUBMITTED status
+            submitter_name="Alice Example",
+            submitter_email="alice@example.com",
+            submitted_at=datetime.datetime(2026, 4, 23, tzinfo=datetime.UTC),
+        )
+        self.bob = StagedErratumFactory(
+            rfc_metadata=self.rfc_b,
+            rfc_number=self.rfc_b.rfc_number,
+            entry_status=StagedErratumStatus.SUBMITTED,
+            submitter_name="Bob Sample",
+            submitter_email="bob@sample.net",
+            submitted_at=datetime.datetime(2026, 3, 20, tzinfo=datetime.UTC),
+        )
+        self.client.force_login(self.rpc_user)
+
+    def test_unauthenticated_returns_403(self):
+        self.client.logout()
+        response = self.client.get(reverse("errata_staged_bulk_delete"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_regular_user_returns_403(self):
+        self.client.force_login(self.regular_user)
+        response = self.client.get(reverse("errata_staged_bulk_delete"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_get_returns_200(self):
+        response = self.client.get(reverse("errata_staged_bulk_delete"))
+        self.assertEqual(response.status_code, 200)
+        self.assertCountEqual(response.context["staged_errata"], [self.alice, self.bob])
+
+    def test_get_with_filter_narrows_list(self):
+        response = self.client.get(
+            reverse("errata_staged_bulk_delete"), {"submitter": "alice"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertCountEqual(response.context["staged_errata"], [self.alice])
+
+    def test_get_shows_matching_count(self):
+        response = self.client.get(reverse("errata_staged_bulk_delete"))
+        self.assertContains(response, "2 matching staged errata")
+        response = self.client.get(
+            reverse("errata_staged_bulk_delete"), {"submitter": "alice"}
+        )
+        self.assertContains(response, "1 matching staged erratum")
+
+    def test_get_with_invalid_filter_still_renders(self):
+        response = self.client.get(
+            reverse("errata_staged_bulk_delete"),
+            {"date_from": "2026-03-01", "date_to": "2026-01-01"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["filter_form"].is_valid())
+
+    def test_bulk_delete_selected(self):
+        response = self.client.post(
+            reverse("errata_staged_bulk_delete"),
+            {"selected": [str(self.alice.id)]},
+        )
+        self.assertRedirects(response, reverse("errata_staged_bulk_delete"))
+        self.assertFalse(StagedErratum.objects.filter(id=self.alice.id).exists())
+        self.assertTrue(StagedErratum.objects.filter(id=self.bob.id).exists())
+
+    def test_bulk_delete_multiple_selected(self):
+        # The incomplete erratum is selected, but should not be deleted because it does
+        # not have SUBMITTED status.
+        with self.assertLogs("errata.views", level="INFO") as cm:
+            self.client.post(
+                reverse("errata_staged_bulk_delete"),
+                {
+                    "selected": [
+                        str(self.alice.id),
+                        str(self.bob.id),
+                        str(self.alice_incomplete.id),
+                    ]
+                },
+            )
+        self.assertFalse(
+            StagedErratum.objects.filter(id__in=[self.alice.id, self.bob.id]).exists()
+        )
+        self.assertTrue(
+            StagedErratum.objects.filter(id=self.alice_incomplete.id).exists()
+        )
+        self.assertTrue(any("Bulk deleted 2" in line for line in cm.output))
+
+    def test_bulk_delete_all_matching_filter(self):
+        # Selecting "all matching" with a submitter filter only deletes matches.
+        response = self.client.post(
+            reverse("errata_staged_bulk_delete"),
+            {"select_all_matching": "1", "submitter": "alice"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(StagedErratum.objects.filter(id=self.alice.id).exists())
+        self.assertTrue(
+            StagedErratum.objects.filter(id=self.alice_incomplete.id).exists()
+        )
+        self.assertTrue(StagedErratum.objects.filter(id=self.bob.id).exists())
+
+    def test_bulk_delete_all_matching_no_filter_deletes_all(self):
+        self.client.post(
+            reverse("errata_staged_bulk_delete"),
+            {"select_all_matching": "1"},
+        )
+        self.assertEqual(
+            StagedErratum.objects.filter(
+                entry_status=StagedErratumStatus.SUBMITTED
+            ).count(),
+            0,
+        )
+        self.assertEqual(
+            StagedErratum.objects.filter(
+                entry_status=StagedErratumStatus.INCOMPLETE
+            ).count(),
+            1,
+        )
+
+    def test_bulk_delete_nothing_selected_is_noop(self):
+        response = self.client.post(reverse("errata_staged_bulk_delete"), {})
+        self.assertRedirects(response, reverse("errata_staged_bulk_delete"))
+        self.assertEqual(StagedErratum.objects.count(), 3)
+
+    def test_bulk_delete_preserves_filter_querystring(self):
+        response = self.client.post(
+            reverse("errata_staged_bulk_delete"),
+            {
+                "selected": [str(self.alice.id)],
+                "querystring": "submitter=alice&invalidparam=value",
+            },
+        )
+        self.assertRedirects(
+            response, f"{reverse('errata_staged_bulk_delete')}?submitter=alice"
+        )
+
+    def test_bulk_delete_invalid_querystring_is_dropped(self):
+        response = self.client.post(
+            reverse("errata_staged_bulk_delete"),
+            {
+                "selected": [str(self.alice.id)],
+                "querystring": "date_from=2026-03-01&date_to=2026-01-01",
+                # reversed range
+            },
+        )
+        self.assertRedirects(response, reverse("errata_staged_bulk_delete"))

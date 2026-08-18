@@ -54,6 +54,11 @@ urlpatterns = [
         name="errata_staged_list",
     ),
     path(
+        "staged/bulk-delete/",
+        views.staged_bulk_delete,
+        name="errata_staged_bulk_delete",
+    ),
+    path(
         "staged/confirm-delete/<uuid:staged_erratum_id>",
         views.staged_confirm_delete,
         name="errata_staged_confirm_delete",
@@ -77,6 +82,11 @@ urlpatterns = [
         "reported/classify/<int:erratum_id>",
         views.reported_classify,
         name="errata_reported_classify",
+    ),
+    path(
+        "rpc/reclassify/<int:erratum_id>",
+        views.rpc_reclassify,
+        name="errata_rpc_reclassify",
     ),
     path(
         "rpc/force-metadata-update/",

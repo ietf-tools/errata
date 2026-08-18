@@ -3,9 +3,11 @@
 import datetime
 import logging
 import json
+import urllib.parse
 
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 
@@ -18,7 +20,11 @@ from .forms import (
     ErrataSearchForm,
     ChooseRfcForm,
     ConfirmExistingErrataReadForm,
+    ReclassifyErratumForm,
+    ReportedErrataFilterForm,
+    REPORTED_WITHIN_CHOICES,
     RfcNumberListForm,
+    StagedErrataFilterForm,
 )
 from .mail import send_erratum_classified_notification, send_new_erratum_notification
 from .models import (
@@ -29,9 +35,9 @@ from .models import (
     StagedErratumStatus,
     Status,
 )
-from .search import search_errata
+from .search import filter_reported_errata, filter_staged_errata, search_errata
 from .tasks import update_rfc_metadata_task
-from .utils import can_classify, unverified_errata
+from .utils import can_classify, unverified_errata, with_rfc_has_verified
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +51,13 @@ def search(request):
     form = ErrataSearchForm(request.GET)
     if form.is_bound and form.is_valid() and request.GET != {}:
         errata = search_errata(form)
-        template = (
-            "errata/list.html"
-            if form.cleaned_data.get("presentation") == "table"
-            else "errata/list_detail.html"
-        )
+        if form.cleaned_data.get("presentation") == "table":
+            template = "errata/list.html"
+        else:
+            template = "errata/list_detail.html"
+            # The record view links to inline errata when an RFC has any
+            # verified erratum; annotate to avoid a per-row query.
+            errata = with_rfc_has_verified(errata)
         search_ran = True
     else:
         errata = Erratum.objects.none()
@@ -62,8 +70,8 @@ def search(request):
 
 @require_GET
 def detail(request, pk):
-    erratum = Erratum.objects.prefetch_related(
-        "rfc_metadata", "status", "erratum_type"
+    erratum = with_rfc_has_verified(
+        Erratum.objects.prefetch_related("rfc_metadata", "status", "erratum_type")
     ).get(pk=pk)
     return render(request, "errata/detail.html", dict(erratum=erratum))
 
@@ -206,13 +214,69 @@ def staged_list(request):
             )
         else:
             pass
-    staged_errata = StagedErratum.objects.filter(
-        entry_status=StagedErratumStatus.SUBMITTED
-    ).order_by("submitted_at")
+    staged_errata = with_rfc_has_verified(
+        StagedErratum.objects.filter(
+            entry_status=StagedErratumStatus.SUBMITTED
+        ).order_by("submitted_at")
+    )
     return render(
         request,
         "errata/staged_list.html",
         dict(staged_errata=staged_errata),
+    )
+
+
+@role_required("rpc")
+def staged_bulk_delete(request):
+    """Filter submitted staged errata and delete them in bulk.
+
+    Either the explicitly checked errata (``selected``) are deleted, or, when
+    ``select_all_matching`` is set, every staged erratum matching the current
+    filter is deleted. The filter is carried in the POST body so it survives
+    the round trip and can be re-derived for "select all matching".
+    """
+    if request.method == "POST":
+        # The "select_all_matching" branch is currently unreachable from the UI:
+        # with no pagination the template's single "Select all" checks every row,
+        # so the "selected" list already covers the whole filtered set. It is kept
+        # here for when pagination is added -- see the TODO in
+        # templates/errata/staged_bulk_delete.html for re-adding the checkbox.
+        if request.POST.get("select_all_matching"):
+            staged_errata = filter_staged_errata(StagedErrataFilterForm(request.POST))
+        else:
+            selected_ids = request.POST.getlist("selected")
+            staged_errata = StagedErratum.objects.filter(
+                id__in=selected_ids, entry_status=StagedErratumStatus.SUBMITTED
+            )
+        deleted_ids = list(staged_errata.values_list("id", flat=True))
+        if deleted_ids:
+            staged_errata.delete()
+            logger.info(
+                f"Bulk deleted {len(deleted_ids)} staged errata: "
+                f"{', '.join(str(pk) for pk in deleted_ids)}"
+            )
+        # Reconstruct the GET URL with the incoming querystring. Sanitize the
+        # querystring against StagedErrataFilterForm to prevent arbitrary fields
+        # being injected. This does not interact with the `selected` or
+        # `select_all_matching` parameters, which are only used on the POST.
+        url = reverse("errata_staged_bulk_delete")
+        raw_qs = request.POST.get("querystring", "")
+        if raw_qs:
+            # n.b. this will need attention if we use multi-valued params in the form
+            flat = {k: v[0] for k, v in urllib.parse.parse_qs(raw_qs).items() if v}
+            qs_form = StagedErrataFilterForm(flat)
+            if qs_form.is_valid():
+                # Add querystring if valid, else fall back to empty
+                safe_params = {k: v for k, v in qs_form.cleaned_data.items() if v}
+                if safe_params:
+                    url = f"{url}?{urllib.parse.urlencode(safe_params)}"
+        return redirect(url)
+    filter_form = StagedErrataFilterForm(request.GET or None)
+    staged_errata = filter_staged_errata(filter_form)
+    return render(
+        request,
+        "errata/staged_bulk_delete.html",
+        dict(staged_errata=staged_errata, filter_form=filter_form),
     )
 
 
@@ -315,10 +379,75 @@ def staged_rpc_add_to_unverified(request, staged_erratum_id, erratum_type):
     )
 
 
+# Show the table-of-contents navigation once the combined list gets long
+# enough that scrolling to a section is tedious.
+REPORTED_LIST_TOC_THRESHOLD = 10
+
+
+def _within_filter(request):
+    """Return the (form, value) pair for the reported list's date filter.
+
+    The value is the validated ``within`` query parameter, or "all" when it is
+    absent or unrecognized.
+    """
+    form = ReportedErrataFilterForm(request.GET or None)
+    within = "all"
+    if form.is_bound and form.is_valid():
+        within = form.cleaned_data.get("within") or "all"
+    return form, within
+
+
+def _with_within(url, within):
+    """Append the reported list's date filter to ``url``, if one is in effect.
+
+    Carrying the filter in the URL is what keeps it alive across the classify
+    round trip: the classify page links back with it, and its redirects rebuild
+    it, so a reader who narrowed to "last 7 days" returns to that same view.
+    """
+    if not within or within == "all":
+        return url
+    return f"{url}?{urllib.parse.urlencode({'within': within})}"
+
+
 @role_required("rpc", "verifier")
 def reported_list(request):
-    reported = unverified_errata(request.user)
-    return render(request, "errata/reported_list.html", dict(errata=reported))
+    # An unrecognized "within" value leaves the form invalid, which the filter
+    # treats as "all" -- a bad URL shows everything rather than an error.
+    filter_form, selected_within = _within_filter(request)
+    all_reported = unverified_errata(request.user)
+    reported = with_rfc_has_verified(
+        filter_reported_errata(all_reported, filter_form).order_by("rfc_number")
+    )
+    sections = [
+        {
+            "title": "Reported Technical",
+            "anchor": "reported-technical",
+            "errata": reported.filter(erratum_type__slug="technical"),
+        },
+        {
+            "title": "Reported Editorial",
+            "anchor": "reported-editorial",
+            "errata": reported.filter(erratum_type__slug="editorial"),
+        },
+    ]
+    total = reported.count()
+    # Unnarrowed, the two counts are the same query; only pay for it when filtering.
+    total_unfiltered = total if selected_within == "all" else all_reported.count()
+    return render(
+        request,
+        "errata/reported_list.html",
+        dict(
+            sections=sections,
+            total=total,
+            total_unfiltered=total_unfiltered,
+            hidden_count=total_unfiltered - total,
+            within_choices=REPORTED_WITHIN_CHOICES,
+            selected_within=selected_within,
+            # Suffix for links out to the classify page, so the filter survives.
+            within_query=_with_within("", selected_within),
+            show_toc=total > REPORTED_LIST_TOC_THRESHOLD,
+        ),
+    )
 
 
 @role_required("rpc", "verifier")
@@ -326,17 +455,34 @@ def reported_classify(request, erratum_id: int):
     # TODO: Consider not filtering to "reported" and showing
     # a simple "this erratum has already been classified" instead
     # of a 400 if the status isn't reported.
-    erratum = get_object_or_404(Erratum, id=erratum_id, status_id="reported")
+    erratum = get_object_or_404(
+        with_rfc_has_verified(Erratum.objects.all()),
+        id=erratum_id,
+        status_id="reported",
+    )
     # Make sure this user can manipulate this erratum
     if not can_classify(request.user, erratum_id):
         raise Http404
+    # The list's date filter rides along in the query string. The form posts to
+    # the current URL, so it is still here on POST and can be put back on both
+    # redirect targets.
+    _, within = _within_filter(request)
+    list_url = _with_within(reverse("errata_reported_list"), within)
     if request.method == "POST":
         form = EditErratumForm(data=request.POST, instance=erratum)
         if form.is_valid():
             action = request.POST.get("action", "")
             if action == "save":
                 form.save()
-                return redirect("errata_reported_classify", erratum_id=erratum.id)
+                return redirect(
+                    _with_within(
+                        reverse(
+                            "errata_reported_classify",
+                            kwargs={"erratum_id": erratum.id},
+                        ),
+                        within,
+                    )
+                )
             elif action.startswith("mark_") and action[5:] in (
                 "verified",
                 "rejected",
@@ -349,12 +495,57 @@ def reported_classify(request, erratum_id: int):
                 erratum.verified_at = datetime.datetime.now(datetime.UTC)
                 erratum.save()
                 send_erratum_classified_notification(erratum, request.user)
-                return redirect("errata_reported_list")
+                return redirect(list_url)
             else:
                 pass
     else:
         form = EditErratumForm(instance=erratum)
-    return render(request, "errata/reported_classify.html", dict(form=form))
+    return render(
+        request, "errata/reported_classify.html", dict(form=form, list_url=list_url)
+    )
+
+
+@role_required("rpc")
+def rpc_reclassify(request, erratum_id: int):
+    # Let the RPC edit and reclassify an erratum that has already been
+    # classified (i.e. is no longer in the "reported" state). Newly reported
+    # errata go through reported_classify instead.
+    erratum = get_object_or_404(
+        with_rfc_has_verified(Erratum.objects.exclude(status_id="reported")),
+        id=erratum_id,
+    )
+    if request.method == "POST":
+        action = request.POST.get("action", "")
+        form = ReclassifyErratumForm(data=request.POST, instance=erratum, action=action)
+        if form.is_valid():
+            if action == "save":
+                form.save()
+                return redirect("errata_rpc_reclassify", erratum_id=erratum.id)
+            elif action.startswith("mark_") and action[5:] in (
+                "verified",
+                "rejected",
+                "held_for_doc_update",
+            ):
+                erratum = form.save(commit=False)
+                erratum.status_id = action[5:]
+                if (
+                    form.cleaned_data["on_behalf_of"]
+                    == ReclassifyErratumForm.ON_BEHALF_OF_MYSELF
+                ):
+                    erratum.verifier_name = request.user.name
+                    erratum.verifier_email = request.user.email
+                else:
+                    erratum.verifier_name = form.cleaned_data["verifier_name"]
+                    erratum.verifier_email = form.cleaned_data["verifier_email"]
+                erratum.verified_at = datetime.datetime.now(datetime.UTC)
+                erratum.save()
+                send_erratum_classified_notification(erratum, request.user)
+                return redirect("errata_detail", pk=erratum.id)
+            else:
+                pass
+    else:
+        form = ReclassifyErratumForm(instance=erratum)
+    return render(request, "errata/rpc_reclassify.html", dict(form=form))
 
 
 @role_required("rpc")
@@ -392,7 +583,7 @@ def api_rfc_metadata_update(request):
             )
         if any([type(num) is not int or num <= 0 for num in rfc_number_list]):
             return JsonResponse(
-                {"error": "rfc_number_list must be a list of postitive integers."},
+                {"error": "rfc_number_list must be a list of positive integers."},
                 status=400,
             )
         update_rfc_metadata_task.delay(rfc_number_list)

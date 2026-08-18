@@ -137,6 +137,7 @@ class IsVerifierTest(TestCase):
             ["chair", "rsab"],
             ["delegate_stream_manager", "rsab"],
             ["chair", "ise"],
+            ["chair", "cfrg"],
         ]
         for role in verifier_roles:
             with self.subTest(role=role):

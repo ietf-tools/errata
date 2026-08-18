@@ -28,6 +28,7 @@ class UnverifiedErratumVerifierTest(TestCase):
         self.irtf_rfc = RfcMetadataFactory(stream="irtf")
         self.editorial_rfc = RfcMetadataFactory(stream="editorial")
         self.ise_rfc = RfcMetadataFactory(stream="ise")
+        self.cfrg_rfc = RfcMetadataFactory(stream="irtf", group_acronym="cfrg")
         self.ops_rfc = RfcMetadataFactory(
             stream="ietf", area_acronym="ops", area_assignment=""
         )
@@ -45,6 +46,9 @@ class UnverifiedErratumVerifierTest(TestCase):
         )
         self.ise_erratum = ErratumFactory(
             rfc_metadata=self.ise_rfc, rfc_number=self.ise_rfc.rfc_number
+        )
+        self.cfrg_erratum = ErratumFactory(
+            rfc_metadata=self.cfrg_rfc, rfc_number=self.cfrg_rfc.rfc_number
         )
         self.ops_erratum = ErratumFactory(
             rfc_metadata=self.ops_rfc, rfc_number=self.ops_rfc.rfc_number
@@ -72,6 +76,23 @@ class UnverifiedErratumVerifierTest(TestCase):
         user = UserFactory(roles=[["delegate_stream_manager", "irtf"]])
         result = unverified_errata(user)
         self.assertIn(self.irtf_erratum, result)
+
+    def test_cfrg_chair_sees_cfrg_errata(self):
+        user = UserFactory(roles=[["chair", "cfrg"]])
+        result = unverified_errata(user)
+        self.assertIn(self.cfrg_erratum, result)
+
+    def test_cfrg_chair_does_not_see_other_irtf_errata(self):
+        # A non-CFRG IRTF RFC must not be visible to the CFRG chair.
+        user = UserFactory(roles=[["chair", "cfrg"]])
+        result = unverified_errata(user)
+        self.assertNotIn(self.irtf_erratum, result)
+
+    def test_irtf_chair_sees_cfrg_errata(self):
+        # The IRTF stream chair still sees CFRG errata (it is IRTF stream).
+        user = UserFactory(roles=[["chair", "irtf"]])
+        result = unverified_errata(user)
+        self.assertIn(self.cfrg_erratum, result)
 
     def test_rsab_chair_sees_editorial_errata(self):
         user = UserFactory(roles=[["chair", "rsab"]])

@@ -5,6 +5,24 @@ from django import forms
 
 from .models import RfcMetadata, Erratum
 
+
+class CaseInsensitiveChoiceField(forms.ChoiceField):
+    """A ChoiceField that matches submitted values regardless of case.
+
+    A case-insensitive match is normalized to the canonical value declared in
+    ``choices`` so downstream processing sees a predictable value.
+    """
+
+    def to_python(self, value):
+        value = super().to_python(value)
+        if value in self.empty_values:
+            return value
+        for choice_value, _ in self.choices:
+            if value.casefold() == str(choice_value).casefold():
+                return str(choice_value)
+        return value
+
+
 STATUS_CHOICES = [
     ("any", "All/Any"),
     ("verified_reported", "Verified+Reported"),
@@ -53,20 +71,20 @@ PRESENTATION_CHOICES = [
 class ErrataSearchForm(forms.Form):
     rfc_number = forms.IntegerField(required=False, label="RFC Number")
     errata_id = forms.IntegerField(required=False, label="Errata ID")
-    status = forms.ChoiceField(
+    status = CaseInsensitiveChoiceField(
         choices=STATUS_CHOICES, required=False, label="Status", initial="any"
     )
-    area = forms.ChoiceField(
+    area = CaseInsensitiveChoiceField(
         choices=AREA_CHOICES, required=False, label="Area Acronym", initial="any"
     )
-    errata_type = forms.ChoiceField(
+    errata_type = CaseInsensitiveChoiceField(
         choices=TYPE_CHOICES, required=False, label="Type", initial="any"
     )
     wg_acronym = forms.CharField(max_length=40, required=False, label="WG Acronym")
     submitter_name = forms.CharField(
         max_length=80, required=False, label="Submitter Name"
     )
-    stream = forms.ChoiceField(
+    stream = CaseInsensitiveChoiceField(
         choices=STREAM_CHOICES, required=False, label="Stream", initial="any"
     )  # Labeled "Other" in previous errata app
     date = forms.CharField(
@@ -74,7 +92,7 @@ class ErrataSearchForm(forms.Form):
         label="Date Submitted",
         widget=forms.TextInput(attrs={"placeholder": "YYYY-MM-DD, YYYY-MM, or YYYY"}),
     )
-    presentation = forms.ChoiceField(
+    presentation = CaseInsensitiveChoiceField(
         choices=PRESENTATION_CHOICES,
         required=False,
         label="Presentation",
@@ -109,6 +127,62 @@ class ConfirmExistingErrataReadForm(forms.Form):
         required=True,
         label="I have read the existing errata for this RFC and what I wish to report has not been reported before.",
     )
+
+
+REPORTED_WITHIN_CHOICES = [
+    ("7", "Last 7 days"),
+    ("14", "Last 14 days"),
+    ("30", "Last 30 days"),
+    ("90", "Last 90 days"),
+    ("365", "Last 365 days"),
+    ("all", "All"),
+]
+
+
+class ReportedErrataFilterForm(forms.Form):
+    """Narrow the reported errata list to recently reported entries.
+
+    Long-standing reported errata accumulate for reasons unrelated to how
+    promptly anyone works the list, so the default is "all" and narrowing is
+    something the reader opts into to see what has arrived recently.
+    """
+
+    within = CaseInsensitiveChoiceField(
+        choices=REPORTED_WITHIN_CHOICES,
+        required=False,
+        initial="all",
+        label="Reported within",
+    )
+
+
+class StagedErrataFilterForm(forms.Form):
+    rfc_number = forms.IntegerField(required=False, label="RFC Number")
+    submitter = forms.CharField(
+        max_length=120,
+        required=False,
+        label="Submitter",
+        widget=forms.TextInput(attrs={"placeholder": "Name or email"}),
+    )
+    date_from = forms.DateField(
+        required=False,
+        label="Submitted On or After",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    date_to = forms.DateField(
+        required=False,
+        label="Submitted On or Before",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        date_from = cleaned_data.get("date_from")
+        date_to = cleaned_data.get("date_to")
+        if date_from and date_to and date_from > date_to:
+            self.add_error(
+                "date_to", "End date must not be earlier than the start date."
+            )
+        return cleaned_data
 
 
 class EditStagedErratumForm(forms.Form):
@@ -203,6 +277,72 @@ class EditErratumForm(forms.ModelForm):
             self.add_error(
                 "corrected_text", "Corrected Text must be different from Original Text."
             )
+        return cleaned_data
+
+
+class ReclassifyErratumForm(EditErratumForm):
+    """EditErratumForm plus a record of who the reclassification is on behalf of.
+
+    The RPC can reclassify on behalf of themselves or name another verifying
+    party. The verifier name/email are only consulted when a status-changing
+    action is taken; a plain "save" leaves the existing verifier untouched.
+    """
+
+    ON_BEHALF_OF_MYSELF = "myself"
+    ON_BEHALF_OF_OTHER = "other"
+    ON_BEHALF_OF_CHOICES = [
+        (ON_BEHALF_OF_MYSELF, "Myself (RFC Production Center)"),
+        (ON_BEHALF_OF_OTHER, "Someone else"),
+    ]
+
+    on_behalf_of = forms.ChoiceField(
+        choices=ON_BEHALF_OF_CHOICES,
+        widget=forms.RadioSelect,
+        initial=ON_BEHALF_OF_MYSELF,
+        label="Reclassifying on behalf of",
+    )
+    verifier_name = forms.CharField(
+        max_length=80,
+        required=False,
+        label="Verifying party name",
+    )
+    verifier_email = forms.EmailField(
+        max_length=120,
+        required=False,
+        label="Verifying party email",
+    )
+
+    def __init__(self, *args, action="", **kwargs):
+        # The submitted action determines whether the status is changing, which
+        # in turn determines whether the verifying party is actually used.
+        self.action = action
+        super().__init__(*args, **kwargs)
+        # Prefill the "someone else" fields with the current verifying party so
+        # the RPC can keep or edit it.
+        self.fields["verifier_name"].initial = self.instance.verifier_name
+        self.fields["verifier_email"].initial = self.instance.verifier_email
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # The verifying party is only recorded when the status changes. A plain
+        # "save" leaves the existing verifier untouched, so don't make the RPC
+        # name someone just to save edits.
+        changing_status = self.action.startswith("mark_")
+        if (
+            changing_status
+            and cleaned_data.get("on_behalf_of") == self.ON_BEHALF_OF_OTHER
+        ):
+            if not cleaned_data.get("verifier_name"):
+                self.add_error(
+                    "verifier_name",
+                    "Provide a name when reclassifying on behalf of someone else.",
+                )
+            if not cleaned_data.get("verifier_email"):
+                self.add_error(
+                    "verifier_email",
+                    "Provide an email when reclassifying on behalf of someone else.",
+                )
+        return cleaned_data
 
 
 class RfcNumberListForm(forms.Form):

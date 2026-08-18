@@ -18,6 +18,7 @@
                     <div>
                         {% if user|has_role:"rpc" %}
                             <a href="{% url 'errata_staged_list' %}" class="btn btn-primary">Screen Staged Errata Reports</a>
+                            <a href="{% url 'errata_staged_bulk_delete' %}" class="btn btn-primary">Bulk Delete Staged Errata</a>
                         {% endif %}
                         {% if user|has_role:"rpc,verifier" %}
                             <a href="{% url 'errata_reported_list' %}" class="btn btn-primary">Verify Reported Errata</a>

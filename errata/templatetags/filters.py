@@ -3,9 +3,12 @@
 import calendar
 from django import template
 
-from errata.utils import can_classify
+from errata.utils import can_classify, rfc_info_url, rfc_inline_errata_url
 
 register = template.Library()
+
+register.filter("rfc_info_url", rfc_info_url)
+register.filter("rfc_inline_errata_url", rfc_inline_errata_url)
 
 
 @register.filter

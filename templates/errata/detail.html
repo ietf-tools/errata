@@ -9,7 +9,7 @@
         <div class="col-lg-8">
             <div class="card mb-4">
                 <div class="card-header bg-info text-dark">
-                    <h2 class="mb-0">RFC {{ erratum.rfc_number }}, "{{ erratum.rfc_metadata.title }}", {{ erratum.rfc_metadata.publication_month|month_name }} {{ erratum.rfc_metadata.publication_year }}</h2>
+                    <h2 class="mb-0"><a href="{{ erratum.rfc_number|rfc_info_url }}" rel="noopener" target="_blank">RFC {{ erratum.rfc_number }}</a>{% if erratum.rfc_has_verified %} <a href="{{ erratum.rfc_number|rfc_inline_errata_url }}" rel="noopener" target="_blank" class="small">inline-errata</a>{% endif %}, "{{ erratum.rfc_metadata.title }}", {{ erratum.rfc_metadata.publication_month|month_name }} {{ erratum.rfc_metadata.publication_year }}</h2>
                 </div>
                 <div class="card-body{% if erratum.rfc_metadata.obsoleted_by %} bg-danger text-light{% elif erratum.rfc_metadata.updated_by %} bg-warning text-light{% endif %}">
                     <p class="mb-0"><strong>Source of RFC:</strong> {{ erratum.rfc_metadata.display_source }}</p>
@@ -105,7 +105,7 @@
                         {% endif %}
                         {% if erratum.notes %}
                             <p>Notes:</p>
-                            <pre class="bg-light p-3 rounded"><code>{{ erratum.notes }}</code></pre>
+                            <pre class="bg-light p-3 rounded errata-notes"><code>{{ erratum.notes }}</code></pre>
                         {% endif %}
                         
 
@@ -118,6 +118,10 @@
                 {% if erratum|is_classifiable_by:request.user %}
                     <a href="{% url 'errata_reported_classify' erratum_id=erratum.id %}" class="btn btn-primary">
                         Classify this Erratum
+                    </a>
+                {% elif erratum.status_id != "reported" and request.user|has_role:"rpc" %}
+                    <a href="{% url 'errata_rpc_reclassify' erratum_id=erratum.id %}" class="btn btn-primary">
+                        Edit / Reclassify this Erratum
                     </a>
                 {% endif %}
                 <a href="{% url 'errata_new_entry_instructions' %}" class="btn btn-primary">Report New Erratum</a>

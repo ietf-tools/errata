@@ -13,7 +13,7 @@
                         <div class="col-md-12">
                             <div class="card h-100 shadow-sm">
                                 <div class="card-header bg-light text-dark">
-                                    <h3 class="mt-4">RFC {{ rfc_group.grouper }}</h3>
+                                    <h3 class="mt-4"><a href="{{ rfc_group.grouper|rfc_info_url }}" rel="noopener" target="_blank">RFC {{ rfc_group.grouper }}</a>{% if rfc_group.list.0.rfc_has_verified %} <a href="{{ rfc_group.grouper|rfc_inline_errata_url }}" rel="noopener" target="_blank" class="small">inline-errata</a>{% endif %}</h3>
                                     <div class="card-body{% if rfc_group.list.0.rfc_metadata.obsoleted_by %} bg-danger text-light{% elif rfc_group.list.0.rfc_metadata.updated_by %} bg-warning text-light{% endif %}">
                                         <p class="mb-0"><strong>Source of RFC:</strong> {{ rfc_group.list.0.rfc_metadata.display_source }}</p>
                                         {% if rfc_group.list.0.rfc_metadata.obsoleted_by %}
@@ -110,7 +110,7 @@
                                                 {% endif %}
                                                 {% if erratum.notes %}
                                                     <p>Notes:</p>
-                                                    <pre class="bg-light p-3 rounded"><code>{{ erratum.notes }}</code></pre>
+                                                    <pre class="bg-light p-3 rounded errata-notes"><code>{{ erratum.notes }}</code></pre>
                                                 {% endif %}
                                             </div>
                                         </div>

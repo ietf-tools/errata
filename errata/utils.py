@@ -10,12 +10,41 @@ from functools import reduce
 import rpcapi_client
 from email.policy import EmailPolicy
 
-from django.db.models import Q
+from django.conf import settings
+from django.db.models import Exists, OuterRef, Q
 
 from errata_auth.utils import is_rpc, is_verifier
 
 from .models import Erratum, RfcMetadata
 from .rpcapi import with_rpcapi
+
+
+def rfc_info_url(rfc_number):
+    """URL of the RFC Editor info page for the given RFC number."""
+    base = settings.RFC_EDITOR_BASE.rstrip("/")
+    return f"{base}/info/rfc{rfc_number}"
+
+
+def rfc_inline_errata_url(rfc_number):
+    """URL of the RFC Editor inline-errata page for the given RFC number."""
+    base = settings.RFC_EDITOR_BASE.rstrip("/")
+    return f"{base}/rfc/inline-errata/rfc{rfc_number}.html"
+
+
+def with_rfc_has_verified(queryset):
+    """Annotate each row with ``rfc_has_verified``: whether its RFC has any
+    verified erratum.
+
+    Works for querysets of any model exposing ``rfc_number`` (Erratum and
+    StagedErratum), avoiding a per-row query in the templates.
+    """
+    return queryset.annotate(
+        rfc_has_verified=Exists(
+            Erratum.objects.filter(
+                rfc_number=OuterRef("rfc_number"), status_id="verified"
+            )
+        )
+    )
 
 
 def unverified_errata(user):
@@ -56,6 +85,10 @@ def unverified_errata(user):
     ]:
         if role in user_roles:
             queries_to_union.append(Q(rfc_metadata__stream="irtf"))
+    # The CFRG chair may verify errata for RFCs published by CFRG. This is
+    # specific to CFRG; research group chairs do not get this in general.
+    if ["chair", "cfrg"] in user_roles:
+        queries_to_union.append(Q(rfc_metadata__group_acronym="cfrg"))
     # Editorial Stream
     for role in [
         ["chair", "rsab"],

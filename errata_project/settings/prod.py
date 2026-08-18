@@ -4,7 +4,7 @@ from base64 import b64decode
 import botocore.config
 
 from .base import *  # noqa
-from .base import STORAGES, STORAGE_BUCKETS
+from .base import RFC_EDITOR_BASE, STORAGES, STORAGE_BUCKETS
 from email.utils import parseaddr
 import json
 import os
@@ -40,6 +40,8 @@ DATABASES = {
         "OPTIONS": json.loads(os.environ.get("ERRATA_DB_OPTS_JSON", "{}")),
     }
 }
+
+RFC_EDITOR_BASE = os.environ.get("ERRATA_RFC_EDITOR_BASE", RFC_EDITOR_BASE)
 
 DATATRACKER_BASE = os.environ.get(
     "NUXT_PUBLIC_DATATRACKER_BASE", "https://datatracker.ietf.org"

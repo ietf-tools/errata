@@ -80,7 +80,7 @@ def is_rpc(user):
 def is_verifier(user):
     user_roles = getattr(user, "roles", [])
     # "delegate_stream_manager" is a datatracker role
-    # that is coming into existance to support the
+    # that is coming into existence to support the
     # errata system. It will have to created as a
     # RoleName and roles assigned before the related
     # passing_roles below will have effect.
@@ -93,6 +93,9 @@ def is_verifier(user):
         # IRTF stream
         ["chair", "irtf"],
         ["delegate_stream_manager", "irtf"],
+        # The CFRG chair may verify their own group's errata. This is
+        # specific to CFRG; research group chairs do not get this in general.
+        ["chair", "cfrg"],
         # Editorial stream
         ["chair", "rsab"],
         ["delegate_stream_manager", "rsab"],

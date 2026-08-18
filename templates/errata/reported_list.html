@@ -3,21 +3,56 @@
 
 {% block content %}
 <h1>Reported errata you can classify</h1>
+<div class="btn-group mb-2" role="group" aria-label="Show errata reported within">
+    {% for value, label in within_choices %}
+        <a href="?within={{ value }}" class="btn btn-outline-primary{% if value == selected_within %} active{% endif %}"{% if value == selected_within %} aria-current="true"{% endif %}>{{ label }}</a>
+    {% endfor %}
+</div>
+{% if selected_within == "all" %}
+    <p class="text-muted">Total reported errata: {{ total }}</p>
+{% else %}
+    <p class="text-muted">
+        Showing {{ total }} of {{ total_unfiltered }} reported errata.
+        {% if hidden_count %}
+            <a href="?within=all">Show all</a> to include the {{ hidden_count }} reported earlier.
+        {% endif %}
+    </p>
+{% endif %}
 <div class="container mt-4">
-    {% regroup errata by status as errata_by_status %}
-    {% for status_group in errata_by_status %}
-        <div class="card mb-4 border-primary">
+  <div class="row">
+    {% if show_toc %}
+        <div class="col-lg-3 order-lg-last mb-4">
+            <nav class="sticky-top" style="top: 1rem;" aria-label="Sections">
+                <div class="card">
+                    <div class="card-header bg-light text-dark">
+                        <h2 class="h6 mb-0">On this page</h2>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        {% for section in sections %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <a href="#{{ section.anchor }}">{{ section.title }}</a>
+                                <span class="badge bg-primary rounded-pill">{{ section.errata|length }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    {% endif %}
+    <div class="{% if show_toc %}col-lg-9{% else %}col-12{% endif %}">
+    {% for section in sections %}
+        <div id="{{ section.anchor }}" class="card mb-4 border-primary">
             <div class="card-header bg-primary text-white">
-                <h2 class="h5 mb-0">{{ status_group.grouper }} ({{ status_group.list|length }})</h2>
+                <h2 class="h5 mb-0">{{ section.title }} ({{ section.errata|length }})</h2>
             </div>
             <div class="card-body">
-                {% regroup status_group.list by rfc_number as errata_by_rfc %}
+                {% regroup section.errata by rfc_number as errata_by_rfc %}
                 <div class="row g-3">
                     {% for rfc_group in errata_by_rfc %}
                         <div class="col-md-12">
                             <div class="card h-100 shadow-sm">
                                 <div class="card-header bg-light text-dark">
-                                    <h3 class="mt-4">RFC {{ rfc_group.grouper }}</h3>
+                                    <h3 class="mt-4"><a href="{{ rfc_group.grouper|rfc_info_url }}" rel="noopener" target="_blank">RFC {{ rfc_group.grouper }}</a>{% if rfc_group.list.0.rfc_has_verified %} <a href="{{ rfc_group.grouper|rfc_inline_errata_url }}" rel="noopener" target="_blank" class="small">inline-errata</a>{% endif %}</h3>
                                     <div class="card-body{% if rfc_group.list.0.rfc_metadata.obsoleted_by %} bg-danger text-light{% elif rfc_group.list.0.rfc_metadata.updated_by %} bg-warning text-light{% endif %}">
                                         <p class="mb-0"><strong>Source of RFC:</strong> {{ rfc_group.list.0.rfc_metadata.display_source }}</p>
                                         {% if rfc_group.list.0.rfc_metadata.obsoleted_by %}
@@ -37,7 +72,7 @@
                                         <div class="card mb-4">
                                             <div class="card-header bg-light text-dark">
                                                 <h4 class="mt-4">Errata-ID: {{ erratum.id }}</h4>
-                                                <a href="{% url 'errata_reported_classify' erratum_id=erratum.id%}" class="btn btn-primary">Classify</a>
+                                                <a href="{% url 'errata_reported_classify' erratum_id=erratum.id%}{{ within_query }}" class="btn btn-primary">Classify</a>
                                             </div>
                                             <div class="card-body">
                                                 <dl class="row">
@@ -101,21 +136,27 @@
                                                 {% endif %}
                                                 {% if erratum.notes %}
                                                     <p>Notes:</p>
-                                                    <pre class="bg-light p-3 rounded"><code>{{ erratum.notes }}</code></pre>
+                                                    <pre class="bg-light p-3 rounded errata-notes"><code>{{ erratum.notes }}</code></pre>
                                                 {% endif %}
                                             </div>
                                         </div>
+                                    {% empty %}
                                     {% endfor %}
                                 </div>
                             </div>
                         </div>
+                    {% empty %}
+                        <p class="text-muted mb-0">No {{ section.title|lower }} errata needing classification.</p>
                     {% endfor %}
                 </div>
             </div>
         </div>
-    {% empty %}
-        {% if search_ran %}<p class="alert alert-info">No errata needing classification.</p>{% endif %}
     {% endfor %}
+    {% if not total %}
+        <p class="alert alert-info">No errata needing classification.</p>
+    {% endif %}
+    </div>
+  </div>
 </div>
 
 {% endblock %}

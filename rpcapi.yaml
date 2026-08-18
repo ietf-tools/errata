@@ -28,6 +28,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetDraftsByNamesErrorResponse400'
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -151,6 +165,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetDraftAuthorsErrorResponse400'
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -175,6 +203,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SubmittedToRpcErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
           description: ''
         '200':
           content:
@@ -253,6 +295,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetPersonsErrorResponse400'
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -285,6 +341,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PersonsByEmailErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
           description: ''
         '200':
           content:
@@ -329,12 +399,66 @@ paths:
               schema:
                 $ref: '#/components/schemas/SearchPersonErrorResponse400'
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedPersonList'
           description: ''
+  /api/purple/queue/process/:
+    post:
+      operationId: process_rpc_queue
+      description: Schedules parsing the provided queue to update documents with change
+        dqueue data
+      summary: Process the provided RPC queue
+      tags:
+      - purple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RpcQueueDataRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessRpcQueueErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/purple/rfc/{rfc_number}/:
     put:
       operationId: purple_rfc_update
@@ -548,6 +672,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetRfcAuthorsErrorResponse400'
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -578,6 +716,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotifyRfcPublishedErrorResponse400'
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -606,6 +758,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/UploadRfcFilesErrorResponse400'
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -630,6 +796,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetRfcOriginalStreamsErrorResponse400'
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -638,6 +818,39 @@ paths:
                 items:
                   $ref: '#/components/schemas/OriginalStream'
           description: ''
+  /api/purple/rfc_index/refresh/:
+    post:
+      operationId: refresh_rfc_index
+      description: Requests creation of various index files.
+      summary: Refresh rfc-index files
+      tags:
+      - purple
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshRfcIndexErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/purple/subject/{subject_id}/person/:
     get:
       operationId: get_subject_person_by_id
@@ -807,6 +1020,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/RedDocListErrorResponse400'
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '200':
           content:
             application/json:
@@ -879,6 +1106,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RedSubseriesListErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
           description: ''
         '200':
           content:
@@ -967,6 +1208,53 @@ paths:
               schema:
                 $ref: '#/components/schemas/SchemaRetrieveErrorResponse400'
           description: ''
+        '404':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+            application/yaml:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+            application/vnd.oai.openapi+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '200':
           content:
             application/vnd.oai.openapi:
@@ -1013,6 +1301,9 @@ components:
 
         Works with Email or Role
       properties:
+        name:
+          type: string
+          readOnly: true
         email:
           type: string
           format: email
@@ -1084,6 +1375,10 @@ components:
         plain_name:
           type: string
           readOnly: true
+        affiliation:
+          type: string
+          description: Organization/company used by author for submission
+          maxLength: 100
       required:
       - person
     Draft:
@@ -1166,6 +1461,7 @@ components:
           type: string
           nullable: true
           title: Standardization level
+        keywords: {}
       required:
       - authors
       - title
@@ -1208,6 +1504,19 @@ components:
             minLength: 1
             pattern: ^(bcp|std|fyi)[1-9][0-9]{0,4}$
           writeOnly: true
+        keywords: {}
+        updates:
+          type: array
+          items:
+            type: integer
+          writeOnly: true
+          description: List of RFC numbers this document updates.
+        obsoletes:
+          type: array
+          items:
+            type: integer
+          writeOnly: true
+          description: List of RFC numbers this document obsoletes.
       required:
       - authors
       - published
@@ -1338,6 +1647,11 @@ components:
           type: integer
           nullable: true
           title: Area director
+        wg_chairs:
+          type: array
+          items:
+            $ref: '#/components/schemas/WgChair'
+          readOnly: true
       required:
       - authors
       - name
@@ -1739,6 +2053,7 @@ components:
       - $ref: '#/components/schemas/NotifyRfcPublishedUpdatesErrorComponent'
       - $ref: '#/components/schemas/NotifyRfcPublishedSubseriesErrorComponent'
       - $ref: '#/components/schemas/NotifyRfcPublishedSubseriesINDEXErrorComponent'
+      - $ref: '#/components/schemas/NotifyRfcPublishedKeywordsErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -1765,6 +2080,7 @@ components:
           updates: '#/components/schemas/NotifyRfcPublishedUpdatesErrorComponent'
           subseries: '#/components/schemas/NotifyRfcPublishedSubseriesErrorComponent'
           subseries.INDEX: '#/components/schemas/NotifyRfcPublishedSubseriesINDEXErrorComponent'
+          keywords: '#/components/schemas/NotifyRfcPublishedKeywordsErrorComponent'
     NotifyRfcPublishedErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/NotifyRfcPublishedValidationError'
@@ -1786,10 +2102,30 @@ components:
           enum:
           - does_not_exist
           - invalid
-          - 'null'
           type: string
           description: |-
             * `does_not_exist` - does_not_exist
+            * `invalid` - invalid
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    NotifyRfcPublishedKeywordsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - keywords
+          type: string
+          description: '* `keywords` - keywords'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
             * `invalid` - invalid
             * `null` - null
         detail:
@@ -2231,6 +2567,19 @@ components:
             minLength: 1
             pattern: ^(bcp|std|fyi)[1-9][0-9]{0,4}$
           writeOnly: true
+        keywords: {}
+        updates:
+          type: array
+          items:
+            type: integer
+          writeOnly: true
+          description: List of RFC numbers this document updates.
+        obsoletes:
+          type: array
+          items:
+            type: integer
+          writeOnly: true
+          description: List of RFC numbers this document obsoletes.
     Person:
       type: object
       properties:
@@ -2260,6 +2609,82 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ProcessRpcQueueDataErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - data
+          type: string
+          description: '* `data` - data'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProcessRpcQueueError:
+      oneOf:
+      - $ref: '#/components/schemas/ProcessRpcQueueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProcessRpcQueueDataErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProcessRpcQueueNonFieldErrorsErrorComponent'
+          data: '#/components/schemas/ProcessRpcQueueDataErrorComponent'
+    ProcessRpcQueueErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProcessRpcQueueValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProcessRpcQueueValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProcessRpcQueueNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProcessRpcQueueValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessRpcQueueError'
+      required:
+      - errors
+      - type
     PurpleRfcAuthorsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -2498,6 +2923,11 @@ components:
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateStdLevelErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateSubseriesErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateSubseriesINDEXErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateKeywordsErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateUpdatesErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateUpdatesINDEXErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateObsoletesErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcPartialUpdateObsoletesINDEXErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -2517,6 +2947,11 @@ components:
           std_level: '#/components/schemas/PurpleRfcPartialUpdateStdLevelErrorComponent'
           subseries: '#/components/schemas/PurpleRfcPartialUpdateSubseriesErrorComponent'
           subseries.INDEX: '#/components/schemas/PurpleRfcPartialUpdateSubseriesINDEXErrorComponent'
+          keywords: '#/components/schemas/PurpleRfcPartialUpdateKeywordsErrorComponent'
+          updates: '#/components/schemas/PurpleRfcPartialUpdateUpdatesErrorComponent'
+          updates.INDEX: '#/components/schemas/PurpleRfcPartialUpdateUpdatesINDEXErrorComponent'
+          obsoletes: '#/components/schemas/PurpleRfcPartialUpdateObsoletesErrorComponent'
+          obsoletes.INDEX: '#/components/schemas/PurpleRfcPartialUpdateObsoletesINDEXErrorComponent'
     PurpleRfcPartialUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/PurpleRfcPartialUpdateValidationError'
@@ -2526,6 +2961,28 @@ components:
         mapping:
           validation_error: '#/components/schemas/PurpleRfcPartialUpdateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    PurpleRfcPartialUpdateKeywordsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - keywords
+          type: string
+          description: '* `keywords` - keywords'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     PurpleRfcPartialUpdateNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -2542,6 +2999,54 @@ components:
           description: |-
             * `invalid` - invalid
             * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateObsoletesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - obsoletes
+          type: string
+          description: '* `obsoletes` - obsoletes'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateObsoletesINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - obsoletes.INDEX
+          type: string
+          description: '* `obsoletes.INDEX` - obsoletes.INDEX'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -2726,6 +3231,54 @@ components:
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateUpdatesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - updates
+          type: string
+          description: '* `updates` - updates'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcPartialUpdateUpdatesINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - updates.INDEX
+          type: string
+          description: '* `updates.INDEX` - updates.INDEX'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -2968,6 +3521,11 @@ components:
       - $ref: '#/components/schemas/PurpleRfcUpdateStdLevelErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcUpdateSubseriesErrorComponent'
       - $ref: '#/components/schemas/PurpleRfcUpdateSubseriesINDEXErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateKeywordsErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateUpdatesErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateUpdatesINDEXErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateObsoletesErrorComponent'
+      - $ref: '#/components/schemas/PurpleRfcUpdateObsoletesINDEXErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -2987,6 +3545,11 @@ components:
           std_level: '#/components/schemas/PurpleRfcUpdateStdLevelErrorComponent'
           subseries: '#/components/schemas/PurpleRfcUpdateSubseriesErrorComponent'
           subseries.INDEX: '#/components/schemas/PurpleRfcUpdateSubseriesINDEXErrorComponent'
+          keywords: '#/components/schemas/PurpleRfcUpdateKeywordsErrorComponent'
+          updates: '#/components/schemas/PurpleRfcUpdateUpdatesErrorComponent'
+          updates.INDEX: '#/components/schemas/PurpleRfcUpdateUpdatesINDEXErrorComponent'
+          obsoletes: '#/components/schemas/PurpleRfcUpdateObsoletesErrorComponent'
+          obsoletes.INDEX: '#/components/schemas/PurpleRfcUpdateObsoletesINDEXErrorComponent'
     PurpleRfcUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/PurpleRfcUpdateValidationError'
@@ -2996,6 +3559,28 @@ components:
         mapping:
           validation_error: '#/components/schemas/PurpleRfcUpdateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    PurpleRfcUpdateKeywordsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - keywords
+          type: string
+          description: '* `keywords` - keywords'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     PurpleRfcUpdateNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -3012,6 +3597,54 @@ components:
           description: |-
             * `invalid` - invalid
             * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateObsoletesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - obsoletes
+          type: string
+          description: '* `obsoletes` - obsoletes'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateObsoletesINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - obsoletes.INDEX
+          type: string
+          description: '* `obsoletes.INDEX` - obsoletes.INDEX'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -3196,6 +3829,54 @@ components:
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateUpdatesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - updates
+          type: string
+          description: '* `updates` - updates'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PurpleRfcUpdateUpdatesINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - updates.INDEX
+          type: string
+          description: '* `updates.INDEX` - updates.INDEX'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -3483,6 +4164,13 @@ components:
         name:
           type: string
           readOnly: true
+    RefreshRfcIndexErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     RelatedDraft:
       type: object
       properties:
@@ -3866,6 +4554,7 @@ components:
         group:
           type: string
           minLength: 1
+          nullable: true
         stream:
           type: string
           minLength: 1
@@ -3902,6 +4591,7 @@ components:
             type: string
             minLength: 1
             pattern: ^(bcp|std|fyi)[1-9][0-9]{0,4}$
+        keywords: {}
       required:
       - authors
       - published
@@ -3935,6 +4625,12 @@ components:
             $ref: '#/components/schemas/AuthorPerson'
       required:
       - authors
+    RpcQueueDataRequest:
+      type: object
+      properties:
+        data: {}
+      required:
+      - data
     SchemaRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -4340,6 +5036,17 @@ components:
       - validation_error
       type: string
       description: '* `validation_error` - Validation Error'
+    WgChair:
+      type: object
+      description: Serialize a WG chair's name and email from a Role
+      properties:
+        name:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
   securitySchemes:
     apiKeyAuth:
       type: apiKey

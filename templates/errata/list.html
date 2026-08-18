@@ -45,7 +45,7 @@
             <tbody>
                 {% for erratum in status_group.list %}
                     <tr>
-                        <td>RFC{{erratum.rfc_number }} (<a href="{% url 'errata_detail' pk=erratum.id %}">{{ erratum.id }}</a>)</td>
+                        <td><a href="{{ erratum.rfc_number|rfc_info_url }}" rel="noopener" target="_blank">RFC{{ erratum.rfc_number }}</a> (<a href="{% url 'errata_detail' pk=erratum.id %}">{{ erratum.id }}</a>)</td>
                         <td>{{ erratum.section|suppress_strings_starting_with_99 }}</td>
                         <td>{{ erratum.erratum_type }}</td>
                         <td>{{ erratum.rfc_metadata.display_source_with_assignment }}</td>

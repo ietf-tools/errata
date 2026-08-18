@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 filters %}
+
+{% block title %}Bulk Delete Staged Errata{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Bulk Delete Staged Errata</h2>
+
+    <form id="staged-filter-form" method="get" class="card card-body mb-4 bg-light">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                {% bootstrap_field filter_form.rfc_number %}
+            </div>
+            <div class="col-md-3">
+                {% bootstrap_field filter_form.submitter %}
+            </div>
+            <div class="col-md-3">
+                {% bootstrap_field filter_form.date_from %}
+            </div>
+            <div class="col-md-3">
+                {% bootstrap_field filter_form.date_to %}
+            </div>
+        </div>
+        <div class="mt-2 d-flex align-items-center">
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <a href="{% url 'errata_staged_bulk_delete' %}" class="btn btn-outline-secondary">Clear</a>
+            <span class="ms-3 text-muted">
+                {{ staged_errata|length }} matching staged errat{{ staged_errata|length|pluralize:"um,a" }}
+            </span>
+        </div>
+    </form>
+
+    <form id="bulk-delete-form" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="querystring" value="{{ request.GET.urlencode }}">
+        {# Carry the current filter so "select all matching" can re-derive it. #}
+        {% for field in filter_form %}
+            <input type="hidden" name="{{ field.name }}" value="{{ field.value|default_if_none:'' }}">
+        {% endfor %}
+
+        {% if staged_errata %}
+        <div class="mb-3">
+            {# A single "Select all" toggles every row checkbox client-side. There is #}
+            {# no pagination, so the visible rows ARE every erratum matching the #}
+            {# filter and this selects the full filtered set. #}
+            {# TODO(pagination): once this list is paginated, "Select all" will only #}
+            {# cover the current page. Re-introduce a second, distinct checkbox named #}
+            {# "select_all_matching" (value="1") for "select all matching the current #}
+            {# filter" -- the staged_bulk_delete view already handles that field by #}
+            {# re-deriving the full filtered queryset from the hidden filter fields #}
+            {# above, so only this template and its JS need to change. #}
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="select-all">
+                <label class="form-check-label" for="select-all">Select all</label>
+            </div>
+            <button type="submit" class="btn btn-warning mt-2"
+                    onclick="return confirm('Delete (Spam) the selected staged errata? This cannot be undone.');">
+                Delete (Spam) Selected
+            </button>
+        </div>
+
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col"></th>
+                    <th scope="col"></th>
+                    <th scope="col">Submitter</th>
+                    <th scope="col">Submitter Email</th>
+                    <th scope="col">RFC Number</th>
+                    <th scope="col">Submitted</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for erratum in staged_errata %}
+                <tr>
+                    <td>
+                        <input class="form-check-input staged-select" type="checkbox"
+                               name="selected" value="{{ erratum.id }}"
+                               aria-label="Select erratum {{ erratum.id }}">
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#detail-{{ erratum.id }}"
+                                aria-expanded="false" aria-controls="detail-{{ erratum.id }}"
+                                aria-label="Show or hide full erratum">
+                            &#9656;
+                        </button>
+                    </td>
+                    <td>{{ erratum.submitter_name|default:"Not provided" }}</td>
+                    <td>{{ erratum.submitter_email|default:"Not provided" }}</td>
+                    <td>RFC{{ erratum.rfc_number }}</td>
+                    <td>{{ erratum.submitted_at|date:"Y-m-d H:i:s e"|default:"Not provided" }}</td>
+                </tr>
+                <tr class="collapse" id="detail-{{ erratum.id }}">
+                    <td colspan="6" class="p-0">
+                        <div class="border-start border-primary border-4">
+                            {% include "errata/staged_erratum_card_body.html" %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>There are currently no submitted Staged Errata{% if request.GET %} matching the current filter{% endif %}.</p>
+        {% endif %}
+    </form>
+</div>
+
+<script>
+    (function () {
+        const selectAll = document.getElementById("select-all");
+        const rowCheckboxes = document.querySelectorAll(".staged-select");
+        if (selectAll) {
+            selectAll.addEventListener("change", function () {
+                rowCheckboxes.forEach(function (cb) { cb.checked = selectAll.checked; });
+            });
+        }
+        // TODO(pagination): if a "select all matching the current filter" checkbox
+        // is re-added (see template note), wire it here to disable the per-row and
+        // "Select all" checkboxes while it is checked, since the server then deletes
+        // the whole filtered set regardless of which rows are checked.
+    })();
+</script>
+{% endblock %}

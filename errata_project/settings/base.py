@@ -8,6 +8,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 BASE_URL = "https://errata.rfc-editor.org"
 
+# Base URL of the RFC Editor site, used to build links to RFC info pages and
+# inline errata (see errata.utils.rfc_info_url / rfc_inline_errata_url).
+RFC_EDITOR_BASE = "https://www.rfc-editor.org/"
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
