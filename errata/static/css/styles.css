@@ -13,3 +13,11 @@
     background-size: 16px 12px;
     padding-right: 2.25rem;
 }
+
+/* Notes are free prose rather than a verbatim RFC excerpt, so wrap long lines
+   instead of overflowing the card. pre-wrap (not Bootstrap's .text-wrap, which
+   is white-space: normal) keeps the author's own line breaks. */
+.errata-notes {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
