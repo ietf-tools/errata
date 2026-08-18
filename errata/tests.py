@@ -1707,106 +1707,6 @@ class UtilsTest(TestCase):
 
         self.assertFalse(can_classify(self.rpc_user, 999999))
 
-
-class ErratumAdminTest(TestCase):
-    """Admin edits should fire the same notifications as the public workflow."""
-
-    def setUp(self):
-        from django.contrib import admin as django_admin
-        from django.test import RequestFactory
-
-        from errata.admin import ErratumAdmin
-
-        self.admin = ErratumAdmin(Erratum, django_admin.site)
-        self.user = RpcUserFactory()
-        self.request = RequestFactory().post("/admin/")
-        self.request.user = self.user
-        self.rfc = RfcMetadataFactory()
-
-    def _build_erratum(self, status_slug):
-        return Erratum(
-            rfc_number=self.rfc.rfc_number,
-            rfc_metadata=self.rfc,
-            status=Status.objects.get(slug=status_slug),
-            erratum_type=ErratumType.objects.get(slug="technical"),
-            section="1",
-            orig_text="Original text",
-            corrected_text="Corrected text",
-            submitter_name="Test Submitter",
-            submitter_email="submitter@example.com",
-            submitted_at=timezone.now(),
-        )
-
-    @patch("errata.admin.send_new_erratum_notification")
-    def test_create_reported_erratum_sends_new_notification(self, mock_notify):
-        obj = self._build_erratum("reported")
-        self.admin.save_model(self.request, obj, form=None, change=False)
-        self.assertIsNotNone(obj.pk)
-        mock_notify.assert_called_once_with(obj, self.user)
-
-    @patch("errata.admin.send_new_erratum_notification")
-    def test_create_non_reported_erratum_does_not_notify(self, mock_notify):
-        obj = self._build_erratum("verified")
-        self.admin.save_model(self.request, obj, form=None, change=False)
-        mock_notify.assert_not_called()
-
-    @patch("errata.admin.send_erratum_classified_notification")
-    def test_classifying_reported_erratum_sends_classified_notification(
-        self, mock_notify
-    ):
-        erratum = ErratumFactory(
-            rfc_metadata=self.rfc, rfc_number=self.rfc.rfc_number
-        )
-        erratum.status = Status.objects.get(slug="verified")
-        self.admin.save_model(self.request, erratum, form=None, change=True)
-        erratum.refresh_from_db()
-        self.assertEqual(erratum.status_id, "verified")
-        # With no verifier supplied, the acting admin is recorded as verifier.
-        self.assertEqual(erratum.verifier_name, self.user.name)
-        self.assertEqual(erratum.verifier_email, self.user.email)
-        self.assertIsNotNone(erratum.verified_at)
-        mock_notify.assert_called_once_with(erratum, self.user)
-
-    @patch("errata.admin.send_erratum_classified_notification")
-    def test_classifying_preserves_admin_supplied_verifier(self, mock_notify):
-        erratum = ErratumFactory(
-            rfc_metadata=self.rfc, rfc_number=self.rfc.rfc_number
-        )
-        erratum.status = Status.objects.get(slug="verified")
-        erratum.verifier_name = "Real Verifier"
-        erratum.verifier_email = "real.verifier@example.com"
-        self.admin.save_model(self.request, erratum, form=None, change=True)
-        erratum.refresh_from_db()
-        # Verifier details entered in the form are kept, not overwritten by the
-        # acting admin.
-        self.assertEqual(erratum.verifier_name, "Real Verifier")
-        self.assertEqual(erratum.verifier_email, "real.verifier@example.com")
-        mock_notify.assert_called_once_with(erratum, self.user)
-
-    @patch("errata.admin.send_erratum_classified_notification")
-    @patch("errata.admin.send_new_erratum_notification")
-    def test_editing_reported_erratum_without_status_change_does_not_notify(
-        self, mock_new, mock_classified
-    ):
-        erratum = ErratumFactory(
-            rfc_metadata=self.rfc, rfc_number=self.rfc.rfc_number
-        )
-        erratum.notes = "Edited via admin"
-        self.admin.save_model(self.request, erratum, form=None, change=True)
-        mock_new.assert_not_called()
-        mock_classified.assert_not_called()
-
-    @patch("errata.admin.send_erratum_classified_notification")
-    def test_editing_already_classified_erratum_does_not_notify(self, mock_notify):
-        erratum = ErratumFactory(
-            rfc_metadata=self.rfc,
-            rfc_number=self.rfc.rfc_number,
-            status=Status.objects.get(slug="verified"),
-        )
-        erratum.notes = "Edited again"
-        self.admin.save_model(self.request, erratum, form=None, change=True)
-        mock_notify.assert_not_called()
-
     @override_settings(RFC_EDITOR_BASE="https://www.rfc-editor.org/")
     def test_rfc_info_url(self):
         from errata.utils import rfc_info_url
@@ -1831,6 +1731,197 @@ class ErratumAdminTest(TestCase):
             rfc_inline_errata_url(42),
             "https://example.test/rfc/inline-errata/rfc42.html",
         )
+
+
+class ErratumAdminTest(TestCase):
+    """Admin edits should fire the same notifications as the public workflow."""
+
+    def setUp(self):
+        from django.contrib import admin as django_admin
+        from django.test import RequestFactory
+
+        from errata.admin import ErratumAdmin
+
+        self.admin = ErratumAdmin(Erratum, django_admin.site)
+        # The admin builds its form from the acting user's permissions, so this
+        # has to be a user who could really reach the change view.
+        self.user = RpcUserFactory(is_staff=True, is_superuser=True)
+        self.request = RequestFactory().post("/admin/")
+        self.request.user = self.user
+        self.rfc = RfcMetadataFactory(stream="ietf")
+
+    def save(self, obj, change, form=None):
+        """Save through the admin and let the deferred notification run."""
+        with self.captureOnCommitCallbacks(execute=True):
+            self.admin.save_model(self.request, obj, form, change)
+
+    def edit(self, erratum, **changes):
+        """Bind the real admin form to ``erratum``, altering only ``changes``.
+
+        save_model distinguishes a verifier the admin typed from one the record
+        already carried by looking at the form's changed_data, so tests of that
+        behavior have to go through a genuinely bound form rather than mutating
+        the instance. Returns the (form, instance) pair the change view would
+        hand to save_model.
+        """
+        from django.forms.widgets import MultiWidget
+
+        form_class = self.admin.get_form(self.request, erratum, change=True)
+        unbound = form_class(instance=erratum)
+        data = {}
+        for name, field in unbound.fields.items():
+            value = unbound[name].value()
+            if isinstance(field.widget, MultiWidget):
+                for i, part in enumerate(field.widget.decompress(value)):
+                    data[f"{name}_{i}"] = "" if part is None else part
+            else:
+                data[name] = "" if value is None else value
+        data.update(changes)
+        form = form_class(data=data, instance=erratum)
+        self.assertTrue(form.is_valid(), form.errors)
+        return form, form.save(commit=False)
+
+    def _build_erratum(self, status_slug):
+        return Erratum(
+            rfc_number=self.rfc.rfc_number,
+            rfc_metadata=self.rfc,
+            status=Status.objects.get(slug=status_slug),
+            erratum_type=ErratumType.objects.get(slug="technical"),
+            section="1",
+            orig_text="Original text",
+            corrected_text="Corrected text",
+            submitter_name="Test Submitter",
+            submitter_email="submitter@example.com",
+            submitted_at=timezone.now(),
+        )
+
+    @patch("errata.admin.send_new_erratum_notification")
+    def test_create_reported_erratum_sends_new_notification(self, mock_notify):
+        obj = self._build_erratum("reported")
+        self.save(obj, change=False)
+        self.assertIsNotNone(obj.pk)
+        mock_notify.assert_called_once_with(obj, self.user)
+
+    @patch("errata.admin.send_new_erratum_notification")
+    def test_create_non_reported_erratum_does_not_notify(self, mock_notify):
+        obj = self._build_erratum("verified")
+        self.save(obj, change=False)
+        mock_notify.assert_not_called()
+
+    @patch("errata.admin.send_erratum_classified_notification")
+    def test_classifying_reported_erratum_sends_classified_notification(
+        self, mock_notify
+    ):
+        erratum = ErratumFactory(rfc_metadata=self.rfc, rfc_number=self.rfc.rfc_number)
+        form, obj = self.edit(erratum, status="verified")
+        self.save(obj, change=True, form=form)
+        erratum.refresh_from_db()
+        self.assertEqual(erratum.status_id, "verified")
+        # With no verifier supplied, the acting admin is recorded as verifier.
+        self.assertEqual(erratum.verifier_name, self.user.name)
+        self.assertEqual(erratum.verifier_email, self.user.email)
+        self.assertIsNotNone(erratum.verified_at)
+        mock_notify.assert_called_once_with(obj, self.user)
+
+    @patch("errata.admin.send_erratum_classified_notification")
+    def test_classifying_preserves_admin_supplied_verifier(self, mock_notify):
+        erratum = ErratumFactory(rfc_metadata=self.rfc, rfc_number=self.rfc.rfc_number)
+        form, obj = self.edit(
+            erratum,
+            status="verified",
+            verifier_name="Real Verifier",
+            verifier_email="real.verifier@example.com",
+        )
+        self.save(obj, change=True, form=form)
+        erratum.refresh_from_db()
+        # Verifier details entered in the form are kept, not overwritten by the
+        # acting admin.
+        self.assertEqual(erratum.verifier_name, "Real Verifier")
+        self.assertEqual(erratum.verifier_email, "real.verifier@example.com")
+        mock_notify.assert_called_once_with(obj, self.user)
+
+    @patch("errata.admin.send_erratum_classified_notification")
+    @patch("errata.admin.send_new_erratum_notification")
+    def test_editing_reported_erratum_without_status_change_does_not_notify(
+        self, mock_new, mock_classified
+    ):
+        erratum = ErratumFactory(rfc_metadata=self.rfc, rfc_number=self.rfc.rfc_number)
+        form, obj = self.edit(erratum, notes="Edited via admin")
+        self.save(obj, change=True, form=form)
+        mock_new.assert_not_called()
+        mock_classified.assert_not_called()
+
+    @patch("errata.admin.send_erratum_classified_notification")
+    def test_editing_already_classified_erratum_does_not_notify(self, mock_notify):
+        erratum = ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            status=Status.objects.get(slug="verified"),
+        )
+        form, obj = self.edit(erratum, notes="Edited again")
+        self.save(obj, change=True, form=form)
+        mock_notify.assert_not_called()
+
+    @patch("errata.admin.send_erratum_classified_notification")
+    def test_reclassifying_a_classified_erratum_notifies(self, mock_notify):
+        """The admin mirrors rpc_reclassify, not just reported_classify."""
+        erratum = ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            status=Status.objects.get(slug="verified"),
+            verifier_name="Old Verifier",
+            verifier_email="old.verifier@example.com",
+            verified_at=datetime.datetime(2001, 1, 1, tzinfo=datetime.UTC),
+        )
+        form, obj = self.edit(erratum, status="rejected")
+        self.save(obj, change=True, form=form)
+        erratum.refresh_from_db()
+        self.assertEqual(erratum.status_id, "rejected")
+        # The previous verifier came along on the record but was not supplied
+        # by this save, so the acting admin replaces them and the timestamp is
+        # re-stamped rather than left at the earlier classification.
+        self.assertEqual(erratum.verifier_name, self.user.name)
+        self.assertEqual(erratum.verifier_email, self.user.email)
+        self.assertGreater(erratum.verified_at.year, 2001)
+        mock_notify.assert_called_once_with(obj, self.user)
+
+    @patch("errata.admin.send_erratum_classified_notification")
+    def test_notification_waits_for_the_admin_transaction_to_commit(self, mock_notify):
+        erratum = ErratumFactory(rfc_metadata=self.rfc, rfc_number=self.rfc.rfc_number)
+        form, obj = self.edit(erratum, status="verified")
+        with self.captureOnCommitCallbacks() as callbacks:
+            self.admin.save_model(self.request, obj, form, change=True)
+            mock_notify.assert_not_called()
+        self.assertEqual(len(callbacks), 1)
+        callbacks[0]()
+        mock_notify.assert_called_once_with(obj, self.user)
+
+    def test_untyped_erratum_is_saved_without_notifying(self):
+        """The model allows a null erratum_type; notifying on one would crash."""
+        obj = self._build_erratum("reported")
+        obj.erratum_type = None
+        with self.assertLogs("errata.admin", level="WARNING") as logs:
+            self.save(obj, change=False)
+        obj.refresh_from_db()
+        self.assertEqual(obj.status_id, "reported")
+        self.assertFalse(MailMessage.objects.exists())
+        self.assertIn("no erratum_type", logs.output[0])
+
+    def test_admin_form_requires_an_erratum_type(self):
+        from errata.admin import ErratumAdminForm
+
+        self.assertIn("erratum_type", ErratumAdminForm(data={}).errors)
+
+    @patch("errata.mail.send_mail_task")
+    def test_classification_builds_a_real_notification(self, mock_task):
+        """Exercise the mail path itself, not just the call into it."""
+        erratum = ErratumFactory(rfc_metadata=self.rfc, rfc_number=self.rfc.rfc_number)
+        form, obj = self.edit(erratum, status="verified")
+        self.save(obj, change=True, form=form)
+        message = MailMessage.objects.get()
+        self.assertIn(f"({obj.id})", message.subject)
+        self.assertIn(self.user.email, message.cc)
+        mock_task.delay.assert_called_once_with(message.pk)
 
 
 class FilterReportedErrataTest(TestCase):
