@@ -1185,6 +1185,100 @@ class RpcViewTest(TestCase):
             "On this page",
         )
 
+    def _int_erratum(self, group_acronym="ntp", **kwargs):
+        rfc = RfcMetadataFactory(
+            stream="ietf",
+            area_acronym="int",
+            area_assignment="",
+            group_acronym=group_acronym,
+        )
+        return ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number, **kwargs)
+
+    def test_reported_list_verifier_sees_only_own_scope(self):
+        int_erratum = self._int_erratum()
+        self.client.force_login(self.ops_verifier)
+        response = self.client.get(reverse("errata_reported_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Total reported errata: 1")
+        self.assertContains(response, f"Errata-ID: {self.erratum.id}</h4>")
+        self.assertNotContains(response, f"Errata-ID: {int_erratum.id}</h4>")
+
+    def test_reported_list_within_counts_limited_to_verifier_scope(self):
+        # Errata outside the verifier's scope count toward neither total.
+        ErratumFactory(
+            rfc_metadata=self.rfc,
+            rfc_number=self.rfc.rfc_number,
+            submitted_at=timezone.now() - datetime.timedelta(days=45),
+        )
+        self._int_erratum()
+        self._int_erratum(submitted_at=timezone.now() - datetime.timedelta(days=45))
+        self.client.force_login(self.ops_verifier)
+        response = self.client.get(reverse("errata_reported_list"), {"within": "30"})
+        self.assertContains(response, "Showing 1 of 2 reported errata.")
+        self.assertContains(response, "the 1 reported earlier")
+
+    def test_reported_list_group_ad_sees_group_errata(self):
+        ntp_erratum = self._int_erratum()
+        group_ad = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"], ["ad", "ntp"]])
+        self.client.force_login(group_ad)
+        response = self.client.get(reverse("errata_reported_list"))
+        self.assertContains(response, f"Errata-ID: {ntp_erratum.id}</h4>")
+        self.assertContains(response, f"Errata-ID: {self.erratum.id}</h4>")
+
+    def test_reported_classify_verifier_in_scope_returns_200(self):
+        self.client.force_login(self.ops_verifier)
+        response = self.client.get(self.classify_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_reported_classify_verifier_out_of_scope_returns_404(self):
+        int_erratum = self._int_erratum()
+        self.client.force_login(self.ops_verifier)
+        response = self.client.get(
+            reverse("errata_reported_classify", kwargs={"erratum_id": int_erratum.id})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_reported_classify_verifier_out_of_scope_post_changes_nothing(
+        self, mock_notify
+    ):
+        int_erratum = self._int_erratum()
+        self.client.force_login(self.ops_verifier)
+        response = self.client.post(
+            reverse("errata_reported_classify", kwargs={"erratum_id": int_erratum.id}),
+            self.classify_post_data("mark_verified"),
+        )
+        self.assertEqual(response.status_code, 404)
+        int_erratum.refresh_from_db()
+        self.assertEqual(int_erratum.status_id, "reported")
+        mock_notify.assert_not_called()
+
+    @patch("errata.views.send_erratum_classified_notification")
+    def test_reported_classify_group_ad_can_mark_group_erratum(self, mock_notify):
+        ntp_erratum = self._int_erratum()
+        group_ad = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"], ["ad", "ntp"]])
+        self.client.force_login(group_ad)
+        data = self.classify_post_data("mark_verified")
+        if ntp_erratum.rfc_number >= 8650:
+            data["formats"] = ["TXT"]
+        response = self.client.post(
+            reverse("errata_reported_classify", kwargs={"erratum_id": ntp_erratum.id}),
+            data,
+        )
+        self.assertEqual(response.status_code, 302)
+        ntp_erratum.refresh_from_db()
+        self.assertEqual(ntp_erratum.status_id, "verified")
+        self.assertEqual(ntp_erratum.verifier_email, group_ad.email)
+        mock_notify.assert_called_once()
+
+    def test_reported_classify_iesg_ad_without_scope_returns_404(self):
+        # ["ad", "iesg"] alone passes the verifier gate but grants no errata.
+        self.client.force_login(UserFactory(roles=[["ad", "iesg"]]))
+        self.assertEqual(
+            self.client.get(reverse("errata_reported_list")).status_code, 200
+        )
+        self.assertEqual(self.client.get(self.classify_url()).status_code, 404)
+
     def test_reported_classify_get_returns_200(self):
         self.client.force_login(self.rpc_user)
         response = self.client.get(
