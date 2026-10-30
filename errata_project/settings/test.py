@@ -1,6 +1,7 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 from .base import *  # noqa
 from .base import STORAGES, STORAGE_BUCKETS
+import botocore.config
 import os
 
 DATABASES = {
@@ -51,9 +52,16 @@ for _bucket in STORAGE_BUCKETS:
         "OPTIONS": {
             "bucket_name": _bucket,
             "endpoint_url": "http://blobstore:9000",
-            "access_key": "minioroot",
-            "secret_key": "miniopass",
+            "access_key": "errata-dev",
+            "secret_key": "errata-dev-not-a-secret",
             "security_token": None,
+            # match prod client config (R2-compatible checksum behavior)
+            "client_config": botocore.config.Config(
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
+                signature_version="s3v4",
+                s3={"addressing_style": "path"},
+            ),
             "verify": False,
         },
     }

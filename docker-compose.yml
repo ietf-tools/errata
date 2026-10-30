@@ -32,8 +32,12 @@ services:
     command: [ "/celery-init.sh" ]  # without beat
 #    command: [ "/celery-init.sh", "-BE" ]  # with beat
     depends_on:
-      - db
-      - mq
+      db:
+        condition: service_started
+      mq:
+        condition: service_started
+      blobstore-init:
+        condition: service_completed_successfully
     volumes:
       - .:/workspace
     extra_hosts:
@@ -51,17 +55,52 @@ services:
       - "8825:8025"
 
   blobstore:
-    image: quay.io/minio/minio:latest
-    entrypoint: bash
-    command: -c "mkdir -p /data/red && minio server /data --console-address :9002"
-    environment:
-      - MINIO_ROOT_USER=minioroot
-      - MINIO_ROOT_PASSWORD=miniopass
+    image: chrislusf/seaweedfs:4.48
+    # image entrypoint adds -dir=/data -volume.max=0 -master.volumeSizeLimitMB=1024
+    command:
+      - server
+      - -ip=blobstore
+      - -ip.bind=0.0.0.0
+      - -s3
+      - -s3.port=9000
+      - -s3.config=/etc/seaweedfs/s3.json
     volumes:
-      - blob_data:/data
+      - seaweed_data:/data
+      - ./docker/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
     ports:
-      - "9002:9002" # dodge datatracker's use of 9001
+      - "9002:8888" # filer UI; dodge datatracker's use of 9001
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  blobstore-init:
+    image: chrislusf/seaweedfs:4.48
+    depends_on:
+      blobstore:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    # keep the bucket list in sync with STORAGE_BUCKETS in settings/base.py
+    command:
+      - |
+        weed_shell () { echo "$$1" | timeout 20 weed shell -master=blobstore:9333 -filer=blobstore:8888; }
+        for bucket in red; do
+          # retry: s3 /healthz can come up before the filer is ready
+          tries=0
+          until weed_shell s3.bucket.list | grep -qw "$$bucket"; do
+            tries=$$((tries + 1))
+            if [ "$$tries" -gt 30 ]; then
+              echo "Failed to create bucket $$bucket"
+              exit 1
+            fi
+            weed_shell "s3.bucket.create -name $$bucket" || true
+            sleep 2
+          done
+          echo "Bucket $$bucket ready"
+        done
+    restart: "no"
 
 volumes:
   errata_data:
-  blob_data:
+  seaweed_data:
