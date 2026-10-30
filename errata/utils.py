@@ -13,7 +13,7 @@ from email.policy import EmailPolicy
 from django.conf import settings
 from django.db.models import Exists, OuterRef, Q
 
-from errata_auth.utils import is_rpc, is_verifier
+from errata_auth.utils import is_rpc, verification_scope
 
 from .models import Erratum, RfcMetadata
 from .rpcapi import with_rpcapi
@@ -51,72 +51,25 @@ def unverified_errata(user):
     unverified = Erratum.objects.filter(status_id="reported")
     if is_rpc(user):
         return unverified
-    if not is_verifier(user):
+    scope = verification_scope(user)
+    if not scope:
         return unverified.none()
 
-    # This leakes knowledge of role details out of errata_auth
-    # consider pushing that back to that module through utility
-    # access.
-    user_roles = getattr(user, "roles", [])
     queries_to_union = []
-    # IETF Stream
-    if ["ad", "iesg"] in user_roles:
-        areas = ["gen", "wit", "art", "ops", "rtg", "int", "sec"]
-        for area in areas:
-            if ["ad", area] in user_roles:
-                queries_to_union.append(Q(rfc_metadata__area_acronym=area))
-                queries_to_union.append(Q(rfc_metadata__area_assignment=area))
-                if area == "art":
-                    for oldarea in ["app", "rai"]:
-                        queries_to_union.append(Q(rfc_metadata__area_acronym=oldarea))
-                        queries_to_union.append(
-                            Q(rfc_metadata__area_assignment=oldarea)
-                        )
-        # An AD may be assigned to a group outside their area (e.g. a
-        # temporary AD for a working group). Area and IESG roles are
-        # excluded so they don't match RFCs whose group is the area itself.
-        ad_groups = [
-            role[1]
-            for role in user_roles
-            if role[0] == "ad" and role[1] not in areas + ["iesg"]
-        ]
-        if ad_groups:
-            queries_to_union.append(
-                Q(
-                    rfc_metadata__stream="ietf",
-                    rfc_metadata__group_acronym__in=ad_groups,
-                )
+    if scope.areas:
+        queries_to_union.append(Q(rfc_metadata__area_acronym__in=scope.areas))
+        queries_to_union.append(Q(rfc_metadata__area_assignment__in=scope.areas))
+    if scope.ietf_groups:
+        queries_to_union.append(
+            Q(
+                rfc_metadata__stream="ietf",
+                rfc_metadata__group_acronym__in=scope.ietf_groups,
             )
-    # IAB
-    for role in [
-        ["chair", "iab"],
-        ["delegate_stream_manager", "iab"],
-    ]:
-        if role in user_roles:
-            queries_to_union.append(Q(rfc_metadata__stream="iab"))
-    # IRTF Stream
-    for role in [
-        ["chair", "irtf"],
-        ["delegate_stream_manager", "irtf"],
-    ]:
-        if role in user_roles:
-            queries_to_union.append(Q(rfc_metadata__stream="irtf"))
-    # The CFRG chair may verify errata for RFCs published by CFRG. This is
-    # specific to CFRG; research group chairs do not get this in general.
-    if ["chair", "cfrg"] in user_roles:
-        queries_to_union.append(Q(rfc_metadata__group_acronym="cfrg"))
-    # Editorial Stream
-    for role in [
-        ["chair", "rsab"],
-        ["delegate_stream_manager", "rsab"],
-    ]:
-        if role in user_roles:
-            queries_to_union.append(Q(rfc_metadata__stream="editorial"))
-    # Independent Stream
-    if ["chair", "ise"] in user_roles:
-        queries_to_union.append(Q(rfc_metadata__stream="ise"))
-    if not queries_to_union:
-        return unverified.none()
+        )
+    if scope.groups:
+        queries_to_union.append(Q(rfc_metadata__group_acronym__in=scope.groups))
+    if scope.streams:
+        queries_to_union.append(Q(rfc_metadata__stream__in=scope.streams))
     combined_queries = reduce(operator.or_, queries_to_union)
     return unverified.filter(combined_queries)
 
