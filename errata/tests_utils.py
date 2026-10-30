@@ -249,6 +249,34 @@ class UnverifiedErratumVerifierTest(TestCase):
                 erratum = ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number)
                 self.assertNotIn(erratum, unverified_errata(user))
 
+    def test_iesg_wit_ad_sees_tsv_errata(self):
+        # wit took over the RFCs of groups that concluded in the closed tsv area.
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "wit"]])
+        for field in ["area_acronym", "area_assignment"]:
+            with self.subTest(field=field):
+                rfc_fields = {"area_acronym": "", "area_assignment": ""}
+                rfc_fields[field] = "tsv"
+                rfc = RfcMetadataFactory(stream="ietf", **rfc_fields)
+                erratum = ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number)
+                self.assertIn(erratum, unverified_errata(user))
+
+    def test_non_wit_ad_does_not_see_tsv_errata(self):
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"]])
+        rfc = RfcMetadataFactory(stream="ietf", area_acronym="tsv")
+        erratum = ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number)
+        self.assertNotIn(erratum, unverified_errata(user))
+
+    def test_group_moved_out_of_tsv_stays_with_its_new_area(self):
+        # e.g. ippm moved from tsv to ops; the datatracker reports ops.
+        rfc = RfcMetadataFactory(
+            stream="ietf", area_acronym="ops", area_assignment="", group_acronym="ippm"
+        )
+        erratum = ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number)
+        wit_ad = UserFactory(roles=[["ad", "iesg"], ["ad", "wit"]])
+        ops_ad = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"]])
+        self.assertNotIn(erratum, unverified_errata(wit_ad))
+        self.assertIn(erratum, unverified_errata(ops_ad))
+
     def test_original_area_ad_keeps_access_after_area_assignment(self):
         # Documents current behavior: area_assignment adds the assigned area's
         # ADs without removing the original area's ADs.

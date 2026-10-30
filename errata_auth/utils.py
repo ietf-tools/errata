@@ -84,7 +84,18 @@ def is_rpc(user):
 # ["ad", <area>] for the area.
 IETF_AREAS = ["gen", "wit", "art", "ops", "rtg", "int", "sec"]
 # Closed areas whose RFCs are now verified by the ADs of a current area.
-SUCCESSOR_AREAS = {"art": ["app", "rai"]}
+# Groups that were still open when their area closed moved to a current area,
+# and the datatracker reports that area for their RFCs; what remains here are
+# RFCs from groups that concluded under the closed area.
+SUCCESSOR_AREAS = {"art": ["app", "rai"], "wit": ["tsv"]}
+
+
+def current_area(area):
+    """Return the current area responsible for ``area``, which may be closed"""
+    for successor, closed_areas in SUCCESSOR_AREAS.items():
+        if area in closed_areas:
+            return successor
+    return area
 
 # Roles that make their holder a verifier for a whole stream.
 # "delegate_stream_manager" is a datatracker role

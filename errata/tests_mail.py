@@ -70,6 +70,29 @@ class GetAdEmailsTest(TestCase):
         erratum = _fetch(ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number))
         self.assertEqual(get_ad_emails(erratum), ["own-ad@example.com"])
 
+    def test_tsv_maps_to_wit(self):
+        RfcMetadataFactory(area_acronym="wit", area_ad_emails="wit-ad@example.com")
+        rfc = RfcMetadataFactory(area_acronym="tsv", area_assignment="")
+        erratum = _fetch(ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number))
+        self.assertEqual(get_ad_emails(erratum), ["wit-ad@example.com"])
+
+    def test_area_assignment_to_closed_area_maps_to_successor(self):
+        RfcMetadataFactory(area_acronym="art", area_ad_emails="art-ad@example.com")
+        RfcMetadataFactory(area_acronym="wit", area_ad_emails="wit-ad@example.com")
+        for closed, expected in [
+            ("app", "art-ad@example.com"),
+            ("rai", "art-ad@example.com"),
+            ("tsv", "wit-ad@example.com"),
+        ]:
+            with self.subTest(area_assignment=closed):
+                rfc = RfcMetadataFactory(
+                    stream="legacy", group_acronym="none", area_assignment=closed
+                )
+                erratum = _fetch(
+                    ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number)
+                )
+                self.assertEqual(get_ad_emails(erratum), [expected])
+
     def test_proxy_not_found_logs_warning_and_returns_empty(self):
         rfc = RfcMetadataFactory(area_assignment="zz-nonexistent")
         erratum = _fetch(ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number))

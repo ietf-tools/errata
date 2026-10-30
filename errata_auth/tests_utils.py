@@ -10,7 +10,9 @@ from errata_auth.utils import (
     GROUP_ROLES,
     IETF_AREAS,
     STREAM_ROLES,
+    SUCCESSOR_AREAS,
     VerificationScope,
+    current_area,
     has_role,
     is_rpc,
     is_verifier,
@@ -255,3 +257,34 @@ class VerificationScopeTest(TestCase):
                 user = UserFactory(roles=[*extra, list(role)])
                 self.assertTrue(verification_scope(user))
                 self.assertTrue(is_verifier(user))
+
+    def test_wit_ad_gets_tsv(self):
+        # Concluded tsv groups' RFCs are now the wit area's responsibility.
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "wit"]])
+        self.assertEqual(verification_scope(user).areas, {"wit", "tsv"})
+
+    def test_only_successor_ad_gets_closed_area(self):
+        closed_areas = {a for areas in SUCCESSOR_AREAS.values() for a in areas}
+        for area in IETF_AREAS:
+            with self.subTest(area=area):
+                user = UserFactory(roles=[["ad", "iesg"], ["ad", area]])
+                self.assertEqual(
+                    verification_scope(user).areas & closed_areas,
+                    set(SUCCESSOR_AREAS.get(area, [])),
+                )
+
+
+class CurrentAreaTest(TestCase):
+    def test_closed_areas_map_to_successor(self):
+        self.assertEqual(current_area("app"), "art")
+        self.assertEqual(current_area("rai"), "art")
+        self.assertEqual(current_area("tsv"), "wit")
+
+    def test_current_areas_are_unchanged(self):
+        for area in IETF_AREAS:
+            with self.subTest(area=area):
+                self.assertEqual(current_area(area), area)
+
+    def test_unknown_and_empty_are_unchanged(self):
+        self.assertEqual(current_area("zz-nonexistent"), "zz-nonexistent")
+        self.assertEqual(current_area(""), "")
