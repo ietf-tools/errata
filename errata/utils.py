@@ -61,7 +61,8 @@ def unverified_errata(user):
     queries_to_union = []
     # IETF Stream
     if ["ad", "iesg"] in user_roles:
-        for area in ["gen", "wit", "art", "ops", "rtg", "int", "sec"]:
+        areas = ["gen", "wit", "art", "ops", "rtg", "int", "sec"]
+        for area in areas:
             if ["ad", area] in user_roles:
                 queries_to_union.append(Q(rfc_metadata__area_acronym=area))
                 queries_to_union.append(Q(rfc_metadata__area_assignment=area))
@@ -71,6 +72,21 @@ def unverified_errata(user):
                         queries_to_union.append(
                             Q(rfc_metadata__area_assignment=oldarea)
                         )
+        # An AD may be assigned to a group outside their area (e.g. a
+        # temporary AD for a working group). Area and IESG roles are
+        # excluded so they don't match RFCs whose group is the area itself.
+        ad_groups = [
+            role[1]
+            for role in user_roles
+            if role[0] == "ad" and role[1] not in areas + ["iesg"]
+        ]
+        if ad_groups:
+            queries_to_union.append(
+                Q(
+                    rfc_metadata__stream="ietf",
+                    rfc_metadata__group_acronym__in=ad_groups,
+                )
+            )
     # IAB
     for role in [
         ["chair", "iab"],
