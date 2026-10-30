@@ -146,6 +146,52 @@ class UnverifiedErratumVerifierTest(TestCase):
         result = unverified_errata(user)
         self.assertIn(assigned_erratum, result)
 
+    def test_iesg_ad_sees_errata_for_group_outside_area(self):
+        # e.g. an OPS AD serving as the AD for an INT working group
+        ntp_rfc = RfcMetadataFactory(
+            stream="ietf", area_acronym="int", area_assignment="", group_acronym="ntp"
+        )
+        ntp_erratum = ErratumFactory(
+            rfc_metadata=ntp_rfc, rfc_number=ntp_rfc.rfc_number
+        )
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"], ["ad", "ntp"]])
+        result = unverified_errata(user)
+        self.assertIn(ntp_erratum, result)
+        self.assertIn(self.ops_erratum, result)
+
+    def test_group_ad_role_requires_iesg_role(self):
+        ntp_rfc = RfcMetadataFactory(
+            stream="ietf", area_acronym="int", area_assignment="", group_acronym="ntp"
+        )
+        ntp_erratum = ErratumFactory(
+            rfc_metadata=ntp_rfc, rfc_number=ntp_rfc.rfc_number
+        )
+        user = UserFactory(roles=[["ad", "ntp"]])
+        result = unverified_errata(user)
+        self.assertNotIn(ntp_erratum, result)
+
+    def test_group_ad_role_limited_to_ietf_stream(self):
+        ise_rfc = RfcMetadataFactory(stream="ise", group_acronym="ntp")
+        ise_erratum = ErratumFactory(
+            rfc_metadata=ise_rfc, rfc_number=ise_rfc.rfc_number
+        )
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "ntp"]])
+        result = unverified_errata(user)
+        self.assertNotIn(ise_erratum, result)
+
+    def test_area_ad_role_does_not_match_area_group(self):
+        # RFCs from the area-level group (e.g. group "ops") are not picked up
+        # by the group match; access to those is unchanged.
+        area_group_rfc = RfcMetadataFactory(
+            stream="ietf", area_acronym="", area_assignment="", group_acronym="ops"
+        )
+        area_group_erratum = ErratumFactory(
+            rfc_metadata=area_group_rfc, rfc_number=area_group_rfc.rfc_number
+        )
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"]])
+        result = unverified_errata(user)
+        self.assertNotIn(area_group_erratum, result)
+
 
 class ErrataJsonTest(TestCase):
     def test_no_errata_returns_empty_json_array(self):
