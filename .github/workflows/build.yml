@@ -83,6 +83,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Write release info
+        env:
+          RELEASE_VERSION: ${{ steps.buildvars.outputs.pkg_version }}
+        run: |
+          jq -n \
+            --arg version "$RELEASE_VERSION" \
+            --arg hash "$GITHUB_SHA" \
+            --arg branch "$GITHUB_REF_NAME" \
+            '{version: $version, hash: $hash, branch: $branch}' \
+            > errata_project/release.json
+          cat errata_project/release.json
+
       - name: Build backend image
         uses: docker/build-push-action@v7
         env:
@@ -94,10 +106,6 @@ jobs:
           target: backend
           platforms: linux/amd64
           push: true
-          build-args: |
-            ERRATA_RELEASE_VERSION=${{ steps.buildvars.outputs.pkg_version }}
-            ERRATA_RELEASE_HASH=${{ github.sha }}
-            ERRATA_RELEASE_BRANCH=${{ github.ref_name }}
           tags: |
             ghcr.io/ietf-tools/errata-backend:${{ steps.buildvars.outputs.pkg_version }}
             ghcr.io/ietf-tools/errata-backend:latest

@@ -32,3 +32,9 @@ db.sqlite3
 
 # generated clients
 /openapi
+
+# release info, written by CI at build time
+/errata_project/release.json
+
+# local scratch files
+/tmp

@@ -36,14 +36,6 @@ COPY --chmod=+x ./dev/build/celery-start.sh ./celery-start.sh
 COPY --chmod=+x ./dev/build/migration-start.sh ./migration-start.sh
 COPY ./dev/build/gunicorn.conf.py ./gunicorn.conf.py
 
-# Release identification for the page footer, passed in by CI
-ARG ERRATA_RELEASE_VERSION=""
-ARG ERRATA_RELEASE_HASH=""
-ARG ERRATA_RELEASE_BRANCH=""
-ENV ERRATA_RELEASE_VERSION=${ERRATA_RELEASE_VERSION} \
-    ERRATA_RELEASE_HASH=${ERRATA_RELEASE_HASH} \
-    ERRATA_RELEASE_BRANCH=${ERRATA_RELEASE_BRANCH}
-
 CMD ["./start.sh"]
 
 EXPOSE 8000

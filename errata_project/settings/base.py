@@ -1,5 +1,6 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 
+import json
 import os
 from pathlib import Path
 
@@ -12,12 +13,16 @@ BASE_URL = "https://errata.rfc-editor.org"
 # inline errata (see errata.utils.rfc_info_url / rfc_inline_errata_url).
 RFC_EDITOR_BASE = "https://www.rfc-editor.org/"
 
-# Release identification, set at image build time by CI (see
-# .github/workflows/build.yml) and shown in the page footer. Empty in
-# development.
-RELEASE_VERSION = os.environ.get("ERRATA_RELEASE_VERSION", "")
-RELEASE_HASH = os.environ.get("ERRATA_RELEASE_HASH", "")
-RELEASE_BRANCH = os.environ.get("ERRATA_RELEASE_BRANCH", "")
+# Release identification, shown in the page footer. CI writes release.json
+# before building the image (see .github/workflows/build.yml); there is no
+# such file in development, so these stay empty.
+try:
+    _release = json.loads((BASE_DIR / "errata_project" / "release.json").read_text())
+except FileNotFoundError:
+    _release = {}
+RELEASE_VERSION = _release.get("version", "")
+RELEASE_HASH = _release.get("hash", "")
+RELEASE_BRANCH = _release.get("branch", "")
 
 
 # Quick-start development settings - unsuitable for production
