@@ -3,6 +3,8 @@
 import datetime
 from unittest.mock import MagicMock, patch
 
+import requests
+
 from django.test import TestCase, override_settings
 
 from errata.factories import ErratumFactory, MailMessageFactory, RfcMetadataFactory
@@ -266,9 +268,7 @@ class TriggerRedPrecomputeMultipleTaskTest(TestCase):
     )
     @patch("errata.tasks.requests.post")
     def test_timeout_does_not_raise(self, mock_post):
-        import requests as req_lib
-
-        mock_post.side_effect = req_lib.Timeout()
+        mock_post.side_effect = requests.Timeout()
         with self.assertLogs("errata.tasks", level="INFO") as cm:
             trigger_red_precompute_multiple_task(rfc_number_list=[1234])
         self.assertEqual(len(cm.output), 2)

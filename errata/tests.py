@@ -38,7 +38,13 @@ from errata.search import (
     filter_staged_errata,
     search_errata,
 )
-from errata.utils import with_rfc_has_verified
+from errata.utils import (
+    can_classify,
+    rfc_info_url,
+    rfc_inline_errata_url,
+    unverified_errata,
+    with_rfc_has_verified,
+)
 from errata.views import REPORTED_LIST_TOC_THRESHOLD
 
 
@@ -1775,42 +1781,28 @@ class UtilsTest(TestCase):
         )
 
     def test_unverified_errata_includes_all_for_rpc_user(self):
-        from errata.utils import unverified_errata
-
         result = unverified_errata(self.rpc_user)
         self.assertIn(self.erratum, result)
 
     def test_unverified_errata_excludes_for_non_verifier(self):
-        from errata.utils import unverified_errata
-
         result = unverified_errata(self.regular_user)
         self.assertNotIn(self.erratum, result)
 
     def test_can_classify_true_for_rpc_user(self):
-        from errata.utils import can_classify
-
         self.assertTrue(can_classify(self.rpc_user, self.erratum.id))
 
     def test_can_classify_false_for_regular_user(self):
-        from errata.utils import can_classify
-
         self.assertFalse(can_classify(self.regular_user, self.erratum.id))
 
     def test_can_classify_false_for_nonexistent_erratum(self):
-        from errata.utils import can_classify
-
         self.assertFalse(can_classify(self.rpc_user, 999999))
 
     @override_settings(RFC_EDITOR_BASE="https://www.rfc-editor.org/")
     def test_rfc_info_url(self):
-        from errata.utils import rfc_info_url
-
         self.assertEqual(rfc_info_url(1234), "https://www.rfc-editor.org/info/rfc1234")
 
     @override_settings(RFC_EDITOR_BASE="https://www.rfc-editor.org/")
     def test_rfc_inline_errata_url(self):
-        from errata.utils import rfc_inline_errata_url
-
         self.assertEqual(
             rfc_inline_errata_url(1234),
             "https://www.rfc-editor.org/rfc/inline-errata/rfc1234.html",
@@ -1818,8 +1810,6 @@ class UtilsTest(TestCase):
 
     @override_settings(RFC_EDITOR_BASE="https://example.test")
     def test_rfc_urls_honor_setting_without_trailing_slash(self):
-        from errata.utils import rfc_info_url, rfc_inline_errata_url
-
         self.assertEqual(rfc_info_url(42), "https://example.test/info/rfc42")
         self.assertEqual(
             rfc_inline_errata_url(42),
