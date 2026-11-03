@@ -10,6 +10,7 @@ from errata.factories import (
     RpcUserFactory,
     UserFactory,
 )
+from errata.models import Erratum
 from errata.templatetags.filters import (
     has_role as has_role_filter,
     is_classifiable_by,
@@ -21,8 +22,6 @@ from errata.templatetags.filters import (
 
 
 def _fetch_erratum(erratum):
-    from errata.models import Erratum
-
     return Erratum.objects.select_related("rfc_metadata", "status", "erratum_type").get(
         pk=erratum.pk
     )

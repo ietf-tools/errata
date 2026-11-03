@@ -1,0 +1,14 @@
+{
+  "identities": [
+    {
+      "name": "errata_dev",
+      "credentials": [
+        {
+          "accessKey": "errata-dev",
+          "secretKey": "errata-dev-not-a-secret"
+        }
+      ],
+      "actions": ["Admin", "Read", "List", "Tagging", "Write"]
+    }
+  ]
+}

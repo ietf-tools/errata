@@ -4,6 +4,669 @@ info:
   version: 1.0.0
   description: Datatracker API
 paths:
+  /api/accounts/migration/claim-email/:
+    post:
+      operationId: account_migration_claim_email
+      description: |-
+        Make an address usable by the Person enrolling, whether it is new to the datatracker, already theirs, or theirs but inactive. Idempotent: calling it again with the same arguments succeeds and changes nothing.
+
+        person_uuid may be any UUID the datatracker has issued for the Person, not only the current primary.
+
+        Every refusal is a 400, told apart by its error code, because each one is about the data supplied rather than the state of a resource. address_belongs_to_another_person means the address is someone else's; it is never moved, so offer another address or send the person to support, who may find the two Persons should be merged. address_has_no_owner means the datatracker knows the address but has never established who is behind it - support establishes that, not enrollment. unknown_person_uuid means no Person has that UUID, and does not distinguish one never issued from one whose Person has since been deleted.
+
+        The response describes the address as it now stands. It does not make the address primary - which address is primary is the person's own profile choice and is not changed here.
+      summary: Give a Person an address, or reactivate one it already has
+      tags:
+      - migration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimEmailRequestRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountMigrationClaimEmailErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationEmail'
+          description: ''
+  /api/accounts/migration/verify/:
+    post:
+      operationId: account_migration_verify
+      description: |-
+        Validate a datatracker login and return the Person it belongs to, so the account app can offer that person's addresses and profile while it builds their new account.
+
+        encrypted_password is the password encrypted to the datatracker's public key with RSA-OAEP (SHA-256 for both the digest and MGF1, no label) and base64 encoded. The password is never sent in the clear and there is no unencrypted alternative. An envelope that does not open is a 400 with code undecryptable_password, which means the key in use is not the one this datatracker holds - it is not a statement about the credentials, and is worth alerting on rather than showing the person.
+
+        Matching on the identifier is case-insensitive, and it may be either the datatracker username or any of the Person's email addresses.
+
+        Every credential failure is the same 400 with code verification_failed: an unknown address, a wrong password, a disabled account, an identifier that names two people and an account with no Person are not distinguished, so the response cannot be used to discover which addresses exist. It is not a 401 - the caller is authenticated, and what failed is the password it asked about. There is no lockout: repeated failures neither block the caller nor let one person deny another their enrollment.
+
+        emails carries every address of the Person, including inactive ones - offer the active ones and treat the rest as claimable. already_linked true means the Person is already attached to an account and enrollment must stop and send them to normal login instead.
+
+        The response is Person-scoped. It carries no datatracker username, no password material, and no database keys apart from legacy_sub, which is the subject the datatracker used to issue for this account and is needed only to keep existing relying parties working.
+      summary: Validate datatracker credentials
+      tags:
+      - migration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyRequestRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountMigrationVerifyErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+          description: ''
+  /api/meeting/registration/attended/{email}/:
+    get:
+      operationId: meeting_registration_attended_retrieve
+      description: |-
+        List meetings attended by a person identified by email address
+
+        Requires API key authentication
+      parameters:
+      - in: path
+        name: email
+        schema:
+          type: string
+          pattern: ^[^/\x00]+$
+        required: true
+      tags:
+      - meeting
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingRegistrationAttendedRetrieveErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonAttendedMeetings'
+          description: ''
+  /api/meeting/registration/attended/by-uuid/{uuid}/:
+    get:
+      operationId: meeting_registration_attended_by_uuid
+      description: |-
+        Lists the person's attended IETF meeting registrations from IETF 110 onwards, which is where these records took their modern form.
+
+        Accepts any UUID the datatracker has issued for the person, so a UUID that stopped being primary because of a merge still resolves. A 404 means no person has this UUID.
+      summary: List the IETF meetings a person attended
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+        required: true
+      tags:
+      - meeting
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingRegistrationAttendedByUuidErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonAttendedMeetings'
+          description: ''
+  /api/meeting/session/{id}/attendees/:
+    post:
+      operationId: meeting_session_add_attendees
+      description: |-
+        Records an Attended row per attendee. An attendee already recorded for the session keeps their existing join time.
+
+        Each attendee is identified by any UUID the datatracker has issued them, so a UUID superseded by a merge still resolves. If any UUID fails to resolve the whole request is rejected and nothing is recorded.
+
+        join_time must carry an explicit UTC offset.
+
+        For an interim meeting this also regenerates the session's bluesheet.
+      summary: Record attendees for a session
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - meeting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionAttendeesRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionAddAttendeesErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionUpdated'
+          description: ''
+  /api/meeting/session/{id}/bluesheet/:
+    post:
+      operationId: meeting_session_upload_bluesheet
+      description: 'Renders the entries into a new revision of the session''s bluesheet
+        document. Entries are free text: they are what the uploader observed, and
+        are not resolved to datatracker persons.'
+      summary: Upload a session's bluesheet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - meeting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionBluesheetRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionUploadBluesheetErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionUpdated'
+          description: ''
+  /api/meeting/session/{id}/chatlog/:
+    post:
+      operationId: meeting_session_upload_chatlog
+      description: Stores the entries as a new revision of the session's chatlog document.
+        Entries are stored as sent; `author` is a display name, not a person reference.
+      summary: Upload a session's chat log
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - meeting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionChatlogRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionUploadChatlogErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionUpdated'
+          description: ''
+  /api/meeting/session/{id}/polls/:
+    post:
+      operationId: meeting_session_upload_polls
+      description: Stores the polls as a new revision of the session's polls document.
+        Polls carry aggregate counts, not per-person responses.
+      summary: Upload a session's polls
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - meeting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionPollsRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionUploadPollsErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionUpdated'
+          description: ''
+  /api/meeting/session/{id}/recording-name/:
+    post:
+      operationId: meeting_session_set_recording_name
+      description: Sets the name the recording is served under by the player.
+      summary: Set the name of a session's recording
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - meeting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionRecordingNameRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionSetRecordingNameErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionUpdated'
+          description: ''
+  /api/meeting/session/{id}/video-url/:
+    post:
+      operationId: meeting_session_set_video_url
+      description: Points the session's video recording at the given URL, updating
+        the newest existing video recording document or creating one.
+      summary: Set a session's video recording URL
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - meeting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionVideoUrlRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeetingSessionSetVideoUrlErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionUpdated'
+          description: ''
+  /api/person/uuid/{uuid}/:
+    get:
+      operationId: person_uuid_retrieve
+      description: |-
+        Resolve any UUID the datatracker has issued for a Person to that Person's current identifier set. A UUID that stopped being primary because of a merge still resolves, and the response carries the current primary. A 200 whose primary_uuid differs from the requested uuid means "same person, new identifier" - it is not an error.
+
+        A 404 means no Person has this UUID. It does not distinguish a UUID the datatracker never issued from one it issued to a Person that has since been deleted, because deleting a Person deletes its UUIDs.
+
+        primary_uuid is the person's current primary. Re-read it; do not assume it is unchanged from a previous response, and do not assume a UUID you hold remains primary.
+
+        Responses contain identifiers only. No name, address or database key is returned.
+      summary: Resolve a Person UUID
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+        required: true
+      tags:
+      - person
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonUuidRetrieveErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonUUIDResolution'
+          description: ''
+  /api/person/uuid/by-person-pk/:
+    post:
+      operationId: person_uuid_by_person_pk
+      description: |-
+        DEPRECATED FROM FIRST RELEASE, AND WILL BE WITHDRAWN. Resolves up to 500 Person.pk values to their UUID sets, so an application that keyed its records on the datatracker database key can convert them to UUIDs once and stop using the key. Person.pk is the identifier this whole feature exists to stop exporting: it does not survive a Person merge, which is why holding it is unsafe.
+
+        Intended to be called once per consuming application, to migrate a table. Do not call it at request time and do not build anything that keeps needing it.
+
+        One results entry per distinct requested pk, with the same fields either way and the identifier fields null when status is unknown. Switch on status.
+      summary: 'TRANSITIONAL: resolve Person database keys to UUIDs'
+      tags:
+      - person
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonPkBatchRequestRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      deprecated: true
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonUuidByPersonPkErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonPkBatchResponse'
+              examples:
+                TwoPks,OneOfThemUnknown:
+                  value:
+                    results:
+                    - person_pk: 12345
+                      status: resolved
+                      primary_uuid: 6f9a1c30-6c7e-4f0a-9a3f-2f1d0b8a4e11
+                      prior_uuids:
+                      - 0b21f8d4-1a55-4c9e-8f77-9c2b4a6e3d02
+                    - person_pk: 999999
+                      status: unknown
+                      primary_uuid: null
+                      prior_uuids: []
+                  summary: Two pks, one of them unknown
+          description: ''
+  /api/person/uuid/lookup/:
+    post:
+      operationId: person_uuid_lookup
+      description: |-
+        Resolve up to 500 UUIDs in one call. Always returns 200 with one results entry per distinct requested UUID - no entry is ever omitted and no unresolvable UUID fails the request.
+
+        Each entry carries a status of resolved or unknown, corresponding to the 200 and 404 outcomes of the single-UUID endpoint. Every entry has the same fields either way, with the identifier fields null when status is unknown, so switch on status rather than on which fields are present. Duplicate inputs produce one entry. Entry order is not significant - match on uuid.
+      summary: Resolve a batch of Person UUIDs
+      tags:
+      - person
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonUUIDBatchRequestRequest'
+        required: true
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonUuidLookupErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonUUIDBatchResponse'
+          description: ''
   /api/purple/doc/drafts_by_names/:
     post:
       operationId: get_drafts_by_names
@@ -422,8 +1085,8 @@ paths:
   /api/purple/queue/process/:
     post:
       operationId: process_rpc_queue
-      description: Schedules parsing the provided queue to update documents with change
-        dqueue data
+      description: Schedules parsing the provided queue to update documents with changed
+        queue data
       summary: Process the provided RPC queue
       tags:
       - purple
@@ -1170,6 +1833,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/SubseriesDoc'
           description: ''
+  /api/reef/rfc/popularity_updated/:
+    post:
+      operationId: refresh_rfc_popularity
+      description: Notifies Datatracker that RFC popularity has changed and dependent
+        data should be updated appropriately
+      summary: Refresh RFC popularity data
+      tags:
+      - reef
+      security:
+      - apiKeyAuth: []
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshRfcPopularityErrorResponse400'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/schema/:
     get:
       operationId: schema_retrieve
@@ -1276,6 +1973,240 @@ paths:
           description: ''
 components:
   schemas:
+    AccountMigrationClaimEmailAddressErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - address
+          type: string
+          description: '* `address` - address'
+        code:
+          enum:
+          - address_has_no_owner
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `address_has_no_owner` - address_has_no_owner
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    AccountMigrationClaimEmailError:
+      oneOf:
+      - $ref: '#/components/schemas/AccountMigrationClaimEmailNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/AccountMigrationClaimEmailPersonUuidErrorComponent'
+      - $ref: '#/components/schemas/AccountMigrationClaimEmailAddressErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/AccountMigrationClaimEmailNonFieldErrorsErrorComponent'
+          person_uuid: '#/components/schemas/AccountMigrationClaimEmailPersonUuidErrorComponent'
+          address: '#/components/schemas/AccountMigrationClaimEmailAddressErrorComponent'
+    AccountMigrationClaimEmailErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/AccountMigrationClaimEmailValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/AccountMigrationClaimEmailValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    AccountMigrationClaimEmailNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - address_belongs_to_another_person
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `address_belongs_to_another_person` - address_belongs_to_another_person
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    AccountMigrationClaimEmailPersonUuidErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - person_uuid
+          type: string
+          description: '* `person_uuid` - person_uuid'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          - unknown_person_uuid
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+            * `unknown_person_uuid` - unknown_person_uuid
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    AccountMigrationClaimEmailValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountMigrationClaimEmailError'
+      required:
+      - errors
+      - type
+    AccountMigrationVerifyEncryptedPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - encrypted_password
+          type: string
+          description: '* `encrypted_password` - encrypted_password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          - undecryptable_password
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `undecryptable_password` - undecryptable_password
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    AccountMigrationVerifyError:
+      oneOf:
+      - $ref: '#/components/schemas/AccountMigrationVerifyNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/AccountMigrationVerifyUsernameOrEmailErrorComponent'
+      - $ref: '#/components/schemas/AccountMigrationVerifyEncryptedPasswordErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/AccountMigrationVerifyNonFieldErrorsErrorComponent'
+          username_or_email: '#/components/schemas/AccountMigrationVerifyUsernameOrEmailErrorComponent'
+          encrypted_password: '#/components/schemas/AccountMigrationVerifyEncryptedPasswordErrorComponent'
+    AccountMigrationVerifyErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/AccountMigrationVerifyValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/AccountMigrationVerifyValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    AccountMigrationVerifyNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - verification_failed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `verification_failed` - verification_failed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    AccountMigrationVerifyUsernameOrEmailErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username_or_email
+          type: string
+          description: '* `username_or_email` - username_or_email'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    AccountMigrationVerifyValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountMigrationVerifyError'
+      required:
+      - errors
+      - type
     Area:
       type: object
       properties:
@@ -1308,6 +2239,19 @@ components:
           type: string
           format: email
           readOnly: true
+    AttendedMeeting:
+      type: object
+      description: Serialize a plenary meeting attendance record
+      properties:
+        meeting:
+          type: string
+          readOnly: true
+        attendance_type:
+          type: string
+          readOnly: true
+        ticket_type:
+          type: string
+          readOnly: true
     AuthorPerson:
       type: object
       properties:
@@ -1333,6 +2277,36 @@ components:
       - initials
       - last_name
       - name
+    BluesheetEntryRequest:
+      type: object
+      description: |-
+        One line of a bluesheet
+
+        Free text, not a person reference: the uploader cannot always resolve an attendee
+        to a datatracker Person.
+      properties:
+        name:
+          type: string
+          minLength: 1
+        affiliation:
+          type: string
+          default: ''
+      required:
+      - name
+    ClaimEmailRequestRequest:
+      type: object
+      properties:
+        person_uuid:
+          type: string
+          format: uuid
+        address:
+          type: string
+          minLength: 1
+          format: email
+          maxLength: 64
+      required:
+      - address
+      - person_uuid
     ClientErrorEnum:
       enum:
       - client_error
@@ -1732,12 +2706,797 @@ components:
         type:
           type: string
           nullable: true
+        state:
+          allOf:
+          - $ref: '#/components/schemas/StateEnum'
+          readOnly: true
         list_email:
           type: string
           maxLength: 64
       required:
       - acronym
       - name
+    MeetingRegistrationAttendedByUuidErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    MeetingRegistrationAttendedRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    MeetingSessionAddAttendeesAttendeesINDEXJoinTimeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - attendees.INDEX.join_time
+          type: string
+          description: '* `attendees.INDEX.join_time` - attendees.INDEX.join_time'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - naive
+          - 'null'
+          - overflow
+          - required
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `naive` - naive
+            * `null` - null
+            * `overflow` - overflow
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionAddAttendeesAttendeesINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - attendees.INDEX.non_field_errors
+          type: string
+          description: '* `attendees.INDEX.non_field_errors` - attendees.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionAddAttendeesAttendeesINDEXPersonUuidErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - attendees.INDEX.person_uuid
+          type: string
+          description: '* `attendees.INDEX.person_uuid` - attendees.INDEX.person_uuid'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionAddAttendeesAttendeesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - attendees.non_field_errors
+          type: string
+          description: '* `attendees.non_field_errors` - attendees.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionAddAttendeesError:
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionAddAttendeesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionAddAttendeesAttendeesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionAddAttendeesAttendeesINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionAddAttendeesAttendeesINDEXPersonUuidErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionAddAttendeesAttendeesINDEXJoinTimeErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/MeetingSessionAddAttendeesNonFieldErrorsErrorComponent'
+          attendees.non_field_errors: '#/components/schemas/MeetingSessionAddAttendeesAttendeesNonFieldErrorsErrorComponent'
+          attendees.INDEX.non_field_errors: '#/components/schemas/MeetingSessionAddAttendeesAttendeesINDEXNonFieldErrorsErrorComponent'
+          attendees.INDEX.person_uuid: '#/components/schemas/MeetingSessionAddAttendeesAttendeesINDEXPersonUuidErrorComponent'
+          attendees.INDEX.join_time: '#/components/schemas/MeetingSessionAddAttendeesAttendeesINDEXJoinTimeErrorComponent'
+    MeetingSessionAddAttendeesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionAddAttendeesValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/MeetingSessionAddAttendeesValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    MeetingSessionAddAttendeesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionAddAttendeesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSessionAddAttendeesError'
+      required:
+      - errors
+      - type
+    MeetingSessionSetRecordingNameError:
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionSetRecordingNameNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionSetRecordingNameNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/MeetingSessionSetRecordingNameNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/MeetingSessionSetRecordingNameNameErrorComponent'
+    MeetingSessionSetRecordingNameErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionSetRecordingNameValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/MeetingSessionSetRecordingNameValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    MeetingSessionSetRecordingNameNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionSetRecordingNameNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionSetRecordingNameValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSessionSetRecordingNameError'
+      required:
+      - errors
+      - type
+    MeetingSessionSetVideoUrlError:
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionSetVideoUrlNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionSetVideoUrlUrlErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/MeetingSessionSetVideoUrlNonFieldErrorsErrorComponent'
+          url: '#/components/schemas/MeetingSessionSetVideoUrlUrlErrorComponent'
+    MeetingSessionSetVideoUrlErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionSetVideoUrlValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/MeetingSessionSetVideoUrlValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    MeetingSessionSetVideoUrlNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionSetVideoUrlUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - url
+          type: string
+          description: '* `url` - url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionSetVideoUrlValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSessionSetVideoUrlError'
+      required:
+      - errors
+      - type
+    MeetingSessionUploadBluesheetBluesheetINDEXAffiliationErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - bluesheet.INDEX.affiliation
+          type: string
+          description: '* `bluesheet.INDEX.affiliation` - bluesheet.INDEX.affiliation'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadBluesheetBluesheetINDEXNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - bluesheet.INDEX.name
+          type: string
+          description: '* `bluesheet.INDEX.name` - bluesheet.INDEX.name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadBluesheetBluesheetINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - bluesheet.INDEX.non_field_errors
+          type: string
+          description: '* `bluesheet.INDEX.non_field_errors` - bluesheet.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadBluesheetBluesheetNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - bluesheet.non_field_errors
+          type: string
+          description: '* `bluesheet.non_field_errors` - bluesheet.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadBluesheetError:
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionUploadBluesheetNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionUploadBluesheetBluesheetNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionUploadBluesheetBluesheetINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionUploadBluesheetBluesheetINDEXNameErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionUploadBluesheetBluesheetINDEXAffiliationErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/MeetingSessionUploadBluesheetNonFieldErrorsErrorComponent'
+          bluesheet.non_field_errors: '#/components/schemas/MeetingSessionUploadBluesheetBluesheetNonFieldErrorsErrorComponent'
+          bluesheet.INDEX.non_field_errors: '#/components/schemas/MeetingSessionUploadBluesheetBluesheetINDEXNonFieldErrorsErrorComponent'
+          bluesheet.INDEX.name: '#/components/schemas/MeetingSessionUploadBluesheetBluesheetINDEXNameErrorComponent'
+          bluesheet.INDEX.affiliation: '#/components/schemas/MeetingSessionUploadBluesheetBluesheetINDEXAffiliationErrorComponent'
+    MeetingSessionUploadBluesheetErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionUploadBluesheetValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/MeetingSessionUploadBluesheetValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    MeetingSessionUploadBluesheetNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadBluesheetValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSessionUploadBluesheetError'
+      required:
+      - errors
+      - type
+    MeetingSessionUploadChatlogChatlogErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - chatlog
+          type: string
+          description: '* `chatlog` - chatlog'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadChatlogChatlogINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - chatlog.INDEX
+          type: string
+          description: '* `chatlog.INDEX` - chatlog.INDEX'
+        code:
+          enum:
+          - not_a_dict
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_dict` - not_a_dict
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadChatlogChatlogINDEXKEYErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - chatlog.INDEX.KEY
+          type: string
+          description: '* `chatlog.INDEX.KEY` - chatlog.INDEX.KEY'
+        code:
+          enum:
+          - required
+          type: string
+          description: '* `required` - required'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadChatlogError:
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionUploadChatlogNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionUploadChatlogChatlogErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionUploadChatlogChatlogINDEXErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionUploadChatlogChatlogINDEXKEYErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/MeetingSessionUploadChatlogNonFieldErrorsErrorComponent'
+          chatlog: '#/components/schemas/MeetingSessionUploadChatlogChatlogErrorComponent'
+          chatlog.INDEX: '#/components/schemas/MeetingSessionUploadChatlogChatlogINDEXErrorComponent'
+          chatlog.INDEX.KEY: '#/components/schemas/MeetingSessionUploadChatlogChatlogINDEXKEYErrorComponent'
+    MeetingSessionUploadChatlogErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionUploadChatlogValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/MeetingSessionUploadChatlogValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    MeetingSessionUploadChatlogNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadChatlogValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSessionUploadChatlogError'
+      required:
+      - errors
+      - type
+    MeetingSessionUploadPollsError:
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionUploadPollsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionUploadPollsPollsErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionUploadPollsPollsINDEXErrorComponent'
+      - $ref: '#/components/schemas/MeetingSessionUploadPollsPollsINDEXKEYErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/MeetingSessionUploadPollsNonFieldErrorsErrorComponent'
+          polls: '#/components/schemas/MeetingSessionUploadPollsPollsErrorComponent'
+          polls.INDEX: '#/components/schemas/MeetingSessionUploadPollsPollsINDEXErrorComponent'
+          polls.INDEX.KEY: '#/components/schemas/MeetingSessionUploadPollsPollsINDEXKEYErrorComponent'
+    MeetingSessionUploadPollsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/MeetingSessionUploadPollsValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/MeetingSessionUploadPollsValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    MeetingSessionUploadPollsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadPollsPollsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - polls
+          type: string
+          description: '* `polls` - polls'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadPollsPollsINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - polls.INDEX
+          type: string
+          description: '* `polls.INDEX` - polls.INDEX'
+        code:
+          enum:
+          - not_a_dict
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_dict` - not_a_dict
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadPollsPollsINDEXKEYErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - polls.INDEX.KEY
+          type: string
+          description: '* `polls.INDEX.KEY` - polls.INDEX.KEY'
+        code:
+          enum:
+          - required
+          type: string
+          description: '* `required` - required'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    MeetingSessionUploadPollsValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/MeetingSessionUploadPollsError'
+      required:
+      - errors
+      - type
+    MigrationEmail:
+      type: object
+      properties:
+        address:
+          type: string
+        primary:
+          type: boolean
+        active:
+          type: boolean
+      required:
+      - active
+      - address
+      - primary
+    Name:
+      type: object
+      properties:
+        full:
+          type: string
+        plain:
+          type: string
+        first:
+          type: string
+        last:
+          type: string
+      required:
+      - first
+      - full
+      - last
+      - plain
     NotificationAck:
       type: object
       properties:
@@ -2221,6 +3980,7 @@ components:
           - date
           - invalid
           - make_aware
+          - naive
           - 'null'
           - overflow
           - required
@@ -2229,6 +3989,7 @@ components:
             * `date` - date
             * `invalid` - invalid
             * `make_aware` - make_aware
+            * `naive` - naive
             * `null` - null
             * `overflow` - overflow
             * `required` - required
@@ -2602,6 +4363,366 @@ components:
           format: uri
           readOnly: true
           description: relative URL for datatracker person page
+    PersonAttendedMeetings:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        attended:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendedMeeting'
+      required:
+      - attended
+      - email
+      - first_name
+      - last_name
+    PersonPkBatchEntry:
+      type: object
+      description: |-
+        One requested Person.pk and, when it resolved, that Person's identifier set
+
+        Same one-shape-for-both-outcomes and output-only rules as
+        PersonUUIDBatchEntrySerializer.
+      properties:
+        person_pk:
+          type: integer
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        primary_uuid:
+          type: string
+          format: uuid
+          nullable: true
+        prior_uuids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - person_pk
+      - primary_uuid
+      - prior_uuids
+      - status
+    PersonPkBatchRequestRequest:
+      type: object
+      properties:
+        person_pks:
+          type: array
+          items:
+            type: integer
+          maxItems: 500
+      required:
+      - person_pks
+    PersonPkBatchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonPkBatchEntry'
+      required:
+      - results
+    PersonUUIDBatchEntry:
+      type: object
+      description: |-
+        One requested UUID and, when it resolved, its Person's identifier set
+
+        Every field is always present. The identifier fields are null - prior_uuids empty -
+        when status is unknown.
+
+        Output only, and deliberately not read_only=True field by field: read_only implies
+        required=False, which would leave a generated client treating even status as optional.
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        is_primary:
+          type: boolean
+          nullable: true
+        primary_uuid:
+          type: string
+          format: uuid
+          nullable: true
+        prior_uuids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - is_primary
+      - primary_uuid
+      - prior_uuids
+      - status
+      - uuid
+    PersonUUIDBatchRequestRequest:
+      type: object
+      properties:
+        uuids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 500
+      required:
+      - uuids
+    PersonUUIDBatchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonUUIDBatchEntry'
+      required:
+      - results
+    PersonUUIDResolution:
+      type: object
+      description: A PersonUUID together with its Person's whole identifier set
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        is_primary:
+          type: boolean
+          readOnly: true
+        primary_uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        prior_uuids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          readOnly: true
+    PersonUuidByPersonPkError:
+      oneOf:
+      - $ref: '#/components/schemas/PersonUuidByPersonPkNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/PersonUuidByPersonPkPersonPksErrorComponent'
+      - $ref: '#/components/schemas/PersonUuidByPersonPkPersonPksINDEXErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/PersonUuidByPersonPkNonFieldErrorsErrorComponent'
+          person_pks: '#/components/schemas/PersonUuidByPersonPkPersonPksErrorComponent'
+          person_pks.INDEX: '#/components/schemas/PersonUuidByPersonPkPersonPksINDEXErrorComponent'
+    PersonUuidByPersonPkErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/PersonUuidByPersonPkValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/PersonUuidByPersonPkValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    PersonUuidByPersonPkNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PersonUuidByPersonPkPersonPksErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - person_pks
+          type: string
+          description: '* `person_pks` - person_pks'
+        code:
+          enum:
+          - empty
+          - max_length
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `empty` - empty
+            * `max_length` - max_length
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PersonUuidByPersonPkPersonPksINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - person_pks.INDEX
+          type: string
+          description: '* `person_pks.INDEX` - person_pks.INDEX'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PersonUuidByPersonPkValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonUuidByPersonPkError'
+      required:
+      - errors
+      - type
+    PersonUuidLookupError:
+      oneOf:
+      - $ref: '#/components/schemas/PersonUuidLookupNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/PersonUuidLookupUuidsErrorComponent'
+      - $ref: '#/components/schemas/PersonUuidLookupUuidsINDEXErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/PersonUuidLookupNonFieldErrorsErrorComponent'
+          uuids: '#/components/schemas/PersonUuidLookupUuidsErrorComponent'
+          uuids.INDEX: '#/components/schemas/PersonUuidLookupUuidsINDEXErrorComponent'
+    PersonUuidLookupErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/PersonUuidLookupValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/PersonUuidLookupValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    PersonUuidLookupNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PersonUuidLookupUuidsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - uuids
+          type: string
+          description: '* `uuids` - uuids'
+        code:
+          enum:
+          - empty
+          - max_length
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `empty` - empty
+            * `max_length` - max_length
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PersonUuidLookupUuidsINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - uuids.INDEX
+          type: string
+          description: '* `uuids.INDEX` - uuids.INDEX'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    PersonUuidLookupValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonUuidLookupError'
+      required:
+      - errors
+      - type
+    PersonUuidRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     PersonsByEmailErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -3092,6 +5213,7 @@ components:
           - date
           - invalid
           - make_aware
+          - naive
           - 'null'
           - overflow
           - required
@@ -3100,6 +5222,7 @@ components:
             * `date` - date
             * `invalid` - invalid
             * `make_aware` - make_aware
+            * `naive` - naive
             * `null` - null
             * `overflow` - overflow
             * `required` - required
@@ -3690,6 +5813,7 @@ components:
           - date
           - invalid
           - make_aware
+          - naive
           - 'null'
           - overflow
           - required
@@ -3698,6 +5822,7 @@ components:
             * `date` - date
             * `invalid` - invalid
             * `make_aware` - make_aware
+            * `naive` - naive
             * `null` - null
             * `overflow` - overflow
             * `required` - required
@@ -4165,6 +6290,13 @@ components:
           type: string
           readOnly: true
     RefreshRfcIndexErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RefreshRfcPopularityErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -4645,6 +6777,92 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    SessionAttendeeRequest:
+      type: object
+      description: One session attendee, identified by any UUID the datatracker issued
+        them
+      properties:
+        person_uuid:
+          type: string
+          format: uuid
+        join_time:
+          type: string
+          format: date-time
+      required:
+      - join_time
+      - person_uuid
+    SessionAttendeesRequest:
+      type: object
+      properties:
+        attendees:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionAttendeeRequest'
+      required:
+      - attendees
+    SessionBluesheetRequest:
+      type: object
+      properties:
+        bluesheet:
+          type: array
+          items:
+            $ref: '#/components/schemas/BluesheetEntryRequest'
+      required:
+      - bluesheet
+    SessionChatlogRequest:
+      type: object
+      description: |-
+        A session's chat log
+
+        Entries are stored as sent. `author` is a display name, not a person reference.
+      properties:
+        chatlog:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - chatlog
+    SessionPollsRequest:
+      type: object
+      description: A session's polls, as aggregate counts
+      properties:
+        polls:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - polls
+    SessionRecordingNameRequest:
+      type: object
+      description: The name the recording is served under by the player
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+      required:
+      - name
+    SessionUpdated:
+      type: object
+      description: Confirmation that a session data push was applied
+      properties:
+        session_id:
+          type: integer
+      required:
+      - session_id
+    SessionVideoUrlRequest:
+      type: object
+      description: A session's video recording URL
+      properties:
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+      required:
+      - url
     Shepherd:
       type: object
       properties:
@@ -4682,6 +6900,24 @@ components:
       - xml-v3
       - txt
       type: string
+    StateEnum:
+      enum:
+      - active
+      - concluded
+      - other
+      type: string
+      description: |-
+        * `active` - active
+        * `concluded` - concluded
+        * `other` - other
+    StatusEnum:
+      enum:
+      - resolved
+      - unknown
+      type: string
+      description: |-
+        * `resolved` - resolved
+        * `unknown` - unknown
     StreamName:
       type: object
       properties:
@@ -4934,6 +7170,7 @@ components:
           - date
           - invalid
           - make_aware
+          - naive
           - 'null'
           - overflow
           type: string
@@ -4941,6 +7178,7 @@ components:
             * `date` - date
             * `invalid` - invalid
             * `make_aware` - make_aware
+            * `naive` - naive
             * `null` - null
             * `overflow` - overflow
         detail:
@@ -5036,6 +7274,65 @@ components:
       - validation_error
       type: string
       description: '* `validation_error` - Validation Error'
+    VerifyRequestRequest:
+      type: object
+      properties:
+        username_or_email:
+          type: string
+          minLength: 1
+        encrypted_password:
+          type: string
+          minLength: 1
+      required:
+      - encrypted_password
+      - username_or_email
+    VerifyResponse:
+      type: object
+      description: |-
+        The account the credentials proved, as much of it as enrollment needs
+
+        Output only, but not read_only=True per field: read_only implies required=False,
+        leaving a generated client treating every field as optional. person_uuid is null only
+        when the Person's UUID rows are inconsistent, which check_person_uuids reports.
+      properties:
+        person_uuid:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          $ref: '#/components/schemas/Name'
+        emails:
+          type: array
+          items:
+            $ref: '#/components/schemas/MigrationEmail'
+        pronouns:
+          type: string
+          nullable: true
+        github_username:
+          type: string
+          nullable: true
+        portrait_url:
+          type: string
+          format: uri
+          nullable: true
+        legacy_sub:
+          type: string
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+        already_linked:
+          type: boolean
+      required:
+      - already_linked
+      - emails
+      - github_username
+      - last_login
+      - legacy_sub
+      - name
+      - person_uuid
+      - portrait_url
+      - pronouns
     WgChair:
       type: object
       description: Serialize a WG chair's name and email from a Role
