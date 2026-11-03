@@ -1,6 +1,7 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 # based on github.com/ietf-tools/purple/rpcauth/utils.py
 
+from dataclasses import dataclass
 from functools import WRAPPER_ASSIGNMENTS, wraps
 import warnings
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -77,31 +78,88 @@ def is_rpc(user):
     return passes_test
 
 
+# Roles are [role_name, group_acronym] pairs as claimed by the datatracker.
+#
+# IESG ADs verify IETF stream errata by area, and need ["ad", "iesg"] plus
+# ["ad", <area>] for the area.
+IETF_AREAS = ["gen", "wit", "art", "ops", "rtg", "int", "sec"]
+# Closed areas whose RFCs are now verified by the ADs of a current area.
+SUCCESSOR_AREAS = {"art": ["app", "rai"]}
+
+# Roles that make their holder a verifier for a whole stream.
+# "delegate_stream_manager" is a datatracker role
+# that is coming into existence to support the
+# errata system. It will have to created as a
+# RoleName and roles assigned before the related
+# roles below will have effect.
+STREAM_ROLES = {
+    ("chair", "iab"): "iab",
+    ("delegate_stream_manager", "iab"): "iab",
+    ("chair", "irtf"): "irtf",
+    ("delegate_stream_manager", "irtf"): "irtf",
+    ("chair", "rsab"): "editorial",
+    ("delegate_stream_manager", "rsab"): "editorial",
+    ("chair", "ise"): "ise",
+}
+
+# Roles that make their holder a verifier for a single group's RFCs.
+GROUP_ROLES = {
+    # The CFRG chair may verify their own group's errata. This is
+    # specific to CFRG; research group chairs do not get this in general.
+    ("chair", "cfrg"): "cfrg",
+}
+
+
+@dataclass(frozen=True)
+class VerificationScope:
+    """The RFCs whose errata a user may verify
+
+    An RFC is in scope if it matches any of the fields.
+    """
+
+    # IETF areas, matched against an RFC's area acronym or area assignment
+    areas: frozenset = frozenset()
+    # Groups whose IETF stream RFCs are in scope
+    ietf_groups: frozenset = frozenset()
+    # Groups whose RFCs are in scope, whatever the stream
+    groups: frozenset = frozenset()
+    streams: frozenset = frozenset()
+
+    def __bool__(self):
+        return any([self.areas, self.ietf_groups, self.groups, self.streams])
+
+
+def verification_scope(user):
+    """Return the VerificationScope that the user's roles grant"""
+    user_roles = {tuple(role) for role in getattr(user, "roles", [])}
+    areas = set()
+    ietf_groups = set()
+    if ("ad", "iesg") in user_roles:
+        for area in IETF_AREAS:
+            if ("ad", area) in user_roles:
+                areas.add(area)
+                areas.update(SUCCESSOR_AREAS.get(area, []))
+        # An AD may be assigned to a group outside their area (e.g. a
+        # temporary AD for a working group). Area and IESG roles are
+        # excluded so they don't match RFCs whose group is the area itself.
+        ietf_groups = {
+            group
+            for name, group in user_roles
+            if name == "ad" and group not in IETF_AREAS + ["iesg"]
+        }
+    return VerificationScope(
+        areas=frozenset(areas),
+        ietf_groups=frozenset(ietf_groups),
+        groups=frozenset(g for r, g in GROUP_ROLES.items() if r in user_roles),
+        streams=frozenset(s for r, s in STREAM_ROLES.items() if r in user_roles),
+    )
+
+
 def is_verifier(user):
-    user_roles = getattr(user, "roles", [])
-    # "delegate_stream_manager" is a datatracker role
-    # that is coming into existence to support the
-    # errata system. It will have to created as a
-    # RoleName and roles assigned before the related
-    # passing_roles below will have effect.
-    passing_roles = [
-        # IESG stream
-        ["ad", "iesg"],
-        # IAB stream
-        ["chair", "iab"],
-        ["delegate_stream_manager", "iab"],
-        # IRTF stream
-        ["chair", "irtf"],
-        ["delegate_stream_manager", "irtf"],
-        # The CFRG chair may verify their own group's errata. This is
-        # specific to CFRG; research group chairs do not get this in general.
-        ["chair", "cfrg"],
-        # Editorial stream
-        ["chair", "rsab"],
-        ["delegate_stream_manager", "rsab"],
-        # Independent stream
-        ["chair", "ise"],
-    ]
+    user_roles = {tuple(role) for role in getattr(user, "roles", [])}
+    # ["ad", "iesg"] passes on its own, even though it grants an empty
+    # VerificationScope without an area or group role.
+    passing_roles = [("ad", "iesg"), *STREAM_ROLES, *GROUP_ROLES]
     passes_test = any([role in user_roles for role in passing_roles])
     return passes_test
 

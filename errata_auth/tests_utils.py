@@ -6,7 +6,17 @@ from django.contrib.auth.models import AnonymousUser
 from django.test import TestCase, override_settings
 
 from errata.factories import UserFactory
-from errata_auth.utils import has_role, is_rpc, is_verifier, op_logout_url
+from errata_auth.utils import (
+    GROUP_ROLES,
+    IETF_AREAS,
+    STREAM_ROLES,
+    VerificationScope,
+    has_role,
+    is_rpc,
+    is_verifier,
+    op_logout_url,
+    verification_scope,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -147,3 +157,101 @@ class IsVerifierTest(TestCase):
     def test_user_without_verifier_role_is_not_verifier(self):
         user = UserFactory(roles=[["auth", "rpc"]])
         self.assertFalse(is_verifier(user))
+
+
+# ---------------------------------------------------------------------------
+# verification_scope
+# ---------------------------------------------------------------------------
+
+
+class VerificationScopeTest(TestCase):
+    def test_no_roles_grants_empty_scope(self):
+        scope = verification_scope(UserFactory(roles=[]))
+        self.assertEqual(scope, VerificationScope())
+        self.assertFalse(scope)
+
+    def test_iesg_ad_without_area_role_grants_empty_scope(self):
+        self.assertFalse(verification_scope(UserFactory(roles=[["ad", "iesg"]])))
+
+    def test_area_role_requires_iesg_role(self):
+        self.assertFalse(verification_scope(UserFactory(roles=[["ad", "ops"]])))
+
+    def test_iesg_ad_gets_their_area(self):
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"]])
+        self.assertEqual(
+            verification_scope(user), VerificationScope(areas=frozenset({"ops"}))
+        )
+
+    def test_each_area_is_granted_by_its_ad_role(self):
+        for area in IETF_AREAS:
+            with self.subTest(area=area):
+                scope = verification_scope(
+                    UserFactory(roles=[["ad", "iesg"], ["ad", area]])
+                )
+                self.assertIn(area, scope.areas)
+
+    def test_art_ad_gets_successor_areas(self):
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "art"]])
+        self.assertEqual(verification_scope(user).areas, {"art", "app", "rai"})
+
+    def test_group_ad_role_grants_ietf_group(self):
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"], ["ad", "ntp"]])
+        scope = verification_scope(user)
+        self.assertEqual(scope.areas, {"ops"})
+        self.assertEqual(scope.ietf_groups, {"ntp"})
+
+    def test_group_ad_role_requires_iesg_role(self):
+        self.assertFalse(verification_scope(UserFactory(roles=[["ad", "ntp"]])))
+
+    def test_area_and_iesg_roles_are_not_groups(self):
+        roles = [["ad", "iesg"], *[["ad", area] for area in IETF_AREAS]]
+        scope = verification_scope(UserFactory(roles=roles))
+        self.assertEqual(scope.ietf_groups, set())
+
+    def test_non_ad_group_role_is_not_a_group(self):
+        user = UserFactory(roles=[["ad", "iesg"], ["chair", "ntp"]])
+        self.assertEqual(verification_scope(user).ietf_groups, set())
+
+    def test_stream_roles_grant_streams(self):
+        for role, stream in STREAM_ROLES.items():
+            with self.subTest(role=role):
+                user = UserFactory(roles=[list(role)])
+                self.assertEqual(
+                    verification_scope(user),
+                    VerificationScope(streams=frozenset({stream})),
+                )
+
+    def test_cfrg_chair_gets_cfrg_group_only(self):
+        user = UserFactory(roles=[["chair", "cfrg"]])
+        self.assertEqual(
+            verification_scope(user), VerificationScope(groups=frozenset({"cfrg"}))
+        )
+
+    def test_roles_combine(self):
+        user = UserFactory(
+            roles=[["ad", "iesg"], ["ad", "sec"], ["chair", "ise"], ["chair", "cfrg"]]
+        )
+        self.assertEqual(
+            verification_scope(user),
+            VerificationScope(
+                areas=frozenset({"sec"}),
+                groups=frozenset({"cfrg"}),
+                streams=frozenset({"ise"}),
+            ),
+        )
+
+    def test_every_role_granting_scope_passes_is_verifier(self):
+        # Guards against the scope and the verifier gate drifting apart.
+        roles = [
+            *STREAM_ROLES,
+            *GROUP_ROLES,
+            *[("ad", area) for area in IETF_AREAS],
+            ("ad", "ntp"),
+        ]
+        for role in roles:
+            with self.subTest(role=role):
+                # AD roles only grant anything alongside ["ad", "iesg"]
+                extra = [["ad", "iesg"]] if role[0] == "ad" else []
+                user = UserFactory(roles=[*extra, list(role)])
+                self.assertTrue(verification_scope(user))
+                self.assertTrue(is_verifier(user))

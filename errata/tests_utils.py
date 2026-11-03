@@ -192,6 +192,104 @@ class UnverifiedErratumVerifierTest(TestCase):
         result = unverified_errata(user)
         self.assertNotIn(area_group_erratum, result)
 
+    def test_area_ad_without_group_role_sees_group_errata(self):
+        # The area's own ADs keep access when another AD holds the group role.
+        ntp_rfc = RfcMetadataFactory(
+            stream="ietf", area_acronym="int", area_assignment="", group_acronym="ntp"
+        )
+        ntp_erratum = ErratumFactory(
+            rfc_metadata=ntp_rfc, rfc_number=ntp_rfc.rfc_number
+        )
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "int"]])
+        result = unverified_errata(user)
+        self.assertIn(ntp_erratum, result)
+
+    def test_group_ad_role_does_not_extend_to_other_groups_in_area(self):
+        other_int_rfc = RfcMetadataFactory(
+            stream="ietf", area_acronym="int", area_assignment="", group_acronym="dhc"
+        )
+        other_int_erratum = ErratumFactory(
+            rfc_metadata=other_int_rfc, rfc_number=other_int_rfc.rfc_number
+        )
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"], ["ad", "ntp"]])
+        result = unverified_errata(user)
+        self.assertNotIn(other_int_erratum, result)
+
+    def test_non_ad_group_role_does_not_grant_group_errata(self):
+        # Only the "ad" role on a group counts; e.g. chairing it does not.
+        ntp_rfc = RfcMetadataFactory(
+            stream="ietf", area_acronym="int", area_assignment="", group_acronym="ntp"
+        )
+        ntp_erratum = ErratumFactory(
+            rfc_metadata=ntp_rfc, rfc_number=ntp_rfc.rfc_number
+        )
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"], ["chair", "ntp"]])
+        result = unverified_errata(user)
+        self.assertNotIn(ntp_erratum, result)
+
+    def test_iesg_art_ad_sees_app_and_rai_errata(self):
+        # art took over the closed app and rai areas, by acronym or assignment.
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "art"]])
+        for oldarea in ["app", "rai"]:
+            for field in ["area_acronym", "area_assignment"]:
+                with self.subTest(oldarea=oldarea, field=field):
+                    rfc_fields = {"area_acronym": "", "area_assignment": ""}
+                    rfc_fields[field] = oldarea
+                    rfc = RfcMetadataFactory(stream="ietf", **rfc_fields)
+                    erratum = ErratumFactory(
+                        rfc_metadata=rfc, rfc_number=rfc.rfc_number
+                    )
+                    self.assertIn(erratum, unverified_errata(user))
+
+    def test_non_art_ad_does_not_see_app_or_rai_errata(self):
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"]])
+        for oldarea in ["app", "rai"]:
+            with self.subTest(oldarea=oldarea):
+                rfc = RfcMetadataFactory(stream="ietf", area_acronym=oldarea)
+                erratum = ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number)
+                self.assertNotIn(erratum, unverified_errata(user))
+
+    def test_original_area_ad_keeps_access_after_area_assignment(self):
+        # Documents current behavior: area_assignment adds the assigned area's
+        # ADs without removing the original area's ADs.
+        assigned_rfc = RfcMetadataFactory(
+            stream="ietf", area_acronym="art", area_assignment="ops"
+        )
+        assigned_erratum = ErratumFactory(
+            rfc_metadata=assigned_rfc, rfc_number=assigned_rfc.rfc_number
+        )
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "art"]])
+        result = unverified_errata(user)
+        self.assertIn(assigned_erratum, result)
+
+    def test_verifier_sees_only_reported_errata(self):
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"], ["ad", "ntp"]])
+        ntp_rfc = RfcMetadataFactory(
+            stream="ietf", area_acronym="int", area_assignment="", group_acronym="ntp"
+        )
+        for slug in ["verified", "rejected", "held_for_doc_update", "sort_fix"]:
+            with self.subTest(status=slug):
+                status = Status.objects.get(slug=slug)
+                ops_erratum = ErratumFactory(
+                    rfc_metadata=self.ops_rfc,
+                    rfc_number=self.ops_rfc.rfc_number,
+                    status=status,
+                )
+                ntp_erratum = ErratumFactory(
+                    rfc_metadata=ntp_rfc, rfc_number=ntp_rfc.rfc_number, status=status
+                )
+                result = unverified_errata(user)
+                self.assertNotIn(ops_erratum, result)
+                self.assertNotIn(ntp_erratum, result)
+
+    def test_roles_from_several_streams_combine(self):
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"], ["chair", "ise"]])
+        result = unverified_errata(user)
+        self.assertIn(self.ops_erratum, result)
+        self.assertIn(self.ise_erratum, result)
+        self.assertNotIn(self.iab_erratum, result)
+        self.assertNotIn(self.art_erratum, result)
+
 
 class ErrataJsonTest(TestCase):
     def test_no_errata_returns_empty_json_array(self):
