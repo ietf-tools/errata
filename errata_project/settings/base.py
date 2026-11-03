@@ -1,5 +1,6 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 
+import json
 import os
 from pathlib import Path
 
@@ -11,6 +12,17 @@ BASE_URL = "https://errata.rfc-editor.org"
 # Base URL of the RFC Editor site, used to build links to RFC info pages and
 # inline errata (see errata.utils.rfc_info_url / rfc_inline_errata_url).
 RFC_EDITOR_BASE = "https://www.rfc-editor.org/"
+
+# Release identification, shown in the page footer. CI writes release.json
+# before building the image (see .github/workflows/build.yml); there is no
+# such file in development, so these stay empty.
+try:
+    _release = json.loads((BASE_DIR / "errata_project" / "release.json").read_text())
+except FileNotFoundError:
+    _release = {}
+RELEASE_VERSION = _release.get("version", "")
+RELEASE_HASH = _release.get("hash", "")
+RELEASE_BRANCH = _release.get("branch", "")
 
 
 # Quick-start development settings - unsuitable for production
@@ -69,6 +81,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "errata_project.context_processors.release_info",
             ],
         },
     },

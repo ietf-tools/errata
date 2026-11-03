@@ -83,6 +83,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Write release info
+        env:
+          RELEASE_VERSION: ${{ steps.buildvars.outputs.pkg_version }}
+        run: |
+          jq -n \
+            --arg version "$RELEASE_VERSION" \
+            --arg hash "$GITHUB_SHA" \
+            --arg branch "$GITHUB_REF_NAME" \
+            '{version: $version, hash: $hash, branch: $branch}' \
+            > errata_project/release.json
+          cat errata_project/release.json
+
       - name: Build backend image
         uses: docker/build-push-action@v7
         env:
