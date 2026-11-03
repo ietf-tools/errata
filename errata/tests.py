@@ -3,10 +3,13 @@
 import datetime
 from unittest.mock import patch
 
-from django.test import TestCase, override_settings
+from django.contrib import admin
+from django.forms.widgets import MultiWidget
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from errata.admin import ErratumAdmin, ErratumAdminForm
 from errata.factories import (
     ErratumFactory,
     MailMessageFactory,
@@ -1821,12 +1824,7 @@ class ErratumAdminTest(TestCase):
     """Admin edits should fire the same notifications as the public workflow."""
 
     def setUp(self):
-        from django.contrib import admin as django_admin
-        from django.test import RequestFactory
-
-        from errata.admin import ErratumAdmin
-
-        self.admin = ErratumAdmin(Erratum, django_admin.site)
+        self.admin = ErratumAdmin(Erratum, admin.site)
         # The admin builds its form from the acting user's permissions, so this
         # has to be a user who could really reach the change view.
         self.user = RpcUserFactory(is_staff=True, is_superuser=True)
@@ -1848,8 +1846,6 @@ class ErratumAdminTest(TestCase):
         the instance. Returns the (form, instance) pair the change view would
         hand to save_model.
         """
-        from django.forms.widgets import MultiWidget
-
         form_class = self.admin.get_form(self.request, erratum, change=True)
         unbound = form_class(instance=erratum)
         data = {}
@@ -1992,8 +1988,6 @@ class ErratumAdminTest(TestCase):
         self.assertIn("no erratum_type", logs.output[0])
 
     def test_admin_form_requires_an_erratum_type(self):
-        from errata.admin import ErratumAdminForm
-
         self.assertIn("erratum_type", ErratumAdminForm(data={}).errors)
 
     @patch("errata.mail.send_mail_task")
