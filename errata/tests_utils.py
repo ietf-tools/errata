@@ -6,7 +6,7 @@ import json
 from django.test import TestCase
 
 from errata.factories import ErratumFactory, RfcMetadataFactory, UserFactory
-from errata.models import Status
+from errata.models import ErratumType, Status
 from errata.utils import counts_per_authority, errata_json, unverified_errata
 
 
@@ -444,8 +444,6 @@ class CountsPerAuthorityTest(TestCase):
         self.assertEqual(result["ops"], 1)
 
     def test_only_technical_reported_are_counted(self):
-        from errata.models import ErratumType
-
         rfc = RfcMetadataFactory(stream="iab")
         # editorial type — should not count
         ErratumFactory(
