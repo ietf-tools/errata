@@ -12,6 +12,13 @@ BASE_URL = "https://errata.rfc-editor.org"
 # inline errata (see errata.utils.rfc_info_url / rfc_inline_errata_url).
 RFC_EDITOR_BASE = "https://www.rfc-editor.org/"
 
+# Release identification, set at image build time by CI (see
+# .github/workflows/build.yml) and shown in the page footer. Empty in
+# development.
+RELEASE_VERSION = os.environ.get("ERRATA_RELEASE_VERSION", "")
+RELEASE_HASH = os.environ.get("ERRATA_RELEASE_HASH", "")
+RELEASE_BRANCH = os.environ.get("ERRATA_RELEASE_BRANCH", "")
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -69,6 +76,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "errata_project.context_processors.release_info",
             ],
         },
     },

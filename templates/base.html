@@ -43,6 +43,15 @@
                     <div class="mb-4">rfc-editor.org is maintained by the <a href="https://www.ietf.org/" rel="noopener" target="_blank">Internet Engineering Task Force</a></div>
                     <img src="https://static.ietf.org/logos/ietf-inverted.svg" alt="IETF"
                         style="width: 105px; height: 60px" />
+                    {% spaceless %}
+                    <ul class="list-inline small mt-4 mb-0">
+                        <li class="list-inline-item me-0"><a href="https://status.ietf.org" rel="noopener" target="_blank" class="text-white">System Status</a></li>
+                        <li class="list-inline-item me-0"><span class="px-2" aria-hidden="true">·</span><a href="https://github.com/ietf-tools/errata/issues" rel="noopener" target="_blank" class="text-white">Report a Bug</a></li>
+                        {% if release_version %}
+                        <li class="list-inline-item me-0"><span class="px-2" aria-hidden="true">·</span>Version {% if release_url %}<a href="{{ release_url }}" rel="noopener" target="_blank" class="text-white">{{ release_label }}</a>{% else %}{{ release_label }}{% endif %}</li>
+                        {% endif %}
+                    </ul>
+                    {% endspaceless %}
                 </div>
                 <div class="col">
                     <div class="row">
