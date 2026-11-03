@@ -11,7 +11,7 @@ from django.template.loader import render_to_string
 
 from errata.utils import counts_per_authority
 from errata_auth.models import User
-from errata_auth.utils import is_rpc
+from errata_auth.utils import current_area, is_rpc
 
 from .models import MailMessage, RfcMetadata
 from .templatetags.filters import txt_errata_verifying_party
@@ -27,9 +27,10 @@ def get_ad_emails(erratum):
     implicit and explicit overrides of the base case. Explicitly, the RPC can make an
     area_assignment. To date (early 2026), they've only done this for Legacy RFCs that
     should have been treated as IETF RFCs. Implicitly, when an area has taken over for
-    a closed area, such as the merger of rai and app in to art, notifications should go
-    to the _current_ area ads. Further, erratum for IETF stream individual submissions
-    need to notify the gen area ad.
+    a closed area, such as the merger of rai and app in to art, or tsv's concluded
+    groups going to wit, notifications should go to the _current_ area ads. This
+    applies to an area_assignment naming a closed area too. Further, erratum for IETF
+    stream individual submissions need to notify the gen area ad.
 
     This implementation defers creatign a new API to ask about ADs for areas separately from
     what is being returned by the red_doc_list api. It assumes that some RFC in the
@@ -41,9 +42,9 @@ def get_ad_emails(erratum):
     metadata = erratum.rfc_metadata
     target_acronym = None
     if metadata.area_assignment != "":
-        target_acronym = metadata.area_assignment
-    elif metadata.area_acronym in ["rai", "app"]:
-        target_acronym = "art"
+        target_acronym = current_area(metadata.area_assignment)
+    elif current_area(metadata.area_acronym) != metadata.area_acronym:
+        target_acronym = current_area(metadata.area_acronym)
     elif metadata.group_acronym == "none":
         target_acronym = "gen"
     else:
