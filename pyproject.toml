@@ -1,0 +1,26 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.format]
+indent-style = "space" # Use spaces for indentation
+quote-style = "double"
+
+[tool.ruff.lint]
+select = [
+  "E", # pycodestyle
+  "F", # Pyflakes
+  "UP", # pyupgrade
+  "B", # flake8-bugbear
+  "I", # isort
+  "RUF100", # unused-noqa
+]
+ignore = [
+  "F405", # variable may be undefined, or defined from star imports
+  "F403", # unable to detect undefined names
+]
+
+[tool.ruff.lint.per-file-ignores]
+# makemigrations writes long help_text strings on one line, and ruff can't
+# wrap strings, so rebuild_migrations.sh would reintroduce them.
+"**/migrations/*" = ["E501"]
