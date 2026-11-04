@@ -1,8 +1,8 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 
 import datetime
-import logging
 import json
+import logging
 import urllib.parse
 
 from django.http import Http404, JsonResponse
@@ -15,14 +15,14 @@ from errata.utils_api import requires_api_token
 from errata_auth.utils import role_required
 
 from .forms import (
+    REPORTED_WITHIN_CHOICES,
+    ChooseRfcForm,
+    ConfirmExistingErrataReadForm,
     EditErratumForm,
     EditStagedErratumForm,
     ErrataSearchForm,
-    ChooseRfcForm,
-    ConfirmExistingErrataReadForm,
     ReclassifyErratumForm,
     ReportedErrataFilterForm,
-    REPORTED_WITHIN_CHOICES,
     RfcNumberListForm,
     StagedErrataFilterForm,
 )

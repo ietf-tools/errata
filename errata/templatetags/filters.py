@@ -1,6 +1,7 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 
 import calendar
+
 from django import template
 
 from errata.utils import can_classify, rfc_info_url, rfc_inline_errata_url

@@ -2,11 +2,10 @@
 
 import datetime
 import io
-import requests
 
+import requests
 from celery import shared_task
 from celery.utils.log import get_task_logger
-
 from django.conf import settings
 from django.core.files.storage import storages
 from django.db.models import F

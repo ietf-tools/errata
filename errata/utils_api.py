@@ -2,8 +2,8 @@
 
 # Based on datatracker's ietf/api/ietf_utils.py
 
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, Optional, Union
 
 from django.conf import settings
 from django.http import HttpResponseForbidden
@@ -22,7 +22,7 @@ def is_valid_token(endpoint, token):
     return False
 
 
-def requires_api_token(func_or_endpoint: Optional[Union[Callable, str]] = None):
+def requires_api_token(func_or_endpoint: Callable | str | None = None):
     """Validate API token before executing the wrapped method
 
     Usage:
@@ -51,7 +51,7 @@ def requires_api_token(func_or_endpoint: Optional[Union[Callable, str]] = None):
                     "Cannot automatically decorate function that does not support __qualname__. "
                     "Explicitly set the endpoint."
                 )
-            endpoint = "{}.{}".format(f.__module__, fname)
+            endpoint = f"{f.__module__}.{fname}"
         else:
             endpoint = _endpoint
 

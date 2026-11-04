@@ -1,9 +1,10 @@
 # Copyright The IETF Trust 2026, All Rights Reserved
 
 import re
+
 from django import forms
 
-from .models import RfcMetadata, Erratum
+from .models import Erratum, RfcMetadata
 
 
 class CaseInsensitiveChoiceField(forms.ChoiceField):

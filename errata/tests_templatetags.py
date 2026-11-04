@@ -13,6 +13,8 @@ from errata.factories import (
 from errata.models import Erratum
 from errata.templatetags.filters import (
     has_role as has_role_filter,
+)
+from errata.templatetags.filters import (
     is_classifiable_by,
     month_name,
     suppress_strings_starting_with_99,

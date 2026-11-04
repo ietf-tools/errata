@@ -2,7 +2,6 @@
 
 import datetime
 import logging
-
 from email.policy import EmailPolicy
 
 from django.conf import settings
@@ -14,8 +13,8 @@ from errata_auth.models import User
 from errata_auth.utils import current_area, is_rpc
 
 from .models import MailMessage, RfcMetadata
-from .templatetags.filters import txt_errata_verifying_party
 from .tasks import send_mail_task
+from .templatetags.filters import txt_errata_verifying_party
 
 logger = logging.getLogger(__name__)
 

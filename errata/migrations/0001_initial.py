@@ -1,14 +1,16 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 
+import uuid
+
 import django.contrib.postgres.fields
 import django.db.models.deletion
 import django.utils.timezone
-import errata.models
-import errata_project.mail
 import simple_history.models
-import uuid
 from django.conf import settings
 from django.db import migrations, models
+
+import errata.models
+import errata_project.mail
 
 
 class Migration(migrations.Migration):

@@ -1,9 +1,9 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 # based on github.com/ietf-tools/purple/rpcauth/utils.py
 
+import warnings
 from dataclasses import dataclass
 from functools import WRAPPER_ASSIGNMENTS, wraps
-import warnings
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from django.conf import settings
@@ -96,6 +96,7 @@ def current_area(area):
         if area in closed_areas:
             return successor
     return area
+
 
 # Roles that make their holder a verifier for a whole stream.
 # "delegate_stream_manager" is a datatracker role

@@ -12,7 +12,6 @@ from errata_auth.backends import (
     ServiceTokenOIDCAuthenticationBackend,
 )
 
-
 # Settings required to instantiate the backends in test context.
 OIDC_SETTINGS = dict(
     OIDC_OP_ISSUER_ID="http://issuer.example.com/openid",

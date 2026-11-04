@@ -1,15 +1,14 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 
-import json
 import datetime
+import json
 import operator
-# from zoneinfo import ZoneInfo # used to test emitting errata.json in pacifc time
+from email.policy import EmailPolicy
 
+# from zoneinfo import ZoneInfo # used to test emitting errata.json in pacifc time
 from functools import reduce
 
 import rpcapi_client
-from email.policy import EmailPolicy
-
 from django.conf import settings
 from django.db.models import Exists, OuterRef, Q
 

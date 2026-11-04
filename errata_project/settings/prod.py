@@ -1,13 +1,13 @@
 # Copyright The IETF Trust 2026, All Rights Reserved
+import json
+import os
 from base64 import b64decode
+from email.utils import parseaddr
 
 import botocore.config
 
-from .base import *  # noqa
-from .base import RFC_EDITOR_BASE, STORAGES, STORAGE_BUCKETS
-from email.utils import parseaddr
-import json
-import os
+from .base import *
+from .base import RFC_EDITOR_BASE, STORAGE_BUCKETS, STORAGES
 
 DEPLOYMENT_MODE = "production"
 
