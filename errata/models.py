@@ -2,20 +2,18 @@
 
 import datetime
 import uuid
-
 from collections.abc import Iterable
 from email.policy import EmailPolicy
 
-from simple_history.models import HistoricalRecords
-
 from django import forms
-from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.forms import SimpleArrayField
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
-from errata_project.mail import make_message_id, EmailMessage
+from errata_project.mail import EmailMessage, make_message_id
 
 
 class Name(models.Model):

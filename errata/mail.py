@@ -2,7 +2,6 @@
 
 import datetime
 import logging
-
 from email.policy import EmailPolicy
 
 from django.conf import settings
@@ -14,14 +13,15 @@ from errata_auth.models import User
 from errata_auth.utils import current_area, is_rpc
 
 from .models import MailMessage, RfcMetadata
-from .templatetags.filters import txt_errata_verifying_party
 from .tasks import send_mail_task
+from .templatetags.filters import txt_errata_verifying_party
 
 logger = logging.getLogger(__name__)
 
 
 def get_ad_emails(erratum):
-    """Return the emails of the proper ads to notify when sending email about an erratum.
+    """Return the emails of the proper ads to notify when sending email about an
+    erratum.
 
     The base case is the ads of the area an RFCs WG was in. However, there are both
     implicit and explicit overrides of the base case. Explicitly, the RPC can make an
@@ -32,8 +32,8 @@ def get_ad_emails(erratum):
     applies to an area_assignment naming a closed area too. Further, erratum for IETF
     stream individual submissions need to notify the gen area ad.
 
-    This implementation defers creatign a new API to ask about ADs for areas separately from
-    what is being returned by the red_doc_list api. It assumes that some RFC in the
+    This implementation defers creatign a new API to ask about ADs for areas separately
+    from what is being returned by the red_doc_list api. It assumes that some RFC in the
     series will have the ADs for any given active area already attached to it. This
     assumption has little risk for IETF stream RFCs, but if a very old RFC is assigned
     to a newly minted area that has not yet produced any RFCs, it will fail. A future
@@ -72,13 +72,17 @@ def strip_garbage(addr_list, erratum):
     unclean = set(addr_list) - set(cleaned_list)
     if len(unclean) > 0:
         logger.warning(
-            f"Sending mail for erratum id: {erratum.id} - discarding addresses: {unclean}"
+            f"Sending mail for erratum id: {erratum.id} - "
+            f"discarding addresses: {unclean}"
         )
     return cleaned_list
 
 
 def send_new_erratum_notification(erratum, user):
-    subject = f"[{erratum.erratum_type} Errata Reported] RFC{erratum.rfc_metadata.rfc_number} ({erratum.id})"
+    subject = (
+        f"[{erratum.erratum_type} Errata Reported] "
+        f"RFC{erratum.rfc_metadata.rfc_number} ({erratum.id})"
+    )
     body = render_to_string(
         "errata/email/new_erratum_general.txt",
         {"erratum": erratum, "base_url": settings.BASE_URL},
@@ -170,14 +174,18 @@ def send_new_erratum_notification(erratum, user):
         )
     except ValidationError:
         logger.error(
-            f"Unable to construct message to send for erratum {erratum.pk} with subject {subject} - to: {to}, cc: {cc}"
+            f"Unable to construct message to send for erratum {erratum.pk} "
+            f"with subject {subject} - to: {to}, cc: {cc}"
         )
     if mail_message is not None:
         send_mail_task.delay(mail_message.pk)
 
 
 def send_erratum_classified_notification(erratum, user):
-    subject = f"[Errata {erratum.status.name}] RFC{erratum.rfc_metadata.rfc_number} ({erratum.id})"
+    subject = (
+        f"[Errata {erratum.status.name}] "
+        f"RFC{erratum.rfc_metadata.rfc_number} ({erratum.id})"
+    )
     metadata = erratum.rfc_metadata
     stream = metadata.stream
     # The RFC Production Center is the verifying authority for editorial errata
@@ -311,7 +319,8 @@ def send_erratum_classified_notification(erratum, user):
         )
     except ValidationError:
         logger.error(
-            f"Unable to construct message to send for erratum {erratum.pk} with subject {subject} - to: {to}, cc: {cc}"
+            f"Unable to construct message to send for erratum {erratum.pk} "
+            f"with subject {subject} - to: {to}, cc: {cc}"
         )
     if mail_message is not None:
         send_mail_task.delay(mail_message.pk)

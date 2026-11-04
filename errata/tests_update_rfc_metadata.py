@@ -4,7 +4,6 @@ from datetime import date
 from unittest.mock import MagicMock
 
 from django.test import TestCase
-
 from rpcapi_client.models import (
     Area,
     AreaDirector,
@@ -13,16 +12,17 @@ from rpcapi_client.models import (
     RelatedDraft,
     ReverseRelatedRfc,
     RfcAuthor,
-    RfcMetadata as ApiRfcMetadata,
     RfcStatus,
     Shepherd,
     StreamName,
+)
+from rpcapi_client.models import (
+    RfcMetadata as ApiRfcMetadata,
 )
 
 from errata.factories import RfcMetadataFactory
 from errata.models import RfcMetadata
 from errata.utils import update_rfc_metadata
-
 
 # ---------------------------------------------------------------------------
 # Builder helpers

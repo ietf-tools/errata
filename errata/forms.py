@@ -1,9 +1,10 @@
 # Copyright The IETF Trust 2026, All Rights Reserved
 
 import re
+
 from django import forms
 
-from .models import RfcMetadata, Erratum
+from .models import Erratum, RfcMetadata
 
 
 class CaseInsensitiveChoiceField(forms.ChoiceField):
@@ -116,7 +117,8 @@ class ChooseRfcForm(forms.Form):
             raise forms.ValidationError("RFC Number must be a positive integer.")
         if not RfcMetadata.objects.filter(rfc_number=rfc_number).exists():
             raise forms.ValidationError(
-                f"RFC {rfc_number} has not been published. (Very recently published RFCs may not yet be provisioned in the errata system.)"
+                f"RFC {rfc_number} has not been published. (Very recently published "
+                "RFCs may not yet be provisioned in the errata system.)"
             )
         return rfc_number
 
@@ -125,7 +127,10 @@ class ChooseRfcForm(forms.Form):
 class ConfirmExistingErrataReadForm(forms.Form):
     confirm = forms.BooleanField(
         required=True,
-        label="I have read the existing errata for this RFC and what I wish to report has not been reported before.",
+        label=(
+            "I have read the existing errata for this RFC and what I wish to report "
+            "has not been reported before."
+        ),
     )
 
 
@@ -211,7 +216,10 @@ class EditStagedErratumForm(forms.Form):
         widget=forms.Textarea(
             attrs={
                 "rows": 4,
-                "placeholder": "Enter any explanatory notes or rationale for the suggested correction.",
+                "placeholder": (
+                    "Enter any explanatory notes or rationale for the suggested "
+                    "correction."
+                ),
             }
         ),
         required=True,
@@ -370,11 +378,13 @@ class RfcNumberListForm(forms.Form):
                         raise forms.ValidationError(f"Invalid range: {part}")
                     rfc_numbers.update(range(start, end + 1))
                 except ValueError:
-                    raise forms.ValidationError(f"Invalid RFC number in range: {part}")
+                    raise forms.ValidationError(
+                        f"Invalid RFC number in range: {part}"
+                    ) from None
             else:
                 try:
                     rfc_number = int(part)
                     rfc_numbers.add(rfc_number)
                 except ValueError:
-                    raise forms.ValidationError(f"Invalid RFC number: {part}")
+                    raise forms.ValidationError(f"Invalid RFC number: {part}") from None
         return sorted(rfc_numbers)

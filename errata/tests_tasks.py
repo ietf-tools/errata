@@ -4,7 +4,6 @@ import datetime
 from unittest.mock import MagicMock, patch
 
 import requests
-
 from django.test import TestCase, override_settings
 
 from errata.factories import ErratumFactory, MailMessageFactory, RfcMetadataFactory

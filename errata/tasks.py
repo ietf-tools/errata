@@ -2,11 +2,10 @@
 
 import datetime
 import io
-import requests
 
+import requests
 from celery import shared_task
 from celery.utils.log import get_task_logger
-
 from django.conf import settings
 from django.core.files.storage import storages
 from django.db.models import F
@@ -146,7 +145,8 @@ def trigger_red_precompute_multiple_task(rfc_number_list=()):
             return
         if response.status_code != 200:
             logger.error(
-                f"POST request failed for {url} ]: {response.status_code} {response.text}"
+                f"POST request failed for {url} ]: "
+                f"{response.status_code} {response.text}"
             )
     else:
         logger.error(

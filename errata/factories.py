@@ -3,7 +3,6 @@
 import factory
 from django.utils import timezone
 
-from errata_auth.models import User
 from errata.models import (
     Erratum,
     ErratumType,
@@ -13,6 +12,7 @@ from errata.models import (
     StagedErratumStatus,
     Status,
 )
+from errata_auth.models import User
 
 
 class UserFactory(factory.django.DjangoModelFactory):

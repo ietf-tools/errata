@@ -1,15 +1,14 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 
-import json
 import datetime
+import json
 import operator
-# from zoneinfo import ZoneInfo # used to test emitting errata.json in pacifc time
+from email.policy import EmailPolicy
 
+# from zoneinfo import ZoneInfo # used to test emitting errata.json in pacifc time
 from functools import reduce
 
 import rpcapi_client
-from email.policy import EmailPolicy
-
 from django.conf import settings
 from django.db.models import Exists, OuterRef, Q
 
@@ -173,7 +172,8 @@ def errata_json():
             "update_date": e.updated_at.strftime("%Y-%m-%d %H:%M:%S")
             if e.updated_at is not None
             else None,
-            # "update_date": e.updated_at.astimezone(pacific_tz).strftime("%Y-%m-%d %H:%M:%S"),
+            # "update_date": e.updated_at.astimezone(pacific_tz)
+            #     .strftime("%Y-%m-%d %H:%M:%S"),
         }
         for e in Erratum.objects.select_related("rfc_metadata").all()
     ]

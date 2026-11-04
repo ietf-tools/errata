@@ -1,9 +1,9 @@
 # Copyright The IETF Trust 2025-2026, All Rights Reserved
 # based on github.com/ietf-tools/purple/rpcauth/utils.py
 
+import warnings
 from dataclasses import dataclass
 from functools import WRAPPER_ASSIGNMENTS, wraps
-import warnings
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from django.conf import settings
@@ -96,6 +96,7 @@ def current_area(area):
         if area in closed_areas:
             return successor
     return area
+
 
 # Roles that make their holder a verifier for a whole stream.
 # "delegate_stream_manager" is a datatracker role
@@ -203,8 +204,8 @@ def passes_test_decorator(test_func, message):
 def role_required(*role_names):
     """View decorator for checking that the user is logged in and
     has one of the listed roles."""
+    plural = "s" if len(role_names) != 1 else ""
     return passes_test_decorator(
         lambda u, *args, **kwargs: has_role(u, role_names, *args, **kwargs),
-        "Restricted to role%s: %s"
-        % ("s" if len(role_names) != 1 else "", ", ".join(role_names)),
+        f"Restricted to role{plural}: {', '.join(role_names)}",
     )

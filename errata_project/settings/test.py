@@ -28,8 +28,8 @@ OIDC_OP_TOKEN_ENDPOINT = "http://host.docker.internal:8000/api/openid/token/"
 OIDC_OP_USER_ENDPOINT = "http://host.docker.internal:8000/api/openid/userinfo/"
 OIDC_OP_END_SESSION_ENDPOINT = "http://localhost:8000/api/openid/end-session/"
 
-# NOTE WELL: Testing in development mode. If any runtime guards are added for production mode,
-# this needs to be re-evaluated.
+# NOTE WELL: Testing in development mode. If any runtime guards are added for
+# production mode, this needs to be re-evaluated.
 DEPLOYMENT_MODE = "development"
 
 BASE_URL = "http://localhost:8808"

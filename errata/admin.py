@@ -2,24 +2,23 @@
 
 import logging
 
-from simple_history.admin import SimpleHistoryAdmin
-
 from django import forms
 from django.contrib import admin
 from django.db import transaction
 from django.utils import timezone
+from simple_history.admin import SimpleHistoryAdmin
 
 from .mail import (
     send_erratum_classified_notification,
     send_new_erratum_notification,
 )
 from .models import (
+    DirtyBits,
     Erratum,
-    StagedErratum,
-    Status,
     ErratumType,
     RfcMetadata,
-    DirtyBits,
+    StagedErratum,
+    Status,
 )
 
 logger = logging.getLogger(__name__)

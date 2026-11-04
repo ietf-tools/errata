@@ -3,7 +3,6 @@ from django.http import HttpResponse
 from django.urls import path, register_converter
 from django.views.generic import RedirectView
 
-
 from . import views
 
 

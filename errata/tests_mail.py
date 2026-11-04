@@ -523,7 +523,7 @@ class SendErratumClassifiedNotificationTest(TestCase):
         self.assertIn("rfc-editor@rfc-editor.org", msg.cc)
 
     @patch("errata.mail.send_mail_task")
-    def test_rpc_classifying_editorial_errata_omits_verifier_email_and_uses_rfc_production_center(
+    def test_rpc_classifying_editorial_omits_verifier_uses_production_center(
         self, mock_task
     ):
         stream_expected_ccs = {
