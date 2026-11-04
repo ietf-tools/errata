@@ -101,7 +101,7 @@ def current_area(area):
 # Roles that make their holder a verifier for a whole stream.
 # "delegate_stream_manager" is a datatracker role
 # that is coming into existence to support the
-# errata system. It will have to created as a
+# errata system. It will have to be created as a
 # RoleName and roles assigned before the related
 # roles below will have effect.
 STREAM_ROLES = {
@@ -177,13 +177,12 @@ def is_verifier(user):
 
 
 def passes_test_decorator(test_func, message):
-    """Decorator creator that creates a decorator for checking that
-    user passes the test
+    """Create a decorator that checks that the user passes a test
 
     Returns a 403 error if the user is not logged in or does not pass
     the test.
 
-    The test function should be on the form fn(user) -> true/false.
+    The test function should be of the form fn(user) -> true/false.
     """
 
     def decorate(view_func):
@@ -202,8 +201,7 @@ def passes_test_decorator(test_func, message):
 
 
 def role_required(*role_names):
-    """View decorator for checking that the user is logged in and
-    has one of the listed roles."""
+    """View decorator checking that the user is logged in with a listed role"""
     plural = "s" if len(role_names) != 1 else ""
     return passes_test_decorator(
         lambda u, *args, **kwargs: has_role(u, role_names, *args, **kwargs),

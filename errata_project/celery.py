@@ -4,7 +4,7 @@ from celery import Celery
 from celery import signals as celery_signals
 
 
-# Disable celery's internal logging configuration, we set it up via Django
+# Disable celery's internal logging configuration; we set it up via Django
 @celery_signals.setup_logging.connect
 def on_setup_logging(**kwargs):
     pass

@@ -107,7 +107,7 @@ class ServiceTokenHigherLevelTest(TestCase):
                         self.backend.retrieve_matching_jwk(b"compact")
 
     def test_retrieve_matching_jwk_raises_when_alg_does_not_match(self):
-        # kid matches but alg doesn't — exercises the alg-mismatch continue (line 76)
+        # kid matches but alg doesn't, so retrieve_matching_jwk skips the key
         mock_resp = self._mock_jwks_response([{"kid": "test-kid", "alg": "ES256"}])
         mock_header = MagicMock()
         mock_header.kid = "test-kid"

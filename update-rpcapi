@@ -15,7 +15,7 @@ if curl -sf http://host.docker.internal:8000/api/schema/ -o "$RPCAPI_TMPDIR/rpca
 elif [[ -f "$WORKSPACE/rpcapi.yaml" ]]; then
   echo "Unable to update rpcapi.yaml from local datatracker, using existing schema."
 else
-  echo "Unable to update rpcapi.yaml from local datatracker and does not already exist. Giving up."
+  echo "Unable to update rpcapi.yaml from local datatracker, and it does not already exist. Giving up."
   exit 1
 fi
 

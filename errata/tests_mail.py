@@ -99,7 +99,7 @@ class GetAdEmailsTest(TestCase):
         with self.assertLogs("errata.mail", level="WARNING") as cm:
             result = get_ad_emails(erratum)
         self.assertEqual(result, [])
-        self.assertIn("Can not find AD addresses for area zz-nonexistent", cm.output[0])
+        self.assertIn("Cannot find AD addresses for area zz-nonexistent", cm.output[0])
 
 
 class StripGarbageTest(TestCase):

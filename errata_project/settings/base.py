@@ -258,7 +258,7 @@ CELERY_TASK_IGNORE_RESULT = True  # ignore results unless specifically enabled
 # Celery Beat
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_BEAT_SYNC_EVERY = 1  # update DB after every event
-# Window after after a missed deadline before abandoning a cron task
+# Window after a missed deadline before abandoning a cron task
 CELERY_BEAT_CRON_STARTING_DEADLINE = 1800  # seconds
 
 # Storage

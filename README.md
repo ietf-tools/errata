@@ -1,9 +1,9 @@
 # Errata Website
 
-This is a simple django re-implementation of the current errata system.
+This is a simple Django re-implementation of the current errata system.
 It is not intended to add features beyond these two:
-* Verifiers will login via datatracker credentials
-* The RPC will vet all new filed errata (and handle spam) before verifiers are asked to look
+* Verifiers will log in via datatracker credentials
+* The RPC will vet all newly filed errata (and handle spam) before verifiers are asked to look
 
 ## Development
 

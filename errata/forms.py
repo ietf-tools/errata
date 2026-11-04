@@ -53,7 +53,7 @@ TYPE_CHOICES = [
     ("technical", "Technical"),
 ]
 
-# These left tuple element reflects query strings long in the wild.
+# The left tuple elements reflect query strings long used in the wild.
 STREAM_CHOICES = [
     ("any", "All/Any"),
     ("IAB", "IAB"),

@@ -200,7 +200,7 @@ jobs:
       PKG_VERSION: ${{needs.build.outputs.pkg_version}}
 
     steps:
-      - name: Deploy to staging
+      - name: Deploy to demo
         uses: ietf-tools/workflow-dispatch-action@v1
         with:
           workflow: deploy.yml
