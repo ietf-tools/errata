@@ -4,8 +4,6 @@ import datetime
 import json
 import operator
 from email.policy import EmailPolicy
-
-# from zoneinfo import ZoneInfo # used to test emitting errata.json in Pacific time
 from functools import reduce
 
 import rpcapi_client
@@ -153,6 +151,8 @@ def update_rfc_metadata(rfc_numbers=(), *, rpcapi: rpcapi_client.RedApi) -> None
 
 def errata_json():
     """Return a JSON object of all errata with their metadata."""
+    # Used to test emitting errata.json in Pacific time:
+    # from zoneinfo import ZoneInfo
     # pacific_tz = ZoneInfo("America/Los_Angeles")
 
     rows = [
