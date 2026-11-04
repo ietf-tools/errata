@@ -93,7 +93,10 @@ def new_review_existing(request, rfc_number: int):
             request,
             "errata/review_existing.html",
             dict(
-                error_message=f"RFC{rfc_number} has not been published. (Recently published RFCs may not yet be provisioned in the errata system.)",
+                error_message=(
+                    f"RFC{rfc_number} has not been published. (Recently published "
+                    "RFCs may not yet be provisioned in the errata system.)"
+                ),
             ),
         )
     search_form = ErrataSearchForm(dict(rfc_number=rfc_number))

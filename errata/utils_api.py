@@ -14,7 +14,8 @@ def is_valid_token(endpoint, token):
         token_store = settings.APP_API_TOKENS
         if endpoint in token_store:
             endpoint_tokens = token_store[endpoint]
-            # Be sure endpoints is a list or tuple so we don't accidentally use substring matching!
+            # Be sure endpoints is a list or tuple so we don't accidentally use
+            # substring matching!
             if not isinstance(endpoint_tokens, (list, tuple)):
                 endpoint_tokens = [endpoint_tokens]
             if token in endpoint_tokens:
@@ -26,7 +27,8 @@ def requires_api_token(func_or_endpoint: Callable | str | None = None):
     """Validate API token before executing the wrapped method
 
     Usage:
-        * Basic: endpoint defaults to the qualified name of the wrapped method. E.g., in errata.views,
+        * Basic: endpoint defaults to the qualified name of the wrapped method.
+          E.g., in errata.views,
 
                 @requires_api_token
                 def my_view(request):
@@ -48,8 +50,8 @@ def requires_api_token(func_or_endpoint: Callable | str | None = None):
             fname = getattr(f, "__qualname__", None)
             if fname is None:
                 raise TypeError(
-                    "Cannot automatically decorate function that does not support __qualname__. "
-                    "Explicitly set the endpoint."
+                    "Cannot automatically decorate function that does not support "
+                    "__qualname__. Explicitly set the endpoint."
                 )
             endpoint = f"{f.__module__}.{fname}"
         else:

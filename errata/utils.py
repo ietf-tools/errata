@@ -172,7 +172,8 @@ def errata_json():
             "update_date": e.updated_at.strftime("%Y-%m-%d %H:%M:%S")
             if e.updated_at is not None
             else None,
-            # "update_date": e.updated_at.astimezone(pacific_tz).strftime("%Y-%m-%d %H:%M:%S"),
+            # "update_date": e.updated_at.astimezone(pacific_tz)
+            #     .strftime("%Y-%m-%d %H:%M:%S"),
         }
         for e in Erratum.objects.select_related("rfc_metadata").all()
     ]

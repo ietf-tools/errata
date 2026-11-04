@@ -204,8 +204,8 @@ def passes_test_decorator(test_func, message):
 def role_required(*role_names):
     """View decorator for checking that the user is logged in and
     has one of the listed roles."""
+    plural = "s" if len(role_names) != 1 else ""
     return passes_test_decorator(
         lambda u, *args, **kwargs: has_role(u, role_names, *args, **kwargs),
-        "Restricted to role%s: %s"
-        % ("s" if len(role_names) != 1 else "", ", ".join(role_names)),
+        f"Restricted to role{plural}: {', '.join(role_names)}",
     )
