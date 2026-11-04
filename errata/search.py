@@ -5,6 +5,8 @@ import datetime
 from django.db.models import Q
 from django.utils import timezone
 
+from errata_auth.utils import SUCCESSOR_AREAS
+
 from .forms import ErrataSearchForm, ReportedErrataFilterForm, StagedErrataFilterForm
 from .models import Erratum, StagedErratum, StagedErratumStatus
 
@@ -26,9 +28,8 @@ def search_errata(form: ErrataSearchForm):
         else:
             errata = errata.filter(status__slug=status)
     if form.cleaned_data.get("area") and form.cleaned_data["area"] != "any":
-        search_areas = [form.cleaned_data["area"]]
-        if form.cleaned_data.get("area") == "art":
-            search_areas = ["art", "app", "rai"]
+        area = form.cleaned_data["area"]
+        search_areas = [area, *SUCCESSOR_AREAS.get(area, [])]
         errata = errata.filter(
             Q(rfc_metadata__area_assignment__in=search_areas)
             | Q(

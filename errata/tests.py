@@ -553,6 +553,29 @@ class SearchErrataTest(TestCase):
         self.assertIn(rai_erratum, result)
         self.assertNotIn(self.erratum1, result)
 
+    def test_search_by_area_wit_expands_to_tsv(self):
+        tsv_rfc = RfcMetadataFactory(
+            stream="ietf", area_acronym="tsv", area_assignment=""
+        )
+        tsv_erratum = ErratumFactory(
+            rfc_metadata=tsv_rfc, rfc_number=tsv_rfc.rfc_number
+        )
+        # e.g. RFC 4380, from int's group with no area, assigned to tsv.
+        assigned_rfc = RfcMetadataFactory(
+            stream="ietf",
+            group_acronym="int",
+            area_acronym="",
+            area_assignment="tsv",
+        )
+        assigned_erratum = ErratumFactory(
+            rfc_metadata=assigned_rfc, rfc_number=assigned_rfc.rfc_number
+        )
+        form = ErrataSearchForm(data={"area": "wit"})
+        result = search_errata(form)
+        self.assertIn(tsv_erratum, result)
+        self.assertIn(assigned_erratum, result)
+        self.assertNotIn(self.erratum1, result)
+
     def test_search_by_stream_iab(self):
         form = ErrataSearchForm(data={"stream": "IAB"})
         result = search_errata(form)
