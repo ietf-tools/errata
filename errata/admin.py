@@ -179,6 +179,11 @@ class RfcMetadataAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
         "stream",
     ]
     list_filter = ["area_acronym", "stream"]
+    readonly_fields = [
+        "resolved_area",
+        "resolved_group_acronym",
+        "resolved_group_list_email",
+    ]
 
 
 admin.site.register(RfcMetadata, RfcMetadataAdmin)
@@ -198,6 +203,12 @@ class AreaAssignmentAdmin(SimpleHistoryAdmin):
     search_fields = ["rfc_metadata__rfc_number"]
     list_display = ["rfc_metadata_id", "area"]
     list_filter = ["area"]
+
+    def get_actions(self, request):
+        # Bulk delete skips AreaAssignment.delete, which updates RfcMetadata.
+        actions = super().get_actions(request)
+        actions.pop("delete_selected", None)
+        return actions
 
 
 class StagedErratumAdmin(admin.ModelAdmin):

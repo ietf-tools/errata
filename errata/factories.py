@@ -60,6 +60,7 @@ class RfcMetadataFactory(factory.django.DjangoModelFactory):
         """Give the RFC an AreaAssignment to the area passed as area_assignment."""
         if extracted:
             AreaAssignment.objects.create(rfc_metadata=obj, area=extracted)
+            obj.refresh_from_db()
 
 
 class ErratumFactory(factory.django.DjangoModelFactory):

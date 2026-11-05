@@ -9,7 +9,12 @@ from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from errata.admin import ErratumAdmin, ErratumAdminForm, RfcMetadataAdmin
+from errata.admin import (
+    AreaAssignmentAdmin,
+    ErratumAdmin,
+    ErratumAdminForm,
+    RfcMetadataAdmin,
+)
 from errata.factories import (
     ErratumFactory,
     MailMessageFactory,
@@ -175,6 +180,80 @@ class RfcMetadataAdminTest(TestCase):
         self.assertFalse(model_admin.has_change_permission(request))
         self.assertFalse(model_admin.has_delete_permission(request))
         self.assertTrue(model_admin.has_view_permission(request))
+
+
+class ResolveRoutingTest(TestCase):
+    def test_uses_datatracker_area_and_group(self):
+        rfc = RfcMetadataFactory(
+            area_acronym="ops",
+            area_assignment="",
+            group_acronym="opsawg",
+            group_list_email="opsawg@ietf.org",
+        )
+        self.assertEqual(rfc.resolved_area, "ops")
+        self.assertEqual(rfc.resolved_group_acronym, "opsawg")
+        self.assertEqual(rfc.resolved_group_list_email, "opsawg@ietf.org")
+
+    def test_area_assignment_takes_precedence(self):
+        rfc = RfcMetadataFactory(area_acronym="art", area_assignment="sec")
+        self.assertEqual(rfc.resolved_area, "sec")
+
+    def test_closed_area_maps_to_successor(self):
+        for closed, successor in [("app", "art"), ("rai", "art"), ("tsv", "wit")]:
+            for field in ["area_acronym", "area_assignment"]:
+                with self.subTest(closed=closed, field=field):
+                    fields = {"area_acronym": "", "area_assignment": ""}
+                    fields[field] = closed
+                    rfc = RfcMetadataFactory(**fields)
+                    self.assertEqual(rfc.resolved_area, successor)
+
+    def test_no_area(self):
+        rfc = RfcMetadataFactory(stream="iab", area_acronym="", area_assignment="")
+        self.assertEqual(rfc.resolved_area, "")
+
+    def test_adding_area_assignment_updates_resolved_area(self):
+        rfc = RfcMetadataFactory(area_acronym="art")
+        AreaAssignment.objects.create(rfc_metadata=rfc, area="sec")
+        rfc.refresh_from_db()
+        self.assertEqual(rfc.resolved_area, "sec")
+
+    def test_changing_area_assignment_updates_resolved_area(self):
+        rfc = RfcMetadataFactory(area_acronym="art", area_assignment="sec")
+        assignment = rfc.area_assignment
+        assignment.area = "ops"
+        assignment.save()
+        rfc.refresh_from_db()
+        self.assertEqual(rfc.resolved_area, "ops")
+
+    def test_moving_area_assignment_updates_both_rfcs(self):
+        first = RfcMetadataFactory(area_acronym="art", area_assignment="sec")
+        second = RfcMetadataFactory(area_acronym="art")
+        assignment = first.area_assignment
+        assignment.rfc_metadata = second
+        assignment.save()
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertEqual(first.resolved_area, "art")
+        self.assertEqual(second.resolved_area, "sec")
+
+    def test_deleting_area_assignment_updates_resolved_area(self):
+        rfc = RfcMetadataFactory(area_acronym="art", area_assignment="sec")
+        rfc.area_assignment.delete()
+        rfc.refresh_from_db()
+        self.assertEqual(rfc.resolved_area, "art")
+
+    def test_area_assignment_applies_when_metadata_arrives(self):
+        AreaAssignment.objects.create(rfc_metadata_id=99999, area="sec")
+        rfc = RfcMetadataFactory(rfc_number=99999, area_acronym="art")
+        self.assertEqual(rfc.resolved_area, "sec")
+
+
+class AreaAssignmentAdminTest(TestCase):
+    def test_bulk_delete_is_not_offered(self):
+        request = RequestFactory().get("/")
+        request.user = UserFactory(is_staff=True, is_superuser=True)
+        model_admin = AreaAssignmentAdmin(AreaAssignment, admin.site)
+        self.assertNotIn("delete_selected", model_admin.get_actions(request))
 
 
 class AreaAssignmentModelTest(TestCase):
