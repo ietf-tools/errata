@@ -55,7 +55,7 @@ def unverified_errata(user):
     queries_to_union = []
     if scope.areas:
         queries_to_union.append(Q(rfc_metadata__area_acronym__in=scope.areas))
-        queries_to_union.append(Q(rfc_metadata__area_assignment__in=scope.areas))
+        queries_to_union.append(Q(rfc_metadata__area_assignment__area__in=scope.areas))
     if scope.ietf_groups:
         queries_to_union.append(
             Q(
@@ -207,7 +207,7 @@ def counts_per_authority(as_of: datetime.datetime = None):
         if authority == "legacy":
             authority_q = Q(
                 rfc_metadata__stream=authority,
-                rfc_metadata__area_assignment="",
+                rfc_metadata__area_assignment__isnull=True,
             )
         elif authority in ["iab", "ise", "irtf", "editorial"]:
             authority_q = Q(rfc_metadata__stream=authority)
@@ -215,8 +215,8 @@ def counts_per_authority(as_of: datetime.datetime = None):
             areas = [authority, *SUCCESSOR_AREAS.get(authority, [])]
             authority_q = Q(
                 rfc_metadata__area_acronym__in=areas,
-                rfc_metadata__area_assignment="",
-            ) | Q(rfc_metadata__area_assignment__in=areas)
+                rfc_metadata__area_assignment__isnull=True,
+            ) | Q(rfc_metadata__area_assignment__area__in=areas)
         count = qs.filter(authority_q).count()
         results[authority] = count
     return results

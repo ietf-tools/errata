@@ -9,7 +9,7 @@ from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from errata.admin import ErratumAdmin, ErratumAdminForm
+from errata.admin import ErratumAdmin, ErratumAdminForm, RfcMetadataAdmin
 from errata.factories import (
     ErratumFactory,
     MailMessageFactory,
@@ -29,9 +29,11 @@ from errata.forms import (
 )
 from errata.models import (
     AddressListField,
+    AreaAssignment,
     Erratum,
     ErratumType,
     MailMessage,
+    RfcMetadata,
     StagedErratum,
     StagedErratumStatus,
     Status,
@@ -162,6 +164,53 @@ class RfcMetadataModelTest(TestCase):
         )
         annotated = with_rfc_has_verified(Erratum.objects.filter(pk=reported.pk)).get()
         self.assertTrue(annotated.rfc_has_verified)
+
+
+class RfcMetadataAdminTest(TestCase):
+    def test_admin_is_read_only(self):
+        request = RequestFactory().get("/")
+        request.user = UserFactory(is_staff=True, is_superuser=True)
+        model_admin = RfcMetadataAdmin(RfcMetadata, admin.site)
+        self.assertFalse(model_admin.has_add_permission(request))
+        self.assertFalse(model_admin.has_change_permission(request))
+        self.assertFalse(model_admin.has_delete_permission(request))
+        self.assertTrue(model_admin.has_view_permission(request))
+
+
+class AreaAssignmentModelTest(TestCase):
+    def test_assigned_area_is_the_assignments_area(self):
+        rfc = RfcMetadataFactory()
+        AreaAssignment.objects.create(rfc_metadata=rfc, area="sec")
+        self.assertEqual(RfcMetadata.objects.get(pk=rfc.pk).assigned_area, "sec")
+
+    def test_assigned_area_is_empty_without_an_assignment(self):
+        rfc = RfcMetadataFactory()
+        self.assertEqual(RfcMetadata.objects.get(pk=rfc.pk).assigned_area, "")
+
+    def test_assignment_for_rfc_without_metadata_is_allowed(self):
+        # It applies once the RFC's metadata arrives.
+        AreaAssignment.objects.create(rfc_metadata_id=99999, area="sec")
+        rfc = RfcMetadataFactory(rfc_number=99999)
+        self.assertEqual(rfc.assigned_area, "sec")
+
+    def test_assignment_survives_deleting_rfc_metadata(self):
+        rfc = RfcMetadataFactory(rfc_number=1234, area_assignment="sec")
+        rfc.delete()
+        self.assertTrue(AreaAssignment.objects.filter(rfc_metadata_id=1234).exists())
+
+    def test_history_is_recorded(self):
+        assignment = AreaAssignment.objects.create(rfc_metadata_id=99999, area="sec")
+        assignment.area = "ops"
+        assignment.save()
+        assignment.delete()
+        self.assertEqual(
+            list(
+                AreaAssignment.history.order_by("history_id").values_list(
+                    "history_type", "area"
+                )
+            ),
+            [("+", "sec"), ("~", "ops"), ("-", "ops")],
+        )
 
 
 class ErratumModelTest(TestCase):

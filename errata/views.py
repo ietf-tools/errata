@@ -71,7 +71,9 @@ def search(request):
 @require_GET
 def detail(request, pk):
     erratum = with_rfc_has_verified(
-        Erratum.objects.prefetch_related("rfc_metadata", "status", "erratum_type")
+        Erratum.objects.prefetch_related(
+            "rfc_metadata__area_assignment", "status", "erratum_type"
+        )
     ).get(pk=pk)
     return render(request, "errata/detail.html", dict(erratum=erratum))
 
@@ -218,9 +220,9 @@ def staged_list(request):
         else:
             pass
     staged_errata = with_rfc_has_verified(
-        StagedErratum.objects.filter(
-            entry_status=StagedErratumStatus.SUBMITTED
-        ).order_by("submitted_at")
+        StagedErratum.objects.filter(entry_status=StagedErratumStatus.SUBMITTED)
+        .select_related("rfc_metadata__area_assignment")
+        .order_by("submitted_at")
     )
     return render(
         request,
@@ -419,7 +421,9 @@ def reported_list(request):
     filter_form, selected_within = _within_filter(request)
     all_reported = unverified_errata(request.user)
     reported = with_rfc_has_verified(
-        filter_reported_errata(all_reported, filter_form).order_by("rfc_number")
+        filter_reported_errata(all_reported, filter_form)
+        .select_related("rfc_metadata__area_assignment")
+        .order_by("rfc_number")
     )
     sections = [
         {
