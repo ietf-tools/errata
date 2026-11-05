@@ -1,0 +1,3 @@
+<td>{{ entry.history_date|date:"Y-m-d H:i" }}</td>
+<td>{% if entry.history_type == "+" %}Added{% elif entry.history_type == "-" %}Removed{% else %}Changed{% endif %}</td>
+<td>{% if entry.history_user %}{{ entry.history_user.name }}{% else %}Errata app update{% endif %}</td>

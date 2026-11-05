@@ -221,7 +221,7 @@ class RfcMetadata(models.Model):
         self.resolve_routing()
         super().save(*args, **kwargs)
 
-    def resolve_routing(self, replacements=None):
+    def resolve_routing(self, replacements=None, assigned_area=None):
         """Set the area, group and list address used for this RFC's errata.
 
         If the RFC's group has been replaced, the group and list address are
@@ -237,8 +237,9 @@ class RfcMetadata(models.Model):
 
         with a closed area replaced by the current area that took it over.
 
-        ``replacements`` maps group acronyms to their GroupReplacement. It is
-        read from the database if not given.
+        ``replacements`` maps group acronyms to their GroupReplacement, and
+        ``assigned_area`` is the RFC's area assignment. They are read from the
+        database if not given.
         """
         if replacements is None:
             replacements = GroupReplacement.objects.in_bulk(field_name="group")
@@ -254,7 +255,7 @@ class RfcMetadata(models.Model):
             if group in seen:
                 break  # GroupReplacement.clean refuses loops; don't hang on one
             seen.add(group)
-        area = self.assigned_area
+        area = self.assigned_area if assigned_area is None else assigned_area
         if area == "" and self.stream == "ietf":
             area = replacement_area
         self.resolved_area = current_area(area or self.area_acronym)

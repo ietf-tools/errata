@@ -251,14 +251,6 @@ class ResolveRoutingTest(TestCase):
         self.assertEqual(rfc.resolved_area, "sec")
 
 
-class AreaAssignmentAdminTest(TestCase):
-    def test_bulk_delete_is_not_offered(self):
-        request = RequestFactory().get("/")
-        request.user = UserFactory(is_staff=True, is_superuser=True)
-        model_admin = AreaAssignmentAdmin(AreaAssignment, admin.site)
-        self.assertNotIn("delete_selected", model_admin.get_actions(request))
-
-
 def replace_group(group, replacement_group, list_email, area=""):
     return GroupReplacement.objects.create(
         group=group,
@@ -431,11 +423,14 @@ class GroupReplacementTest(TestCase):
         response = self.client.get(reverse("errata_detail", kwargs={"pk": erratum.pk}))
         self.assertContains(response, "Replacement group: bpm")
 
-    def test_admin_offers_no_bulk_delete(self):
+    def test_admin_is_read_only(self):
         request = RequestFactory().get("/")
         request.user = UserFactory(is_staff=True, is_superuser=True)
         model_admin = GroupReplacementAdmin(GroupReplacement, admin.site)
-        self.assertNotIn("delete_selected", model_admin.get_actions(request))
+        self.assertFalse(model_admin.has_add_permission(request))
+        self.assertFalse(model_admin.has_change_permission(request))
+        self.assertFalse(model_admin.has_delete_permission(request))
+        self.assertTrue(model_admin.has_view_permission(request))
 
 
 class MigratedGroupReplacementTest(TestCase):
@@ -502,6 +497,283 @@ class AreaAssignmentModelTest(TestCase):
             ),
             [("+", "sec"), ("~", "ops"), ("-", "ops")],
         )
+
+
+class AreaAssignmentAdminTest(TestCase):
+    def test_admin_is_read_only(self):
+        request = RequestFactory().get("/")
+        request.user = UserFactory(is_staff=True, is_superuser=True)
+        model_admin = AreaAssignmentAdmin(AreaAssignment, admin.site)
+        self.assertFalse(model_admin.has_add_permission(request))
+        self.assertFalse(model_admin.has_change_permission(request))
+        self.assertFalse(model_admin.has_delete_permission(request))
+        self.assertTrue(model_admin.has_view_permission(request))
+
+
+class RpcAreaAssignmentViewTest(TestCase):
+    def setUp(self):
+        self.rpc_user = RpcUserFactory()
+        self.rfc = RfcMetadataFactory(
+            rfc_number=1234, area_acronym="art", area_assignment=""
+        )
+        ErratumFactory(rfc_metadata=self.rfc, rfc_number=1234)
+        self.client.force_login(self.rpc_user)
+
+    def test_pages_require_rpc_role(self):
+        assignment = AreaAssignment.objects.create(rfc_metadata=self.rfc, area="sec")
+        self.client.force_login(UserFactory(roles=[["ad", "iesg"], ["ad", "sec"]]))
+        for url in [
+            reverse("errata_rpc_area_assignments"),
+            reverse("errata_rpc_area_assignment_add"),
+            reverse("errata_rpc_area_assignment_edit", kwargs={"pk": assignment.pk}),
+            reverse("errata_rpc_area_assignment_remove", kwargs={"pk": assignment.pk}),
+        ]:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 403)
+                self.assertEqual(self.client.post(url).status_code, 403)
+
+    def test_list_shows_assignments_and_history(self):
+        AreaAssignment.objects.create(rfc_metadata=self.rfc, area="sec")
+        response = self.client.get(reverse("errata_rpc_area_assignments"))
+        self.assertContains(response, "RFC 1234")
+        self.assertContains(response, self.rfc.title)
+        self.assertContains(response, "Added")
+        self.assertContains(response, self.rpc_user.name)
+
+    def test_preview_shows_change_without_saving(self):
+        response = self.client.post(
+            reverse("errata_rpc_area_assignment_add"),
+            {"rfc_number": "1234", "area": "sec", "action": "preview"},
+        )
+        self.assertTemplateUsed(response, "errata/rpc_routing_confirm.html")
+        preview = response.context["preview"]
+        self.assertEqual(preview.rfc_count, 1)
+        self.assertEqual(preview.errata_count, 1)
+        self.assertEqual(preview.changes[0].after.area, "sec")
+        self.assertContains(response, "art → <strong>sec</strong>")
+        self.assertFalse(AreaAssignment.objects.exists())
+
+    def test_save_adds_assignment(self):
+        response = self.client.post(
+            reverse("errata_rpc_area_assignment_add"),
+            {"rfc_number": "1234", "area": "sec", "action": "save"},
+        )
+        self.assertRedirects(response, reverse("errata_rpc_area_assignments"))
+        self.rfc.refresh_from_db()
+        self.assertEqual(self.rfc.area_assignment.area, "sec")
+        self.assertEqual(self.rfc.resolved_area, "sec")
+        self.assertEqual(AreaAssignment.history.get().history_user, self.rpc_user)
+
+    def test_go_back_returns_to_edit_form(self):
+        response = self.client.post(
+            reverse("errata_rpc_area_assignment_add"),
+            {"rfc_number": "1234", "area": "sec", "action": "edit"},
+        )
+        self.assertTemplateUsed(response, "errata/rpc_routing_edit.html")
+        self.assertFalse(AreaAssignment.objects.exists())
+
+    def test_unknown_rfc_is_refused(self):
+        response = self.client.post(
+            reverse("errata_rpc_area_assignment_add"),
+            {"rfc_number": "99999", "area": "sec", "action": "save"},
+        )
+        self.assertTemplateUsed(response, "errata/rpc_routing_edit.html")
+        self.assertContains(response, "There is no metadata for RFC 99999")
+        self.assertFalse(AreaAssignment.objects.exists())
+
+    def test_second_assignment_for_an_rfc_is_refused(self):
+        AreaAssignment.objects.create(rfc_metadata=self.rfc, area="sec")
+        response = self.client.post(
+            reverse("errata_rpc_area_assignment_add"),
+            {"rfc_number": "1234", "area": "ops", "action": "save"},
+        )
+        self.assertTemplateUsed(response, "errata/rpc_routing_edit.html")
+        self.assertContains(response, "RFC 1234 already has an area assignment")
+        self.assertEqual(AreaAssignment.objects.get().area, "sec")
+
+    def test_closed_area_is_not_offered_for_new_assignments(self):
+        response = self.client.post(
+            reverse("errata_rpc_area_assignment_add"),
+            {"rfc_number": "1234", "area": "tsv", "action": "save"},
+        )
+        self.assertTemplateUsed(response, "errata/rpc_routing_edit.html")
+        self.assertFalse(AreaAssignment.objects.exists())
+
+    def test_edit_keeps_rfc_number_and_existing_closed_area(self):
+        assignment = AreaAssignment.objects.create(rfc_metadata=self.rfc, area="tsv")
+        RfcMetadataFactory(rfc_number=5678)
+        url = reverse("errata_rpc_area_assignment_edit", kwargs={"pk": assignment.pk})
+        response = self.client.post(
+            url, {"rfc_number": "5678", "area": "tsv", "action": "save"}
+        )
+        self.assertRedirects(response, reverse("errata_rpc_area_assignments"))
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.rfc_metadata_id, 1234)
+        self.assertEqual(assignment.area, "tsv")
+
+    def test_remove_previews_then_removes(self):
+        assignment = AreaAssignment.objects.create(rfc_metadata=self.rfc, area="sec")
+        url = reverse("errata_rpc_area_assignment_remove", kwargs={"pk": assignment.pk})
+        response = self.client.get(url)
+        self.assertContains(response, "sec → <strong>art</strong>")
+        response = self.client.post(url)
+        self.assertRedirects(response, reverse("errata_rpc_area_assignments"))
+        self.rfc.refresh_from_db()
+        self.assertFalse(AreaAssignment.objects.exists())
+        self.assertEqual(self.rfc.resolved_area, "art")
+
+
+class RpcGroupReplacementViewTest(TestCase):
+    def setUp(self):
+        # Migration 0012 adds replacements; these tests make their own.
+        GroupReplacement.objects.all().delete()
+        self.rpc_user = RpcUserFactory()
+        self.rfcs = [
+            RfcMetadataFactory(
+                area_acronym="ops",
+                area_assignment="",
+                group_acronym=group,
+                group_list_email=f"{group}@ietf.org",
+            )
+            for group in ["ippm", "ippm", "bmwg"]
+        ]
+        for rfc in self.rfcs:
+            ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number)
+        self.client.force_login(self.rpc_user)
+
+    def _post(self, url_name, action, **fields):
+        data = dict(
+            group="ippm",
+            replacement_group="bpm",
+            replacement_list_email="bpm@ietf.org",
+            replacement_area="",
+            action=action,
+        )
+        data.update(fields)
+        return self.client.post(reverse(url_name), data)
+
+    def test_pages_require_rpc_role(self):
+        replacement = replace_group("ippm", "bpm", "bpm@ietf.org")
+        self.client.force_login(UserFactory(roles=[["ad", "iesg"], ["ad", "ops"]]))
+        for url in [
+            reverse("errata_rpc_group_replacements"),
+            reverse("errata_rpc_group_replacement_add"),
+            reverse("errata_rpc_group_replacement_edit", kwargs={"pk": replacement.pk}),
+            reverse(
+                "errata_rpc_group_replacement_remove", kwargs={"pk": replacement.pk}
+            ),
+        ]:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 403)
+                self.assertEqual(self.client.post(url).status_code, 403)
+
+    def test_history_without_a_user_is_an_app_update(self):
+        replacement = GroupReplacement(
+            group="sipping",
+            replacement_group="sipcore",
+            replacement_list_email="sipcore@ietf.org",
+        )
+        replacement._change_reason = "Data migration"
+        replacement.save()
+        response = self.client.get(reverse("errata_rpc_group_replacements"))
+        self.assertContains(response, "<td>Errata app update</td>", html=True)
+        self.assertNotContains(response, "Data migration")
+
+    def test_list_shows_replacements_with_rfc_counts(self):
+        replace_group("ippm", "bpm", "bpm@ietf.org")
+        response = self.client.get(reverse("errata_rpc_group_replacements"))
+        [replacement] = response.context["replacements"]
+        self.assertEqual(replacement.rfc_count, 2)
+        self.assertContains(response, "bpm@ietf.org")
+
+    def test_preview_counts_affected_rfcs_and_errata(self):
+        response = self._post("errata_rpc_group_replacement_add", "preview")
+        preview = response.context["preview"]
+        self.assertEqual(preview.rfc_count, 2)
+        self.assertEqual(preview.errata_count, 2)
+        self.assertEqual(preview.reported_count, 2)
+        self.assertContains(response, "ippm@ietf.org → <strong>bpm@ietf.org</strong>")
+        self.assertFalse(GroupReplacement.objects.exists())
+
+    def test_save_adds_replacement_and_reroutes(self):
+        response = self._post("errata_rpc_group_replacement_add", "save")
+        self.assertRedirects(response, reverse("errata_rpc_group_replacements"))
+        self.rfcs[0].refresh_from_db()
+        self.assertEqual(self.rfcs[0].resolved_group_list_email, "bpm@ietf.org")
+
+    def test_acronyms_are_normalized(self):
+        self._post(
+            "errata_rpc_group_replacement_add",
+            "save",
+            group=" IPPM ",
+            replacement_group="BPM",
+        )
+        replacement = GroupReplacement.objects.get()
+        self.assertEqual(
+            (replacement.group, replacement.replacement_group), ("ippm", "bpm")
+        )
+
+    def test_loop_is_refused(self):
+        replace_group("bpm", "ippm", "ippm@ietf.org")
+        response = self._post("errata_rpc_group_replacement_add", "save")
+        self.assertTemplateUsed(response, "errata/rpc_routing_edit.html")
+        self.assertContains(response, "loop")
+        self.assertEqual(GroupReplacement.objects.count(), 1)
+
+    def test_list_address_is_required(self):
+        response = self._post(
+            "errata_rpc_group_replacement_add", "save", replacement_list_email=""
+        )
+        self.assertTemplateUsed(response, "errata/rpc_routing_edit.html")
+        self.assertFalse(GroupReplacement.objects.exists())
+
+    def test_edit_previews_only_the_change(self):
+        replacement = replace_group("ippm", "bpm", "bpm@ietf.org")
+        response = self.client.post(
+            reverse("errata_rpc_group_replacement_edit", kwargs={"pk": replacement.pk}),
+            dict(
+                group="bmwg",  # disabled when editing, so ignored
+                replacement_group="bpm",
+                replacement_list_email="bpm@ietf.org",
+                replacement_area="wit",
+                action="preview",
+            ),
+        )
+        preview = response.context["preview"]
+        self.assertEqual(preview.rfc_count, 2)
+        self.assertEqual(preview.changes[0].before.area, "ops")
+        self.assertEqual(preview.changes[0].after.area, "wit")
+
+    def test_remove_previews_then_removes(self):
+        replacement = replace_group("ippm", "bpm", "bpm@ietf.org")
+        url = reverse(
+            "errata_rpc_group_replacement_remove", kwargs={"pk": replacement.pk}
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.context["preview"].rfc_count, 2)
+        self.client.post(url)
+        self.assertFalse(GroupReplacement.objects.exists())
+        self.rfcs[0].refresh_from_db()
+        self.assertEqual(self.rfcs[0].resolved_group_list_email, "ippm@ietf.org")
+
+    def test_user_info_links_to_pages(self):
+        response = self.client.get(reverse("errata_user_info"))
+        self.assertContains(response, reverse("errata_rpc_group_replacements"))
+        self.assertContains(response, reverse("errata_rpc_area_assignments"))
+
+    def test_pages_link_back_to_user_info(self):
+        for url_name in [
+            "errata_rpc_group_replacements",
+            "errata_rpc_area_assignments",
+        ]:
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name))
+                self.assertContains(
+                    response,
+                    f'<a href="{reverse("errata_user_info")}" '
+                    'class="btn btn-outline-secondary">Return to User Info</a>',
+                    html=True,
+                )
 
 
 class ErratumModelTest(TestCase):

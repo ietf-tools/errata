@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>{{ title }}</h1>
+    <div class="card mb-4 border-warning">
+        <div class="card-body">
+            {% include "errata/_routing_preview.html" %}
+            <form method="post">
+                {% csrf_token %}
+                <button class="btn btn-warning" type="submit">Remove</button>
+                <a href="{{ list_url }}" class="btn btn-info">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

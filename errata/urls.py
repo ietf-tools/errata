@@ -98,6 +98,46 @@ urlpatterns = [
         name="errata_rpc_force_metadata_update_accepted",
     ),
     path(
+        "rpc/area-assignments/",
+        views.rpc_area_assignments,
+        name="errata_rpc_area_assignments",
+    ),
+    path(
+        "rpc/area-assignments/add/",
+        views.rpc_area_assignment_edit,
+        name="errata_rpc_area_assignment_add",
+    ),
+    path(
+        "rpc/area-assignments/<int:pk>/edit/",
+        views.rpc_area_assignment_edit,
+        name="errata_rpc_area_assignment_edit",
+    ),
+    path(
+        "rpc/area-assignments/<int:pk>/remove/",
+        views.rpc_area_assignment_remove,
+        name="errata_rpc_area_assignment_remove",
+    ),
+    path(
+        "rpc/group-replacements/",
+        views.rpc_group_replacements,
+        name="errata_rpc_group_replacements",
+    ),
+    path(
+        "rpc/group-replacements/add/",
+        views.rpc_group_replacement_edit,
+        name="errata_rpc_group_replacement_add",
+    ),
+    path(
+        "rpc/group-replacements/<int:pk>/edit/",
+        views.rpc_group_replacement_edit,
+        name="errata_rpc_group_replacement_edit",
+    ),
+    path(
+        "rpc/group-replacements/<int:pk>/remove/",
+        views.rpc_group_replacement_remove,
+        name="errata_rpc_group_replacement_remove",
+    ),
+    path(
         "api/rfc_metadata_update/",
         views.api_rfc_metadata_update,
         name="errata_api_rfc_metadata_update",
