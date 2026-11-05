@@ -459,6 +459,20 @@ class CountsPerAuthorityTest(TestCase):
         result = counts_per_authority()
         self.assertEqual(result["art"], 1)
 
+    def test_tsv_area_acronym_counted_under_wit(self):
+        self._technical_reported(area_acronym="tsv", area_assignment="")
+        result = counts_per_authority()
+        self.assertEqual(result["wit"], 1)
+
+    def test_tsv_area_assignment_counted_under_wit(self):
+        # e.g. RFC 4380, from int's group with no area, assigned to tsv.
+        self._technical_reported(
+            group_acronym="int", area_acronym="", area_assignment="tsv"
+        )
+        result = counts_per_authority()
+        self.assertEqual(result["wit"], 1)
+        self.assertEqual(result["int"], 0)
+
     def test_ops_area_assignment_counted_under_ops(self):
         self._technical_reported(area_acronym="art", area_assignment="ops")
         result = counts_per_authority()

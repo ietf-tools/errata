@@ -10,7 +10,7 @@ import rpcapi_client
 from django.conf import settings
 from django.db.models import Exists, OuterRef, Q
 
-from errata_auth.utils import is_rpc, verification_scope
+from errata_auth.utils import SUCCESSOR_AREAS, is_rpc, verification_scope
 
 from .models import Erratum, RfcMetadata
 from .rpcapi import with_rpcapi
@@ -204,12 +204,7 @@ def counts_per_authority(as_of: datetime.datetime = None):
         "legacy",
         "editorial",
     ]:
-        if authority == "art":
-            authority_q = Q(
-                rfc_metadata__area_acronym__in=["art", "app", "rai"],
-                rfc_metadata__area_assignment="",
-            ) | Q(rfc_metadata__area_assignment__in=["art", "app", "rai"])
-        elif authority == "legacy":
+        if authority == "legacy":
             authority_q = Q(
                 rfc_metadata__stream=authority,
                 rfc_metadata__area_assignment="",
@@ -217,10 +212,11 @@ def counts_per_authority(as_of: datetime.datetime = None):
         elif authority in ["iab", "ise", "irtf", "editorial"]:
             authority_q = Q(rfc_metadata__stream=authority)
         else:
+            areas = [authority, *SUCCESSOR_AREAS.get(authority, [])]
             authority_q = Q(
-                rfc_metadata__area_acronym=authority,
+                rfc_metadata__area_acronym__in=areas,
                 rfc_metadata__area_assignment="",
-            ) | Q(rfc_metadata__area_assignment=authority)
+            ) | Q(rfc_metadata__area_assignment__in=areas)
         count = qs.filter(authority_q).count()
         results[authority] = count
     return results
