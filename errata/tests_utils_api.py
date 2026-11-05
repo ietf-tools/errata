@@ -16,7 +16,7 @@ class IsValidTokenTest(TestCase):
     @override_settings(APP_API_TOKENS={"my.endpoint": "scalar-token"})
     def test_scalar_token_is_wrapped_and_accepted(self):
         # When the store holds a plain string rather than list, it is wrapped
-        # in a list before matching (line 19).
+        # in a list before matching.
         self.assertTrue(is_valid_token("my.endpoint", "scalar-token"))
 
     @override_settings(APP_API_TOKENS={"my.endpoint": "scalar-token"})
@@ -33,7 +33,7 @@ class IsValidTokenTest(TestCase):
 
 class RequiresApiTokenDecoratorTest(TestCase):
     def test_explicit_endpoint_string_sets_endpoint_name(self):
-        # @requires_api_token("name") takes lines 73-74 then line 56.
+        # @requires_api_token("name") uses the given endpoint name.
         @requires_api_token("custom.endpoint")
         def my_view(request):
             return HttpResponse("ok")
@@ -51,7 +51,8 @@ class RequiresApiTokenDecoratorTest(TestCase):
             self.assertEqual(my_view(request).status_code, 200)
 
     def test_no_parens_form_infers_endpoint_from_qualname(self):
-        # @requires_api_token (no parens) takes lines 68-71.
+        # @requires_api_token (no parens) infers the endpoint name from the
+        # wrapped function's module and qualified name.
         @requires_api_token
         def my_view(request):
             return HttpResponse("ok")
@@ -68,7 +69,7 @@ class RequiresApiTokenDecoratorTest(TestCase):
             self.assertEqual(my_view(request).status_code, 200)
 
     def test_callable_without_qualname_raises_type_error(self):
-        # Line 50: a callable whose __qualname__ is None triggers TypeError.
+        # A callable whose __qualname__ is None triggers TypeError.
         func = MagicMock()
         func.__qualname__ = None
         with self.assertRaises(TypeError):

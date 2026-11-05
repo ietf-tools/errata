@@ -4,8 +4,6 @@ import datetime
 import json
 import operator
 from email.policy import EmailPolicy
-
-# from zoneinfo import ZoneInfo # used to test emitting errata.json in pacifc time
 from functools import reduce
 
 import rpcapi_client
@@ -31,11 +29,11 @@ def rfc_inline_errata_url(rfc_number):
 
 
 def with_rfc_has_verified(queryset):
-    """Annotate each row with ``rfc_has_verified``: whether its RFC has any
-    verified erratum.
+    """Annotate each row with whether its RFC has any verified erratum.
 
-    Works for querysets of any model exposing ``rfc_number`` (Erratum and
-    StagedErratum), avoiding a per-row query in the templates.
+    The annotation is named ``rfc_has_verified``. Works for querysets of any
+    model exposing ``rfc_number`` (Erratum and StagedErratum), avoiding a
+    per-row query in the templates.
     """
     return queryset.annotate(
         rfc_has_verified=Exists(
@@ -153,6 +151,8 @@ def update_rfc_metadata(rfc_numbers=(), *, rpcapi: rpcapi_client.RedApi) -> None
 
 def errata_json():
     """Return a JSON object of all errata with their metadata."""
+    # Used to test emitting errata.json in Pacific time:
+    # from zoneinfo import ZoneInfo
     # pacific_tz = ZoneInfo("America/Los_Angeles")
 
     rows = [

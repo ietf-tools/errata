@@ -16,10 +16,9 @@ def _verifier(**roles_kwargs):
 
 
 class UnverifiedErratumVerifierTest(TestCase):
-    """
-    Tests for the verifier-role query-building path of unverified_errata()
-    (lines 31-70).  The rpc and non-verifier paths are already covered by
-    UtilsTest in tests.py.
+    """Tests for the verifier-role query-building path of unverified_errata()
+
+    The rpc and non-verifier paths are already covered by UtilsTest in tests.py.
     """
 
     def setUp(self):

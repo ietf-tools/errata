@@ -20,24 +20,22 @@ logger = logging.getLogger(__name__)
 
 
 def get_ad_emails(erratum):
-    """Return the emails of the proper ads to notify when sending email about an
-    erratum.
+    """Return the email addresses of the ADs to notify about an erratum.
 
-    The base case is the ads of the area an RFCs WG was in. However, there are both
-    implicit and explicit overrides of the base case. Explicitly, the RPC can make an
-    area_assignment. To date (early 2026), they've only done this for Legacy RFCs that
-    should have been treated as IETF RFCs. Implicitly, when an area has taken over for
-    a closed area, such as the merger of rai and app in to art, or tsv's concluded
-    groups going to wit, notifications should go to the _current_ area ads. This
-    applies to an area_assignment naming a closed area too. Further, erratum for IETF
-    stream individual submissions need to notify the gen area ad.
+    Usually these are the ADs of the area the RFC's group was in, except that:
 
-    This implementation defers creatign a new API to ask about ADs for areas separately
-    from what is being returned by the red_doc_list api. It assumes that some RFC in the
-    series will have the ADs for any given active area already attached to it. This
-    assumption has little risk for IETF stream RFCs, but if a very old RFC is assigned
-    to a newly minted area that has not yet produced any RFCs, it will fail. A future
-    improvement will be to separately sync area information into a new class.
+    * An area_assignment, set in the admin at the RPC's request, takes
+      precedence. To date (early 2026) it has only been used for Legacy RFCs
+      that should have been treated as IETF RFCs.
+    * A closed area is replaced by the current area that took it over (app and
+      rai by art; tsv, for its concluded groups, by wit). This also applies to
+      an area_assignment naming a closed area.
+    * IETF stream individual submissions go to the gen ADs.
+
+    The addresses are borrowed from another RFC in the target area rather than
+    from a separate API for areas. That is safe for IETF stream RFCs, but finds
+    no ADs for an area that has not yet published an RFC. A future improvement
+    is to sync area information separately.
     """
     metadata = erratum.rfc_metadata
     target_acronym = None
@@ -54,7 +52,7 @@ def get_ad_emails(erratum):
     if target_acronym is not None:
         proxy_meta = RfcMetadata.objects.filter(area_acronym=target_acronym).first()
         if proxy_meta is None:
-            logger.warning(f"Can not find AD addresses for area {target_acronym}")
+            logger.warning(f"Cannot find AD addresses for area {target_acronym}")
             return []
         return proxy_meta.area_ad_emails
     else:

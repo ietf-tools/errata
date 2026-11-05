@@ -14,6 +14,8 @@ select = [
   "B", # flake8-bugbear
   "I", # isort
   "RUF100", # unused-noqa
+  "D205", # blank line between docstring summary and description
+  "D209", # multi-line docstring closing quotes on their own line
 ]
 ignore = [
   "F405", # variable may be undefined, or defined from star imports

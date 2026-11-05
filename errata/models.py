@@ -84,8 +84,11 @@ class Erratum(models.Model):
         return f"Erratum {self.id} for RFC {self.rfc_number}"
 
     def save(self, *args, **kwargs):
-        """Use decoration to allow specifying an updated_at that is not now,
-        or is even None. Otherwise force updated_at to now."""
+        """Save, setting updated_at to now unless told to keep the given value.
+
+        Setting _take_given_updated_at_value allows an updated_at that is not
+        now, or even None.
+        """
         if not getattr(self, "_take_given_updated_at_value", False):
             self.updated_at = timezone.now()
         super().save(*args, **kwargs)
@@ -254,11 +257,11 @@ class StagedErratum(models.Model):
     A place for holding errata reports for Erratum entry and RPC screening.
 
     Held as a separate table to make it less likely that
-    unscreened erratum leak through the UI or APis.
+    unscreened errata leak through the UI or APIs.
 
     Entry objects that aren't submitted for screening are expected
     to be periodically cleaned by a scheduled task (such as daily
-    cleaning such entries more than 7 days old)
+    cleaning of such entries more than 7 days old).
 
     """
 

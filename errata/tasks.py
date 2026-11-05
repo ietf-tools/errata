@@ -64,7 +64,8 @@ def update_errata_json_task():
     """Periodically update errata.json based on `errata_json` DirtyBits
 
     N.B. This task MUST be set up to run periodically.
-    An initial period of 5m is suggested."""
+    An initial period of 5m is suggested.
+    """
     dirty_work = DirtyBits.objects.get(slug=DirtyBits.Slugs.ERRATA_JSON)
     if dirty_work.dirty_time is None:
         logger.error(
@@ -108,10 +109,11 @@ def update_errata_json_task():
 
 @shared_task
 def mail_monthly_report_task():
-    """Send a monthly report to the stream managere.
+    """Send a monthly report to the stream managers.
 
     This must be scheduled for the 1st of each month.
-    Suggested time is 12:00 UTC."""
+    Suggested time is 12:00 UTC.
+    """
 
     # Avoid a circular import
     from errata.mail import build_monthly_report
@@ -122,7 +124,7 @@ def mail_monthly_report_task():
     send_mail_task(message.id)
 
 
-# Providing this as a shared task even though its only currently used directly from
+# Providing this as a shared task even though it's only currently used directly from
 # the update_errata_json_task, to allow it to be run from the admin if needed.
 @shared_task
 def trigger_red_precompute_multiple_task(rfc_number_list=()):
@@ -141,12 +143,11 @@ def trigger_red_precompute_multiple_task(rfc_number_list=()):
                 timeout=settings.DEFAULT_REQUESTS_TIMEOUT,
             )
         except requests.Timeout as e:
-            logger.error(f"POST request timed out for {url} ]: {e}")
+            logger.error(f"POST request timed out for {url}: {e}")
             return
         if response.status_code != 200:
             logger.error(
-                f"POST request failed for {url} ]: "
-                f"{response.status_code} {response.text}"
+                f"POST request failed for {url}: {response.status_code} {response.text}"
             )
     else:
         logger.error(

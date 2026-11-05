@@ -363,7 +363,7 @@ def staged_rpc_add_to_unverified(request, staged_erratum_id, erratum_type):
                 submitter_email=staged_erratum.submitter_email,
                 notes=staged_erratum.notes,
                 submitted_at=staged_erratum.submitted_at,
-                # created at gets default of now
+                # created_at gets default of now
                 # updated_at is an AutoDateTimeField
                 formats=staged_erratum.formats,
             )
