@@ -19,7 +19,7 @@ from errata.mail import (
     send_new_erratum_notification,
     strip_garbage,
 )
-from errata.models import Erratum, ErratumType, MailMessage, Status
+from errata.models import Erratum, ErratumType, GroupReplacement, MailMessage, Status
 
 
 def _fetch(erratum):
@@ -130,6 +130,51 @@ class StripGarbageTest(TestCase):
             result = strip_garbage(addr_list, self.erratum)
         self.assertEqual(result, ["good@example.com"])
         self.assertIn(str(self.erratum.id), cm.output[0])
+
+
+class GroupReplacementMailTest(TestCase):
+    def setUp(self):
+        # Migration 0012 adds replacements; these tests make their own.
+        GroupReplacement.objects.all().delete()
+        self.user = UserFactory()
+        RfcMetadataFactory(area_acronym="art", area_ad_emails="art-ad@example.com")
+        RfcMetadataFactory(area_acronym="wit", area_ad_emails="wit-ad@example.com")
+        rfc = RfcMetadataFactory(
+            stream="ietf",
+            area_acronym="app",
+            area_assignment="",
+            group_acronym="httpstate",
+            group_list_email="http-state@ietf.org",
+        )
+        self.erratum = ErratumFactory(
+            rfc_metadata=rfc,
+            rfc_number=rfc.rfc_number,
+            erratum_type=ErratumType.objects.get(slug="technical"),
+        )
+        GroupReplacement.objects.create(
+            group="httpstate",
+            replacement_group="httpbis",
+            replacement_list_email="ietf-http-wg@w3.org",
+            replacement_area="wit",
+        )
+
+    def test_ad_emails_come_from_replacement_area(self):
+        self.assertEqual(get_ad_emails(_fetch(self.erratum)), ["wit-ad@example.com"])
+
+    @patch("errata.mail.send_mail_task")
+    def test_new_erratum_cc_goes_to_replacement_list(self, mock_task):
+        send_new_erratum_notification(_fetch(self.erratum), self.user)
+        msg = MailMessage.objects.latest("id")
+        self.assertIn("ietf-http-wg@w3.org", msg.cc)
+        self.assertNotIn("http-state@ietf.org", msg.cc)
+        self.assertIn("wit-ad@example.com", msg.to)
+
+    @patch("errata.mail.send_mail_task")
+    def test_classified_erratum_cc_goes_to_replacement_list(self, mock_task):
+        send_erratum_classified_notification(_fetch(self.erratum), self.user)
+        msg = MailMessage.objects.latest("id")
+        self.assertIn("ietf-http-wg@w3.org", msg.cc)
+        self.assertNotIn("http-state@ietf.org", msg.cc)
 
 
 class SendNewErratumNotificationTest(TestCase):

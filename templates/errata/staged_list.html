@@ -22,6 +22,9 @@
         {% if erratum.rfc_metadata.assigned_area %}
             <p class="mb-0 bg-warning text-light">Area assignment: {{ erratum.rfc_metadata.assigned_area }}</p>
         {% endif %}
+        {% if erratum.rfc_metadata.has_replacement_group %}
+            <p class="mb-0 bg-warning text-light">Replacement group: {{ erratum.rfc_metadata.resolved_group_acronym }}</p>
+        {% endif %}
         {% include "errata/staged_erratum_card_body.html" %}
         <hr>
         <div class="card-body">
