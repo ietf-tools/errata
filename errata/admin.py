@@ -8,11 +8,14 @@ from django.db import transaction
 from django.utils import timezone
 from simple_history.admin import SimpleHistoryAdmin
 
+from errata_auth.utils import IETF_AREAS, SUCCESSOR_AREAS
+
 from .mail import (
     send_erratum_classified_notification,
     send_new_erratum_notification,
 )
 from .models import (
+    AreaAssignment,
     DirtyBits,
     Erratum,
     ErratumType,
@@ -22,6 +25,13 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Current areas, then closed areas, which existing assignments still name.
+ASSIGNABLE_AREA_CHOICES = [
+    (area, area)
+    for area in IETF_AREAS
+    + [closed for closed_areas in SUCCESSOR_AREAS.values() for closed in closed_areas]
+]
 
 # Statuses that represent a classified erratum. Matches the transitions
 # offered by errata.views.reported_classify and errata.views.rpc_reclassify.
@@ -142,7 +152,22 @@ class StatusAdmin(admin.ModelAdmin):
 admin.site.register(Status, StatusAdmin)
 
 
-class RfcMetadataAdmin(admin.ModelAdmin):
+class ReadOnlyAdminMixin:
+    """Admin pages that only show records, which are changed elsewhere."""
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class RfcMetadataAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
+    # A cache of datatracker information, which update_rfc_metadata rewrites.
+    # The RPC refreshes it with Force RFC Metadata Update.
     search_fields = ["rfc_number", "title"]
     list_display = [
         "rfc_number",
@@ -152,12 +177,27 @@ class RfcMetadataAdmin(admin.ModelAdmin):
         "group_acronym",
         "area_acronym",
         "stream",
-        "area_assignment",
     ]
-    list_filter = ["area_acronym", "stream", "area_assignment"]
+    list_filter = ["area_acronym", "stream"]
 
 
 admin.site.register(RfcMetadata, RfcMetadataAdmin)
+
+
+class AreaAssignmentAdminForm(forms.ModelForm):
+    class Meta:
+        model = AreaAssignment
+        fields = "__all__"
+        widgets = {"area": forms.Select(choices=ASSIGNABLE_AREA_CHOICES)}
+
+
+@admin.register(AreaAssignment)
+class AreaAssignmentAdmin(SimpleHistoryAdmin):
+    form = AreaAssignmentAdminForm
+    raw_id_fields = ["rfc_metadata"]
+    search_fields = ["rfc_metadata__rfc_number"]
+    list_display = ["rfc_metadata_id", "area"]
+    list_filter = ["area"]
 
 
 class StagedErratumAdmin(admin.ModelAdmin):

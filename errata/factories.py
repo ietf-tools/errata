@@ -4,6 +4,7 @@ import factory
 from django.utils import timezone
 
 from errata.models import (
+    AreaAssignment,
     Erratum,
     ErratumType,
     MailMessage,
@@ -33,6 +34,7 @@ class RpcUserFactory(UserFactory):
 class RfcMetadataFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = RfcMetadata
+        skip_postgeneration_save = True
 
     rfc_number = factory.Sequence(lambda n: n + 1)
     title = factory.LazyAttribute(lambda o: f"Test RFC {o.rfc_number}")
@@ -50,9 +52,14 @@ class RfcMetadataFactory(factory.django.DjangoModelFactory):
     group_list_email = ""
     stream = "ietf"
     area_acronym = factory.LazyAttribute(lambda o: "ops" if o.stream == "ietf" else "")
-    area_assignment = ""
     obsoleted_by = ""
     updated_by = ""
+
+    @factory.post_generation
+    def area_assignment(obj, create, extracted, **kwargs):
+        """Give the RFC an AreaAssignment to the area passed as area_assignment."""
+        if extracted:
+            AreaAssignment.objects.create(rfc_metadata=obj, area=extracted)
 
 
 class ErratumFactory(factory.django.DjangoModelFactory):

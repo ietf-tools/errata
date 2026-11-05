@@ -104,6 +104,14 @@ class UpdateRfcMetadataTest(TestCase):
         self._run(_make_page([_make_rfc(1234, title="New Title")]))
         self.assertEqual(RfcMetadata.objects.get(rfc_number=1234).title, "New Title")
 
+    # --- area assignment ---
+
+    def test_area_assignment_survives_rebuilding_rfc_metadata(self):
+        RfcMetadataFactory(rfc_number=1234, area_assignment="sec")
+        RfcMetadata.objects.all().delete()
+        self._run(_make_page([_make_rfc(1234)]))
+        self.assertEqual(RfcMetadata.objects.get(rfc_number=1234).assigned_area, "sec")
+
     # --- authors ---
 
     def test_author_names_joined_with_comma(self):

@@ -24,12 +24,12 @@ def get_ad_emails(erratum):
 
     Usually these are the ADs of the area the RFC's group was in, except that:
 
-    * An area_assignment, set in the admin at the RPC's request, takes
+    * An AreaAssignment, set in the admin at the RPC's request, takes
       precedence. To date (early 2026) it has only been used for Legacy RFCs
       that should have been treated as IETF RFCs.
     * A closed area is replaced by the current area that took it over (app and
       rai by art; tsv, for its concluded groups, by wit). This also applies to
-      an area_assignment naming a closed area.
+      an AreaAssignment naming a closed area.
     * IETF stream individual submissions go to the gen ADs.
 
     The addresses are borrowed from another RFC in the target area rather than
@@ -39,8 +39,8 @@ def get_ad_emails(erratum):
     """
     metadata = erratum.rfc_metadata
     target_acronym = None
-    if metadata.area_assignment != "":
-        target_acronym = current_area(metadata.area_assignment)
+    if metadata.assigned_area != "":
+        target_acronym = current_area(metadata.assigned_area)
     elif current_area(metadata.area_acronym) != metadata.area_acronym:
         target_acronym = current_area(metadata.area_acronym)
     elif metadata.group_acronym == "none":

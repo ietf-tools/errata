@@ -16,7 +16,7 @@ def search_errata(form: ErrataSearchForm):
         return Erratum.objects.none()
     errata = Erratum.objects.order_by(
         "status__order", "rfc_number", "erratum_type__order", "pk"
-    ).prefetch_related("rfc_metadata", "status", "erratum_type")
+    ).prefetch_related("rfc_metadata__area_assignment", "status", "erratum_type")
     if form.cleaned_data.get("rfc_number") is not None:
         errata = errata.filter(rfc_number=form.cleaned_data["rfc_number"])
     if form.cleaned_data.get("errata_id") is not None:
@@ -31,10 +31,10 @@ def search_errata(form: ErrataSearchForm):
         area = form.cleaned_data["area"]
         search_areas = [area, *SUCCESSOR_AREAS.get(area, [])]
         errata = errata.filter(
-            Q(rfc_metadata__area_assignment__in=search_areas)
+            Q(rfc_metadata__area_assignment__area__in=search_areas)
             | Q(
                 rfc_metadata__area_acronym__in=search_areas,
-                rfc_metadata__area_assignment="",
+                rfc_metadata__area_assignment__isnull=True,
             )
         )
     if (

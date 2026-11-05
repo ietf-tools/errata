@@ -204,7 +204,6 @@ class RfcMetadata(models.Model):
     group_list_email = models.EmailField(max_length=64, blank=True)
     area_acronym = models.CharField(max_length=40, blank=True)
     stream = models.CharField(max_length=40, blank=True)
-    area_assignment = models.CharField(max_length=40, blank=True)
     obsoleted_by = models.CharField(max_length=1024, blank=True)
     updated_by = models.CharField(max_length=1024, blank=True)
 
@@ -238,9 +237,44 @@ class RfcMetadata(models.Model):
 
     def display_source_with_assignment(self):
         result = self.display_source()
-        if self.area_assignment != "":
-            result += f" ({self.area_assignment})"
+        if self.assigned_area != "":
+            result += f" ({self.assigned_area})"
         return result
+
+    @property
+    def assigned_area(self):
+        """The area of this RFC's AreaAssignment, or "" if it has none."""
+        try:
+            return self.area_assignment.area
+        except AreaAssignment.DoesNotExist:
+            return ""
+
+
+class AreaAssignment(models.Model):
+    """An RFC whose errata are handled by an area other than its group's.
+
+    The assignment takes precedence over the area the datatracker reports. It
+    is set at the RPC's request. RfcMetadata is a cache of information from
+    the datatracker, so assignments are kept in their own table. The link to
+    RfcMetadata has no database constraint and isn't deleted with it, so
+    assignments survive RfcMetadata being wiped and rebuilt.
+    """
+
+    rfc_metadata = models.OneToOneField(
+        RfcMetadata,
+        on_delete=models.DO_NOTHING,
+        db_constraint=False,
+        db_column="rfc_number",
+        related_name="area_assignment",
+    )
+    area = models.CharField(max_length=40)
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ["rfc_metadata"]
+
+    def __str__(self):
+        return f"RFC {self.rfc_metadata_id}: {self.area}"
 
 
 class StagedErratumStatus(models.TextChoices):
