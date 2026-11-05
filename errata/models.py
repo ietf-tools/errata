@@ -13,6 +13,7 @@ from django.db import models
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
+from errata_auth.utils import current_area
 from errata_project.mail import EmailMessage, make_message_id
 
 
@@ -206,9 +207,31 @@ class RfcMetadata(models.Model):
     stream = models.CharField(max_length=40, blank=True)
     obsoleted_by = models.CharField(max_length=1024, blank=True)
     updated_by = models.CharField(max_length=1024, blank=True)
+    # Where this RFC's errata go, worked out by resolve_routing on every save.
+    resolved_area = models.CharField(max_length=40, blank=True, editable=False)
+    resolved_group_acronym = models.CharField(max_length=40, blank=True, editable=False)
+    resolved_group_list_email = models.EmailField(
+        max_length=64, blank=True, editable=False
+    )
 
     def __str__(self):
         return f"RFC {self.rfc_number}: {self.title}"
+
+    def save(self, *args, **kwargs):
+        self.resolve_routing()
+        super().save(*args, **kwargs)
+
+    def resolve_routing(self):
+        """Set the area, group and list address used for this RFC's errata.
+
+        The area is the RFC's area assignment if it has one, and otherwise the
+        area the datatracker reports. A closed area is replaced by the current
+        area that took it over. The group and list address are the
+        datatracker's.
+        """
+        self.resolved_area = current_area(self.assigned_area or self.area_acronym)
+        self.resolved_group_acronym = self.group_acronym
+        self.resolved_group_list_email = self.group_list_email
 
     def display_source(self):
         if self.stream == "ise":
@@ -275,6 +298,26 @@ class AreaAssignment(models.Model):
 
     def __str__(self):
         return f"RFC {self.rfc_metadata_id}: {self.area}"
+
+    def save(self, *args, **kwargs):
+        previous_rfc_number = (
+            AreaAssignment.objects.filter(pk=self.pk)
+            .values_list("rfc_metadata_id", flat=True)
+            .first()
+        )
+        super().save(*args, **kwargs)
+        refresh_rfc_routing({previous_rfc_number, self.rfc_metadata_id})
+
+    def delete(self, *args, **kwargs):
+        result = super().delete(*args, **kwargs)
+        refresh_rfc_routing({self.rfc_metadata_id})
+        return result
+
+
+def refresh_rfc_routing(rfc_numbers):
+    """Re-resolve the routing of the given RFCs, for those that have metadata."""
+    for metadata in RfcMetadata.objects.filter(rfc_number__in=rfc_numbers - {None}):
+        metadata.save()
 
 
 class StagedErratumStatus(models.TextChoices):

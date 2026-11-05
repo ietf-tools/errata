@@ -10,7 +10,7 @@ from django.template.loader import render_to_string
 
 from errata.utils import counts_per_authority
 from errata_auth.models import User
-from errata_auth.utils import current_area, is_rpc
+from errata_auth.utils import is_rpc
 
 from .models import MailMessage, RfcMetadata
 from .tasks import send_mail_task
@@ -38,25 +38,19 @@ def get_ad_emails(erratum):
     is to sync area information separately.
     """
     metadata = erratum.rfc_metadata
-    target_acronym = None
-    if metadata.assigned_area != "":
-        target_acronym = current_area(metadata.assigned_area)
-    elif current_area(metadata.area_acronym) != metadata.area_acronym:
-        target_acronym = current_area(metadata.area_acronym)
-    elif metadata.group_acronym == "none":
+    # RfcMetadata.resolve_routing applies the area assignment and closed areas.
+    target_acronym = metadata.resolved_area
+    if target_acronym == metadata.area_acronym and metadata.group_acronym == "none":
         target_acronym = "gen"
-    else:
+    if target_acronym == metadata.area_acronym:
         # datatracker group information reflects the current area,
         # so, e.g., the wit reorg is handled.
-        pass
-    if target_acronym is not None:
-        proxy_meta = RfcMetadata.objects.filter(area_acronym=target_acronym).first()
-        if proxy_meta is None:
-            logger.warning(f"Cannot find AD addresses for area {target_acronym}")
-            return []
-        return proxy_meta.area_ad_emails
-    else:
         return metadata.area_ad_emails
+    proxy_meta = RfcMetadata.objects.filter(area_acronym=target_acronym).first()
+    if proxy_meta is None:
+        logger.warning(f"Cannot find AD addresses for area {target_acronym}")
+        return []
+    return proxy_meta.area_ad_emails
 
 
 def strip_garbage(addr_list, erratum):
@@ -103,8 +97,8 @@ def send_new_erratum_notification(erratum, user):
             if metadata.shepherd_email:
                 to.append(metadata.shepherd_email)
             cc.append(erratum.submitter_email)
-            if metadata.group_list_email:
-                cc.append(metadata.group_list_email)
+            if metadata.resolved_group_list_email:
+                cc.append(metadata.resolved_group_list_email)
             # Future possible improvement - cc the _group_ ad
             # to handle groups with out-of-area ads.
         elif stream == "iab":
@@ -115,8 +109,8 @@ def send_new_erratum_notification(erratum, user):
             to.extend(metadata.author_emails)
             to.append("irsg@irtf.org")
             cc.append(erratum.submitter_email)
-            if metadata.group_list_email:
-                cc.append(metadata.group_list_email)
+            if metadata.resolved_group_list_email:
+                cc.append(metadata.resolved_group_list_email)
         elif stream == "ise":
             to.extend(metadata.author_emails)
             to.append("rfc-ise@rfc-editor.org")
@@ -125,29 +119,29 @@ def send_new_erratum_notification(erratum, user):
             to.extend(metadata.author_emails)
             to.append("rsab@rfc-editor.org")
             cc.append(erratum.submitter_email)
-            if metadata.group_list_email:
-                cc.append(metadata.group_list_email)
+            if metadata.resolved_group_list_email:
+                cc.append(metadata.resolved_group_list_email)
     else:
         to.append("rfc-editor@rfc-editor.org")
         cc.append(erratum.submitter_email)
         if stream == "ietf":
             cc.extend(metadata.author_emails)
-            if metadata.group_list_email:
-                cc.append(metadata.group_list_email)
+            if metadata.resolved_group_list_email:
+                cc.append(metadata.resolved_group_list_email)
         elif stream == "iab":
             cc.extend(metadata.author_emails)
             cc.append("iab@iab.org")
         elif stream == "irtf":
             cc.extend(metadata.author_emails)
-            if metadata.group_list_email:
-                cc.append(metadata.group_list_email)
+            if metadata.resolved_group_list_email:
+                cc.append(metadata.resolved_group_list_email)
         elif stream == "ise":
             cc.append("rfc-ise@rfc-editor.org")
             cc.extend(metadata.author_emails)
         elif stream == "editorial":
             cc.extend(metadata.author_emails)
-            if metadata.group_list_email:
-                cc.append(metadata.group_list_email)
+            if metadata.resolved_group_list_email:
+                cc.append(metadata.resolved_group_list_email)
     # Always CC the RFC Editor
     cc.append("rfc-editor@rfc-editor.org")
 
@@ -222,8 +216,8 @@ def send_erratum_classified_notification(erratum, user):
             to.extend(metadata.author_emails)
             cc.append(verifier_email)
             cc.append("iesg@ietf.org")
-            if metadata.group_list_email:
-                cc.append(metadata.group_list_email)
+            if metadata.resolved_group_list_email:
+                cc.append(metadata.resolved_group_list_email)
             cc.append("iana@iana.org")
         elif stream == "iab":
             to.append(erratum.submitter_email)
@@ -236,8 +230,8 @@ def send_erratum_classified_notification(erratum, user):
             to.extend(metadata.author_emails)
             cc.append(verifier_email)
             cc.append("irsg@irtf.org")
-            if metadata.group_list_email:
-                cc.append(metadata.group_list_email)
+            if metadata.resolved_group_list_email:
+                cc.append(metadata.resolved_group_list_email)
             cc.append("iana@iana.org")
         elif stream == "ise":
             to.append(erratum.submitter_email)
@@ -251,8 +245,8 @@ def send_erratum_classified_notification(erratum, user):
             to.extend(metadata.author_emails)
             cc.append(verifier_email)
             cc.append("rsab@rfc-editor.org")
-            if metadata.group_list_email:
-                cc.append(metadata.group_list_email)
+            if metadata.resolved_group_list_email:
+                cc.append(metadata.resolved_group_list_email)
             cc.append("iana@iana.org")
     else:
         if not rpc_classifying_editorial:
@@ -266,8 +260,8 @@ def send_erratum_classified_notification(erratum, user):
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
             cc.append("iesg@ietf.org")
-            if metadata.group_list_email:
-                cc.append(metadata.group_list_email)
+            if metadata.resolved_group_list_email:
+                cc.append(metadata.resolved_group_list_email)
             cc.append("iana@iana.org")
         elif stream == "iab":
             to.append(erratum.submitter_email)
@@ -278,8 +272,8 @@ def send_erratum_classified_notification(erratum, user):
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
             cc.append("irsg@irtf.org")
-            if metadata.group_list_email:
-                cc.append(metadata.group_list_email)
+            if metadata.resolved_group_list_email:
+                cc.append(metadata.resolved_group_list_email)
             cc.append("iana@iana.org")
         elif stream == "ise":
             to.append(erratum.submitter_email)
@@ -290,8 +284,8 @@ def send_erratum_classified_notification(erratum, user):
             to.append(erratum.submitter_email)
             to.extend(metadata.author_emails)
             cc.append("rsab@rfc-editor.org")
-            if metadata.group_list_email:
-                cc.append(metadata.group_list_email)
+            if metadata.resolved_group_list_email:
+                cc.append(metadata.resolved_group_list_email)
             cc.append("iana@iana.org")
     # Always CC the RFC Editor
     cc.append("rfc-editor@rfc-editor.org")

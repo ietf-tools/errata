@@ -10,7 +10,7 @@ import rpcapi_client
 from django.conf import settings
 from django.db.models import Exists, OuterRef, Q
 
-from errata_auth.utils import SUCCESSOR_AREAS, is_rpc, verification_scope
+from errata_auth.utils import is_rpc, verification_scope
 
 from .models import Erratum, RfcMetadata
 from .rpcapi import with_rpcapi
@@ -54,8 +54,10 @@ def unverified_errata(user):
 
     queries_to_union = []
     if scope.areas:
+        # An area assignment gives the assigned area's ADs access without
+        # removing the access of the ADs of the area the datatracker reports.
         queries_to_union.append(Q(rfc_metadata__area_acronym__in=scope.areas))
-        queries_to_union.append(Q(rfc_metadata__area_assignment__area__in=scope.areas))
+        queries_to_union.append(Q(rfc_metadata__resolved_area__in=scope.areas))
     if scope.ietf_groups:
         queries_to_union.append(
             Q(
@@ -212,11 +214,7 @@ def counts_per_authority(as_of: datetime.datetime = None):
         elif authority in ["iab", "ise", "irtf", "editorial"]:
             authority_q = Q(rfc_metadata__stream=authority)
         else:
-            areas = [authority, *SUCCESSOR_AREAS.get(authority, [])]
-            authority_q = Q(
-                rfc_metadata__area_acronym__in=areas,
-                rfc_metadata__area_assignment__isnull=True,
-            ) | Q(rfc_metadata__area_assignment__area__in=areas)
+            authority_q = Q(rfc_metadata__resolved_area=authority)
         count = qs.filter(authority_q).count()
         results[authority] = count
     return results
