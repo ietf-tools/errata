@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>{{ title }}</h1>
+    {% if form.non_field_errors or form.errors %}
+        <p class="alert alert-danger">Please correct the errors highlighted below:</p>
+    {% endif %}
+    <form method="post" class="mt-4" novalidate>
+        {% csrf_token %}
+        {% bootstrap_form form %}
+        <button class="btn btn-primary" type="submit" name="action" value="preview">Preview Changes</button>
+        <a href="{{ list_url }}" class="btn btn-info">Cancel</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>{{ title }}</h1>
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-light">
+            <h2 class="h5 mb-0">Check this change before saving it</h2>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                {% for field in form %}
+                    <dt class="col-sm-4">{{ field.label }}</dt>
+                    <dd class="col-sm-8">{{ field.value|default:"none" }}</dd>
+                {% endfor %}
+            </dl>
+            {% include "errata/_routing_preview.html" %}
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {% for field in form %}{{ field.as_hidden }}{% endfor %}
+                <button class="btn btn-primary" type="submit" name="action" value="save">Save</button>
+                <button class="btn btn-secondary" type="submit" name="action" value="edit">Go Back and Edit</button>
+                <a href="{{ list_url }}" class="btn btn-info">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -8,8 +8,6 @@ from django.db import transaction
 from django.utils import timezone
 from simple_history.admin import SimpleHistoryAdmin
 
-from errata_auth.utils import IETF_AREAS, SUCCESSOR_AREAS
-
 from .mail import (
     send_erratum_classified_notification,
     send_new_erratum_notification,
@@ -26,13 +24,6 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Current areas, then closed areas, which existing assignments still name.
-ASSIGNABLE_AREA_CHOICES = [
-    (area, area)
-    for area in IETF_AREAS
-    + [closed for closed_areas in SUCCESSOR_AREAS.values() for closed in closed_areas]
-]
 
 # Statuses that represent a classified erratum. Matches the transitions
 # offered by errata.views.reported_classify and errata.views.rpc_reclassify.
@@ -190,28 +181,9 @@ class RfcMetadataAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
 admin.site.register(RfcMetadata, RfcMetadataAdmin)
 
 
-class AreaAssignmentAdminForm(forms.ModelForm):
-    class Meta:
-        model = AreaAssignment
-        fields = "__all__"
-        widgets = {"area": forms.Select(choices=ASSIGNABLE_AREA_CHOICES)}
-
-
-class GroupReplacementAdminForm(forms.ModelForm):
-    class Meta:
-        model = GroupReplacement
-        fields = "__all__"
-        widgets = {
-            "replacement_area": forms.Select(
-                choices=[("", "Keep the RFC's area")]
-                + [(area, area) for area in IETF_AREAS]
-            )
-        }
-
-
+# The RPC manages group replacements and area assignments on its own pages.
 @admin.register(GroupReplacement)
-class GroupReplacementAdmin(SimpleHistoryAdmin):
-    form = GroupReplacementAdminForm
+class GroupReplacementAdmin(ReadOnlyAdminMixin, SimpleHistoryAdmin):
     search_fields = ["group", "replacement_group"]
     list_display = [
         "group",
@@ -220,26 +192,12 @@ class GroupReplacementAdmin(SimpleHistoryAdmin):
         "replacement_area",
     ]
 
-    def get_actions(self, request):
-        # Bulk delete skips GroupReplacement.delete, which updates RfcMetadata.
-        actions = super().get_actions(request)
-        actions.pop("delete_selected", None)
-        return actions
-
 
 @admin.register(AreaAssignment)
-class AreaAssignmentAdmin(SimpleHistoryAdmin):
-    form = AreaAssignmentAdminForm
-    raw_id_fields = ["rfc_metadata"]
+class AreaAssignmentAdmin(ReadOnlyAdminMixin, SimpleHistoryAdmin):
     search_fields = ["rfc_metadata__rfc_number"]
     list_display = ["rfc_metadata_id", "area"]
     list_filter = ["area"]
-
-    def get_actions(self, request):
-        # Bulk delete skips AreaAssignment.delete, which updates RfcMetadata.
-        actions = super().get_actions(request)
-        actions.pop("delete_selected", None)
-        return actions
 
 
 class StagedErratumAdmin(admin.ModelAdmin):

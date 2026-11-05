@@ -4,7 +4,9 @@ import re
 
 from django import forms
 
-from .models import Erratum, RfcMetadata
+from errata_auth.utils import IETF_AREAS
+
+from .models import AreaAssignment, Erratum, GroupReplacement, RfcMetadata
 
 
 class CaseInsensitiveChoiceField(forms.ChoiceField):
@@ -388,3 +390,85 @@ class RfcNumberListForm(forms.Form):
                 except ValueError:
                     raise forms.ValidationError(f"Invalid RFC number: {part}") from None
         return sorted(rfc_numbers)
+
+
+CURRENT_AREA_CHOICES = [(area, area) for area in IETF_AREAS]
+
+
+class AreaAssignmentForm(forms.ModelForm):
+    """Assign an RFC's errata to an area. The RFC can't be changed once set."""
+
+    rfc_number = forms.IntegerField(label="RFC number", min_value=1)
+    area = forms.ChoiceField(choices=CURRENT_AREA_CHOICES)
+
+    class Meta:
+        model = AreaAssignment
+        fields = ["area"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk is not None:
+            self.fields["rfc_number"].initial = self.instance.rfc_metadata_id
+            self.fields["rfc_number"].disabled = True
+            # Older assignments may name a closed area. Keep it choosable.
+            if self.instance.area not in IETF_AREAS:
+                self.fields["area"].choices = CURRENT_AREA_CHOICES + [
+                    (self.instance.area, f"{self.instance.area} (closed)")
+                ]
+
+    def clean_rfc_number(self):
+        rfc_number = self.cleaned_data["rfc_number"]
+        if self.instance.pk is not None:
+            return rfc_number
+        if not RfcMetadata.objects.filter(rfc_number=rfc_number).exists():
+            raise forms.ValidationError(
+                f"There is no metadata for RFC {rfc_number}. Check the number, "
+                "or force a metadata update for it first."
+            )
+        if AreaAssignment.objects.filter(rfc_metadata_id=rfc_number).exists():
+            raise forms.ValidationError(
+                f"RFC {rfc_number} already has an area assignment. Edit that one."
+            )
+        self.instance.rfc_metadata_id = rfc_number
+        return rfc_number
+
+
+class GroupReplacementForm(forms.ModelForm):
+    """Send a group's errata to the group that replaced it."""
+
+    replacement_area = forms.ChoiceField(
+        choices=[("", "Keep each RFC's area")] + CURRENT_AREA_CHOICES,
+        required=False,
+        label="Replacement area",
+        help_text="For IETF stream RFCs, the area whose ADs handle the errata. "
+        "An RFC's area assignment still takes precedence.",
+    )
+
+    class Meta:
+        model = GroupReplacement
+        fields = [
+            "group",
+            "replacement_group",
+            "replacement_list_email",
+            "replacement_area",
+        ]
+        labels = {
+            "group": "Replaced group",
+            "replacement_list_email": "Replacement group's list address",
+        }
+        help_texts = {
+            "group": "The datatracker acronym of the group whose RFCs' errata "
+            "should go elsewhere.",
+            "replacement_group": "The acronym of the group that replaced it.",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk is not None:
+            self.fields["group"].disabled = True
+
+    def clean_group(self):
+        return self.cleaned_data["group"].strip().lower()
+
+    def clean_replacement_group(self):
+        return self.cleaned_data["replacement_group"].strip().lower()
