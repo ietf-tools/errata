@@ -1,0 +1,1 @@
+{% if before == after %}<td>{{ after|default:"none" }}</td>{% else %}<td class="table-warning">{{ before|default:"none" }} → <strong>{{ after|default:"none" }}</strong></td>{% endif %}

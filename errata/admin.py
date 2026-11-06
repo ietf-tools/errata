@@ -13,9 +13,11 @@ from .mail import (
     send_new_erratum_notification,
 )
 from .models import (
+    AreaAssignment,
     DirtyBits,
     Erratum,
     ErratumType,
+    GroupReplacement,
     RfcMetadata,
     StagedErratum,
     Status,
@@ -142,7 +144,22 @@ class StatusAdmin(admin.ModelAdmin):
 admin.site.register(Status, StatusAdmin)
 
 
-class RfcMetadataAdmin(admin.ModelAdmin):
+class ReadOnlyAdminMixin:
+    """Admin pages that only show records, which are changed elsewhere."""
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class RfcMetadataAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
+    # A cache of datatracker information, which update_rfc_metadata rewrites.
+    # The RPC refreshes it with Force RFC Metadata Update.
     search_fields = ["rfc_number", "title"]
     list_display = [
         "rfc_number",
@@ -152,12 +169,35 @@ class RfcMetadataAdmin(admin.ModelAdmin):
         "group_acronym",
         "area_acronym",
         "stream",
-        "area_assignment",
     ]
-    list_filter = ["area_acronym", "stream", "area_assignment"]
+    list_filter = ["area_acronym", "stream"]
+    readonly_fields = [
+        "resolved_area",
+        "resolved_group_acronym",
+        "resolved_group_list_email",
+    ]
 
 
 admin.site.register(RfcMetadata, RfcMetadataAdmin)
+
+
+# The RPC manages group replacements and area assignments on its own pages.
+@admin.register(GroupReplacement)
+class GroupReplacementAdmin(ReadOnlyAdminMixin, SimpleHistoryAdmin):
+    search_fields = ["group", "replacement_group"]
+    list_display = [
+        "group",
+        "replacement_group",
+        "replacement_list_email",
+        "replacement_area",
+    ]
+
+
+@admin.register(AreaAssignment)
+class AreaAssignmentAdmin(ReadOnlyAdminMixin, SimpleHistoryAdmin):
+    search_fields = ["rfc_metadata__rfc_number"]
+    list_display = ["rfc_metadata_id", "area"]
+    list_filter = ["area"]
 
 
 class StagedErratumAdmin(admin.ModelAdmin):

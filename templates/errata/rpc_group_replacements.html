@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Group Replacements{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Group Replacements</h1>
+    <p>A group replacement sends the errata on a group's RFCs to the group that replaced it. New errata cc the replacement's list address. If a replacement area is set, the ADs of that area verify IETF stream errata, unless the RFC has an area assignment.</p>
+    <p>
+        <a href="{% url 'errata_rpc_group_replacement_add' %}" class="btn btn-primary">Add Group Replacement</a>
+        <a href="{% url 'errata_user_info' %}" class="btn btn-outline-secondary">Return to User Info</a>
+    </p>
+    <div class="table-responsive">
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr><th>Replaced group</th><th>RFCs</th><th>Replacement group</th><th>List address</th><th>Area</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for replacement in replacements %}
+                    <tr>
+                        <td>{{ replacement.group }}</td>
+                        <td>{{ replacement.rfc_count }}</td>
+                        <td>{{ replacement.replacement_group }}</td>
+                        <td>{{ replacement.replacement_list_email }}</td>
+                        <td>{{ replacement.replacement_area|default:"each RFC's own" }}</td>
+                        <td class="text-nowrap">
+                            <a href="{% url 'errata_rpc_group_replacement_edit' pk=replacement.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <a href="{% url 'errata_rpc_group_replacement_remove' pk=replacement.pk %}" class="btn btn-sm btn-outline-warning">Remove</a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6">No groups have been replaced.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <h2 class="h4 mt-4">Recent Changes</h2>
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr><th>When</th><th>Change</th><th>By</th><th>Replaced group</th><th>Replacement group</th><th>List address</th><th>Area</th></tr>
+            </thead>
+            <tbody>
+                {% for entry in history %}
+                    <tr>
+                        {% include "errata/_routing_history_who.html" %}
+                        <td>{{ entry.group }}</td>
+                        <td>{{ entry.replacement_group }}</td>
+                        <td>{{ entry.replacement_list_email }}</td>
+                        <td>{{ entry.replacement_area|default:"each RFC's own" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7">No changes yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
