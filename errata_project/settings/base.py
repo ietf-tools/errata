@@ -52,7 +52,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django_bootstrap5",
     "django_celery_beat",
-    "rules.apps.AutodiscoverRulesConfig",
     "simple_history",
     "errata_auth.apps.ErrataAuthConfig",
     "errata.apps.ErrataConfig",
@@ -89,10 +88,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "errata_project.wsgi.application"
 
-# TODO - verify rules.permissions are needed/used
 AUTHENTICATION_BACKENDS = (
     "errata_auth.backends.ErrataOIDCAuthBackend",
-    "rules.permissions.ObjectPermissionBackend",
     "django.contrib.auth.backends.ModelBackend",
 )
 
