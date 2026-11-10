@@ -23,6 +23,9 @@
                     {% if erratum.rfc_metadata.assigned_area %}
                         <p class="mb-0">Area assignment: {{ erratum.rfc_metadata.assigned_area }}</p>
                     {% endif %}
+                    {% if erratum.rfc_metadata.has_replacement_group %}
+                        <p class="mb-0">Replacement group: {{ erratum.rfc_metadata.resolved_group_acronym }}</p>
+                    {% endif %}
                 </div>
             <!-- Erratum Header -->
                 <div class="card mb-4">

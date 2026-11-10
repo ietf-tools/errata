@@ -47,8 +47,10 @@ def search_errata(form: ErrataSearchForm):
     ):
         errata = errata.filter(erratum_type__slug=form.cleaned_data["errata_type"])
     if form.cleaned_data.get("wg_acronym"):
+        # Also finds the RFCs of groups this group replaced.
         errata = errata.filter(
-            rfc_metadata__group_acronym=form.cleaned_data["wg_acronym"]
+            Q(rfc_metadata__group_acronym=form.cleaned_data["wg_acronym"])
+            | Q(rfc_metadata__resolved_group_acronym=form.cleaned_data["wg_acronym"])
         )
     if form.cleaned_data.get("submitter_name"):
         errata = errata.filter(

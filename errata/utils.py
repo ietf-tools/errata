@@ -58,15 +58,21 @@ def unverified_errata(user):
         # removing the access of the ADs of the area the datatracker reports.
         queries_to_union.append(Q(rfc_metadata__area_acronym__in=scope.areas))
         queries_to_union.append(Q(rfc_metadata__resolved_area__in=scope.areas))
+    # Group roles give access to the group's RFCs and to those of the groups it
+    # replaced. A replaced group's roles keep their access.
     if scope.ietf_groups:
         queries_to_union.append(
-            Q(
-                rfc_metadata__stream="ietf",
-                rfc_metadata__group_acronym__in=scope.ietf_groups,
+            Q(rfc_metadata__stream="ietf")
+            & (
+                Q(rfc_metadata__group_acronym__in=scope.ietf_groups)
+                | Q(rfc_metadata__resolved_group_acronym__in=scope.ietf_groups)
             )
         )
     if scope.groups:
         queries_to_union.append(Q(rfc_metadata__group_acronym__in=scope.groups))
+        queries_to_union.append(
+            Q(rfc_metadata__resolved_group_acronym__in=scope.groups)
+        )
     if scope.streams:
         queries_to_union.append(Q(rfc_metadata__stream__in=scope.streams))
     combined_queries = reduce(operator.or_, queries_to_union)

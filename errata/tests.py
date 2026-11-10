@@ -4,6 +4,7 @@ import datetime
 from unittest.mock import patch
 
 from django.contrib import admin
+from django.core.exceptions import ValidationError
 from django.forms.widgets import MultiWidget
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
@@ -13,6 +14,7 @@ from errata.admin import (
     AreaAssignmentAdmin,
     ErratumAdmin,
     ErratumAdminForm,
+    GroupReplacementAdmin,
     RfcMetadataAdmin,
 )
 from errata.factories import (
@@ -37,6 +39,7 @@ from errata.models import (
     AreaAssignment,
     Erratum,
     ErratumType,
+    GroupReplacement,
     MailMessage,
     RfcMetadata,
     StagedErratum,
@@ -253,6 +256,181 @@ class AreaAssignmentAdminTest(TestCase):
         request = RequestFactory().get("/")
         request.user = UserFactory(is_staff=True, is_superuser=True)
         model_admin = AreaAssignmentAdmin(AreaAssignment, admin.site)
+        self.assertNotIn("delete_selected", model_admin.get_actions(request))
+
+
+def replace_group(group, replacement_group, list_email, area=""):
+    return GroupReplacement.objects.create(
+        group=group,
+        replacement_group=replacement_group,
+        replacement_list_email=list_email,
+        replacement_area=area,
+    )
+
+
+class GroupReplacementTest(TestCase):
+    def _ippm_rfc(self, **kwargs):
+        fields = dict(
+            stream="ietf",
+            area_acronym="ops",
+            area_assignment="",
+            group_acronym="ippm",
+            group_list_email="ippm@ietf.org",
+        )
+        fields.update(kwargs)
+        return RfcMetadataFactory(**fields)
+
+    def test_replacement_sets_group_and_list(self):
+        rfc = self._ippm_rfc()
+        replace_group("ippm", "bpm", "bpm@ietf.org")
+        rfc.refresh_from_db()
+        self.assertEqual(rfc.resolved_group_acronym, "bpm")
+        self.assertEqual(rfc.resolved_group_list_email, "bpm@ietf.org")
+        self.assertEqual(rfc.resolved_area, "ops")
+        # The datatracker's values are kept.
+        self.assertEqual(rfc.group_acronym, "ippm")
+        self.assertEqual(rfc.group_list_email, "ippm@ietf.org")
+
+    def test_new_rfc_of_replaced_group_is_routed(self):
+        replace_group("ippm", "bpm", "bpm@ietf.org")
+        rfc = self._ippm_rfc()
+        self.assertEqual(rfc.resolved_group_list_email, "bpm@ietf.org")
+
+    def test_replacement_area_moves_ietf_rfcs(self):
+        rfc = self._ippm_rfc(
+            group_acronym="httpstate",
+            group_list_email="http-state@ietf.org",
+            area_acronym="app",
+        )
+        replace_group("httpstate", "httpbis", "ietf-http-wg@w3.org", area="wit")
+        rfc.refresh_from_db()
+        self.assertEqual(rfc.resolved_area, "wit")
+        self.assertEqual(rfc.resolved_group_list_email, "ietf-http-wg@w3.org")
+
+    def test_area_assignment_beats_replacement_area(self):
+        rfc = self._ippm_rfc(area_assignment="sec")
+        replace_group("ippm", "bpm", "bpm@ietf.org", area="wit")
+        rfc.refresh_from_db()
+        self.assertEqual(rfc.resolved_area, "sec")
+
+    def test_replacement_area_ignored_outside_ietf_stream(self):
+        rfc = RfcMetadataFactory(stream="irtf", area_acronym="", group_acronym="oldrg")
+        replace_group("oldrg", "newrg", "newrg@irtf.org", area="wit")
+        rfc.refresh_from_db()
+        self.assertEqual(rfc.resolved_area, "")
+        self.assertEqual(rfc.resolved_group_list_email, "newrg@irtf.org")
+
+    def test_chain_is_followed(self):
+        rfc = self._ippm_rfc(group_acronym="sipping")
+        replace_group("sipping", "sip", "sip@ietf.org", area="art")
+        replace_group("sip", "sipcore", "sipcore@ietf.org")
+        rfc.refresh_from_db()
+        self.assertEqual(rfc.resolved_group_acronym, "sipcore")
+        self.assertEqual(rfc.resolved_group_list_email, "sipcore@ietf.org")
+        self.assertEqual(rfc.resolved_area, "art")
+
+    def test_editing_a_replacement_updates_rfcs(self):
+        rfc = self._ippm_rfc()
+        replacement = replace_group("ippm", "bpm", "bpm@ietf.org")
+        replacement.replacement_list_email = "bpm-discuss@ietf.org"
+        replacement.save()
+        rfc.refresh_from_db()
+        self.assertEqual(rfc.resolved_group_list_email, "bpm-discuss@ietf.org")
+
+    def test_changing_group_restores_previous_group(self):
+        rfc = self._ippm_rfc()
+        replacement = replace_group("ippm", "bpm", "bpm@ietf.org")
+        replacement.group = "bmwg"
+        replacement.save()
+        rfc.refresh_from_db()
+        self.assertEqual(rfc.resolved_group_acronym, "ippm")
+        self.assertEqual(rfc.resolved_group_list_email, "ippm@ietf.org")
+
+    def test_delete_restores_datatracker_routing(self):
+        rfc = self._ippm_rfc(area_acronym="app")
+        replace_group("ippm", "bpm", "bpm@ietf.org", area="ops").delete()
+        rfc.refresh_from_db()
+        self.assertEqual(rfc.resolved_group_acronym, "ippm")
+        self.assertEqual(rfc.resolved_group_list_email, "ippm@ietf.org")
+        self.assertEqual(rfc.resolved_area, "art")
+
+    def test_resolving_a_stored_loop_terminates(self):
+        # clean() refuses loops, but resolution must not hang on one.
+        rfc = self._ippm_rfc()
+        GroupReplacement.objects.bulk_create(
+            [
+                GroupReplacement(
+                    group="ippm", replacement_group="bpm", replacement_list_email="b@x"
+                ),
+                GroupReplacement(
+                    group="bpm", replacement_group="ippm", replacement_list_email="i@x"
+                ),
+            ]
+        )
+        rfc.save()
+        self.assertEqual(rfc.resolved_group_acronym, "ippm")
+
+    def test_clean_refuses_self_replacement(self):
+        replacement = GroupReplacement(
+            group="ippm", replacement_group="ippm", replacement_list_email="i@x"
+        )
+        with self.assertRaises(ValidationError):
+            replacement.clean()
+
+    def test_clean_refuses_loop(self):
+        replace_group("ippm", "bpm", "bpm@ietf.org")
+        replace_group("bpm", "opsawg", "opsawg@ietf.org")
+        replacement = GroupReplacement(
+            group="opsawg", replacement_group="ippm", replacement_list_email="i@x"
+        )
+        with self.assertRaisesMessage(ValidationError, "ippm"):
+            replacement.clean()
+
+    def test_clean_allows_chain(self):
+        replace_group("ippm", "bpm", "bpm@ietf.org")
+        GroupReplacement(
+            group="bpm", replacement_group="opsawg", replacement_list_email="o@x"
+        ).clean()
+
+    def test_history_is_recorded(self):
+        replace_group("oldwg", "newwg", "newwg@ietf.org").delete()
+        self.assertEqual(
+            list(
+                GroupReplacement.history.filter(group="oldwg")
+                .order_by("history_id")
+                .values_list("history_type", flat=True)
+            ),
+            ["+", "-"],
+        )
+
+    def test_display_source_with_assignment_names_replacement(self):
+        rfc = self._ippm_rfc()
+        replace_group("ippm", "bpm", "bpm@ietf.org")
+        rfc.refresh_from_db()
+        self.assertEqual(
+            rfc.display_source_with_assignment(), "ippm (ops) (replaced by bpm)"
+        )
+
+    def test_search_by_replacement_group_finds_replaced_groups_errata(self):
+        rfc = self._ippm_rfc()
+        erratum = ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number)
+        replace_group("ippm", "bpm", "bpm@ietf.org")
+        for wg in ["bpm", "ippm"]:
+            with self.subTest(wg=wg):
+                result = search_errata(ErrataSearchForm(data={"wg_acronym": wg}))
+                self.assertIn(erratum, result)
+
+    def test_detail_shows_replacement_group(self):
+        rfc = self._ippm_rfc()
+        erratum = ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number)
+        replace_group("ippm", "bpm", "bpm@ietf.org")
+        response = self.client.get(reverse("errata_detail", kwargs={"pk": erratum.pk}))
+        self.assertContains(response, "Replacement group: bpm")
+
+    def test_admin_offers_no_bulk_delete(self):
+        request = RequestFactory().get("/")
+        request.user = UserFactory(is_staff=True, is_superuser=True)
+        model_admin = GroupReplacementAdmin(GroupReplacement, admin.site)
         self.assertNotIn("delete_selected", model_admin.get_actions(request))
 
 

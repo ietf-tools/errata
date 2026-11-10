@@ -19,6 +19,7 @@ from .models import (
     DirtyBits,
     Erratum,
     ErratumType,
+    GroupReplacement,
     RfcMetadata,
     StagedErratum,
     Status,
@@ -194,6 +195,36 @@ class AreaAssignmentAdminForm(forms.ModelForm):
         model = AreaAssignment
         fields = "__all__"
         widgets = {"area": forms.Select(choices=ASSIGNABLE_AREA_CHOICES)}
+
+
+class GroupReplacementAdminForm(forms.ModelForm):
+    class Meta:
+        model = GroupReplacement
+        fields = "__all__"
+        widgets = {
+            "replacement_area": forms.Select(
+                choices=[("", "Keep the RFC's area")]
+                + [(area, area) for area in IETF_AREAS]
+            )
+        }
+
+
+@admin.register(GroupReplacement)
+class GroupReplacementAdmin(SimpleHistoryAdmin):
+    form = GroupReplacementAdminForm
+    search_fields = ["group", "replacement_group"]
+    list_display = [
+        "group",
+        "replacement_group",
+        "replacement_list_email",
+        "replacement_area",
+    ]
+
+    def get_actions(self, request):
+        # Bulk delete skips GroupReplacement.delete, which updates RfcMetadata.
+        actions = super().get_actions(request)
+        actions.pop("delete_selected", None)
+        return actions
 
 
 @admin.register(AreaAssignment)

@@ -20,6 +20,9 @@
         {% if form.instance.rfc_metadata.assigned_area %}
         <p class="mb-0">Area assignment: {{form.instance.rfc_metadata.assigned_area}}</p>
         {% endif %}
+        {% if form.instance.rfc_metadata.has_replacement_group %}
+        <p class="mb-0">Replacement group: {{ form.instance.rfc_metadata.resolved_group_acronym }}</p>
+        {% endif %}
     </div>
     <div class="card-body">
         {% if form.errors %}

@@ -6,7 +6,7 @@ import json
 from django.test import TestCase
 
 from errata.factories import ErratumFactory, RfcMetadataFactory, UserFactory
-from errata.models import ErratumType, Status
+from errata.models import ErratumType, GroupReplacement, Status
 from errata.utils import counts_per_authority, errata_json, unverified_errata
 
 
@@ -276,6 +276,37 @@ class UnverifiedErratumVerifierTest(TestCase):
         self.assertNotIn(erratum, unverified_errata(wit_ad))
         self.assertIn(erratum, unverified_errata(ops_ad))
 
+    def _replaced_ippm_erratum(self, **replacement):
+        rfc = RfcMetadataFactory(
+            stream="ietf", area_acronym="ops", area_assignment="", group_acronym="ippm"
+        )
+        erratum = ErratumFactory(rfc_metadata=rfc, rfc_number=rfc.rfc_number)
+        GroupReplacement.objects.create(
+            group="ippm",
+            replacement_group="bpm",
+            replacement_list_email="bpm@ietf.org",
+            **replacement,
+        )
+        return erratum
+
+    def test_replacement_groups_ad_sees_replaced_groups_errata(self):
+        erratum = self._replaced_ippm_erratum()
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "bpm"]])
+        self.assertIn(erratum, unverified_errata(user))
+
+    def test_replaced_groups_ad_keeps_access(self):
+        erratum = self._replaced_ippm_erratum()
+        user = UserFactory(roles=[["ad", "iesg"], ["ad", "ippm"]])
+        self.assertIn(erratum, unverified_errata(user))
+
+    def test_replacement_area_ads_get_access(self):
+        erratum = self._replaced_ippm_erratum(replacement_area="wit")
+        wit_ad = UserFactory(roles=[["ad", "iesg"], ["ad", "wit"]])
+        ops_ad = UserFactory(roles=[["ad", "iesg"], ["ad", "ops"]])
+        self.assertIn(erratum, unverified_errata(wit_ad))
+        # As with an area assignment, the original area's ADs keep access.
+        self.assertIn(erratum, unverified_errata(ops_ad))
+
     def test_original_area_ad_keeps_access_after_area_assignment(self):
         # Documents current behavior: area_assignment adds the assigned area's
         # ADs without removing the original area's ADs.
@@ -472,6 +503,20 @@ class CountsPerAuthorityTest(TestCase):
         result = counts_per_authority()
         self.assertEqual(result["wit"], 1)
         self.assertEqual(result["int"], 0)
+
+    def test_replacement_area_counted_under_that_area(self):
+        self._technical_reported(
+            area_acronym="app", area_assignment="", group_acronym="httpstate"
+        )
+        GroupReplacement.objects.create(
+            group="httpstate",
+            replacement_group="httpbis",
+            replacement_list_email="ietf-http-wg@w3.org",
+            replacement_area="wit",
+        )
+        result = counts_per_authority()
+        self.assertEqual(result["wit"], 1)
+        self.assertEqual(result["art"], 0)
 
     def test_ops_area_assignment_counted_under_ops(self):
         self._technical_reported(area_acronym="art", area_assignment="ops")
