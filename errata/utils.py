@@ -10,7 +10,7 @@ import rpcapi_client
 from django.conf import settings
 from django.db.models import Exists, OuterRef, Q
 
-from errata_auth.utils import SUCCESSOR_AREAS, is_rpc, verification_scope
+from errata_auth.utils import is_rpc, verification_scope
 
 from .models import Erratum, RfcMetadata
 from .rpcapi import with_rpcapi
@@ -54,17 +54,25 @@ def unverified_errata(user):
 
     queries_to_union = []
     if scope.areas:
+        # An area assignment gives the assigned area's ADs access without
+        # removing the access of the ADs of the area the datatracker reports.
         queries_to_union.append(Q(rfc_metadata__area_acronym__in=scope.areas))
-        queries_to_union.append(Q(rfc_metadata__area_assignment__in=scope.areas))
+        queries_to_union.append(Q(rfc_metadata__resolved_area__in=scope.areas))
+    # Group roles give access to the group's RFCs and to those of the groups it
+    # replaced. A replaced group's roles keep their access.
     if scope.ietf_groups:
         queries_to_union.append(
-            Q(
-                rfc_metadata__stream="ietf",
-                rfc_metadata__group_acronym__in=scope.ietf_groups,
+            Q(rfc_metadata__stream="ietf")
+            & (
+                Q(rfc_metadata__group_acronym__in=scope.ietf_groups)
+                | Q(rfc_metadata__resolved_group_acronym__in=scope.ietf_groups)
             )
         )
     if scope.groups:
         queries_to_union.append(Q(rfc_metadata__group_acronym__in=scope.groups))
+        queries_to_union.append(
+            Q(rfc_metadata__resolved_group_acronym__in=scope.groups)
+        )
     if scope.streams:
         queries_to_union.append(Q(rfc_metadata__stream__in=scope.streams))
     combined_queries = reduce(operator.or_, queries_to_union)
@@ -207,16 +215,12 @@ def counts_per_authority(as_of: datetime.datetime = None):
         if authority == "legacy":
             authority_q = Q(
                 rfc_metadata__stream=authority,
-                rfc_metadata__area_assignment="",
+                rfc_metadata__area_assignment__isnull=True,
             )
         elif authority in ["iab", "ise", "irtf", "editorial"]:
             authority_q = Q(rfc_metadata__stream=authority)
         else:
-            areas = [authority, *SUCCESSOR_AREAS.get(authority, [])]
-            authority_q = Q(
-                rfc_metadata__area_acronym__in=areas,
-                rfc_metadata__area_assignment="",
-            ) | Q(rfc_metadata__area_assignment__in=areas)
+            authority_q = Q(rfc_metadata__resolved_area=authority)
         count = qs.filter(authority_q).count()
         results[authority] = count
     return results

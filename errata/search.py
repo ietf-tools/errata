@@ -5,7 +5,7 @@ import datetime
 from django.db.models import Q
 from django.utils import timezone
 
-from errata_auth.utils import SUCCESSOR_AREAS
+from errata_auth.utils import current_area
 
 from .forms import ErrataSearchForm, ReportedErrataFilterForm, StagedErrataFilterForm
 from .models import Erratum, StagedErratum, StagedErratumStatus
@@ -16,7 +16,7 @@ def search_errata(form: ErrataSearchForm):
         return Erratum.objects.none()
     errata = Erratum.objects.order_by(
         "status__order", "rfc_number", "erratum_type__order", "pk"
-    ).prefetch_related("rfc_metadata", "status", "erratum_type")
+    ).prefetch_related("rfc_metadata__area_assignment", "status", "erratum_type")
     if form.cleaned_data.get("rfc_number") is not None:
         errata = errata.filter(rfc_number=form.cleaned_data["rfc_number"])
     if form.cleaned_data.get("errata_id") is not None:
@@ -29,22 +29,28 @@ def search_errata(form: ErrataSearchForm):
             errata = errata.filter(status__slug=status)
     if form.cleaned_data.get("area") and form.cleaned_data["area"] != "any":
         area = form.cleaned_data["area"]
-        search_areas = [area, *SUCCESSOR_AREAS.get(area, [])]
-        errata = errata.filter(
-            Q(rfc_metadata__area_assignment__in=search_areas)
-            | Q(
-                rfc_metadata__area_acronym__in=search_areas,
-                rfc_metadata__area_assignment="",
+        if current_area(area) == area:
+            # Includes the closed areas this area took over.
+            errata = errata.filter(rfc_metadata__resolved_area=area)
+        else:
+            # A closed area finds only the RFCs recorded under it.
+            errata = errata.filter(
+                Q(rfc_metadata__area_assignment__area=area)
+                | Q(
+                    rfc_metadata__area_acronym=area,
+                    rfc_metadata__area_assignment__isnull=True,
+                )
             )
-        )
     if (
         form.cleaned_data.get("errata_type")
         and form.cleaned_data["errata_type"] != "any"
     ):
         errata = errata.filter(erratum_type__slug=form.cleaned_data["errata_type"])
     if form.cleaned_data.get("wg_acronym"):
+        # Also finds the RFCs of groups this group replaced.
         errata = errata.filter(
-            rfc_metadata__group_acronym=form.cleaned_data["wg_acronym"]
+            Q(rfc_metadata__group_acronym=form.cleaned_data["wg_acronym"])
+            | Q(rfc_metadata__resolved_group_acronym=form.cleaned_data["wg_acronym"])
         )
     if form.cleaned_data.get("submitter_name"):
         errata = errata.filter(

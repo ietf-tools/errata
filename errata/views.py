@@ -5,6 +5,7 @@ import json
 import logging
 import urllib.parse
 
+from django.db.models import Count
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -16,11 +17,13 @@ from errata_auth.utils import role_required
 
 from .forms import (
     REPORTED_WITHIN_CHOICES,
+    AreaAssignmentForm,
     ChooseRfcForm,
     ConfirmExistingErrataReadForm,
     EditErratumForm,
     EditStagedErratumForm,
     ErrataSearchForm,
+    GroupReplacementForm,
     ReclassifyErratumForm,
     ReportedErrataFilterForm,
     RfcNumberListForm,
@@ -28,13 +31,16 @@ from .forms import (
 )
 from .mail import send_erratum_classified_notification, send_new_erratum_notification
 from .models import (
+    AreaAssignment,
     Erratum,
     ErratumType,
+    GroupReplacement,
     RfcMetadata,
     StagedErratum,
     StagedErratumStatus,
     Status,
 )
+from .routing import preview_area_assignment, preview_group_replacement
 from .search import filter_reported_errata, filter_staged_errata, search_errata
 from .tasks import update_rfc_metadata_task
 from .utils import can_classify, unverified_errata, with_rfc_has_verified
@@ -71,7 +77,9 @@ def search(request):
 @require_GET
 def detail(request, pk):
     erratum = with_rfc_has_verified(
-        Erratum.objects.prefetch_related("rfc_metadata", "status", "erratum_type")
+        Erratum.objects.prefetch_related(
+            "rfc_metadata__area_assignment", "status", "erratum_type"
+        )
     ).get(pk=pk)
     return render(request, "errata/detail.html", dict(erratum=erratum))
 
@@ -218,9 +226,9 @@ def staged_list(request):
         else:
             pass
     staged_errata = with_rfc_has_verified(
-        StagedErratum.objects.filter(
-            entry_status=StagedErratumStatus.SUBMITTED
-        ).order_by("submitted_at")
+        StagedErratum.objects.filter(entry_status=StagedErratumStatus.SUBMITTED)
+        .select_related("rfc_metadata__area_assignment")
+        .order_by("submitted_at")
     )
     return render(
         request,
@@ -419,7 +427,9 @@ def reported_list(request):
     filter_form, selected_within = _within_filter(request)
     all_reported = unverified_errata(request.user)
     reported = with_rfc_has_verified(
-        filter_reported_errata(all_reported, filter_form).order_by("rfc_number")
+        filter_reported_errata(all_reported, filter_form)
+        .select_related("rfc_metadata__area_assignment")
+        .order_by("rfc_number")
     )
     sections = [
         {
@@ -567,6 +577,143 @@ def rpc_force_metadata_update(request):
 @role_required("rpc")
 def rpc_force_metadata_update_accepted(request):
     return render(request, "errata/rpc_force_metadata_update_accepted.html")
+
+
+RECENT_HISTORY_LENGTH = 20
+
+
+def _routing_edit(request, form, preview, list_url_name, title):
+    """Edit an area assignment or group replacement, previewing before saving.
+
+    The first submission shows what the change would do, with the values held
+    in hidden fields. Saving from there applies it; going back edits again.
+    """
+    context = dict(form=form, title=title, list_url=reverse(list_url_name))
+    if request.method == "POST" and form.is_valid():
+        action = request.POST.get("action", "")
+        if action == "save":
+            form.save()
+            return redirect(list_url_name)
+        elif action == "preview":
+            context["preview"] = preview(form.instance)
+            return render(request, "errata/rpc_routing_confirm.html", context)
+    return render(request, "errata/rpc_routing_edit.html", context)
+
+
+def _routing_remove(request, instance, preview, list_url_name, title):
+    if request.method == "POST":
+        instance.delete()
+        return redirect(list_url_name)
+    return render(
+        request,
+        "errata/rpc_routing_remove.html",
+        dict(
+            title=title,
+            preview=preview,
+            list_url=reverse(list_url_name),
+        ),
+    )
+
+
+@role_required("rpc")
+def rpc_area_assignments(request):
+    assignments = list(AreaAssignment.objects.all())
+    titles = dict(
+        RfcMetadata.objects.filter(
+            rfc_number__in=[a.rfc_metadata_id for a in assignments]
+        ).values_list("rfc_number", "title")
+    )
+    for assignment in assignments:
+        assignment.title = titles.get(assignment.rfc_metadata_id, "")
+    history = AreaAssignment.history.select_related("history_user").order_by(
+        "-history_date", "-history_id"
+    )[:RECENT_HISTORY_LENGTH]
+    return render(
+        request,
+        "errata/rpc_area_assignments.html",
+        dict(assignments=assignments, history=history),
+    )
+
+
+@role_required("rpc")
+def rpc_area_assignment_edit(request, pk=None):
+    instance = None if pk is None else get_object_or_404(AreaAssignment, pk=pk)
+    form = AreaAssignmentForm(
+        data=request.POST if request.method == "POST" else None, instance=instance
+    )
+    return _routing_edit(
+        request,
+        form,
+        lambda assignment: preview_area_assignment(
+            assignment.rfc_metadata_id, assignment.area
+        ),
+        "errata_rpc_area_assignments",
+        "Add Area Assignment"
+        if instance is None
+        else f"Edit Area Assignment for RFC {instance.rfc_metadata_id}",
+    )
+
+
+@role_required("rpc")
+def rpc_area_assignment_remove(request, pk):
+    assignment = get_object_or_404(AreaAssignment, pk=pk)
+    return _routing_remove(
+        request,
+        assignment,
+        preview_area_assignment(assignment.rfc_metadata_id, ""),
+        "errata_rpc_area_assignments",
+        f"Remove Area Assignment for RFC {assignment.rfc_metadata_id}",
+    )
+
+
+@role_required("rpc")
+def rpc_group_replacements(request):
+    replacements = list(GroupReplacement.objects.all())
+    rfc_counts = dict(
+        RfcMetadata.objects.filter(group_acronym__in=[r.group for r in replacements])
+        .values("group_acronym")
+        .annotate(count=Count("rfc_number"))
+        .values_list("group_acronym", "count")
+    )
+    for replacement in replacements:
+        replacement.rfc_count = rfc_counts.get(replacement.group, 0)
+    history = GroupReplacement.history.select_related("history_user").order_by(
+        "-history_date", "-history_id"
+    )[:RECENT_HISTORY_LENGTH]
+    return render(
+        request,
+        "errata/rpc_group_replacements.html",
+        dict(replacements=replacements, history=history),
+    )
+
+
+@role_required("rpc")
+def rpc_group_replacement_edit(request, pk=None):
+    instance = None if pk is None else get_object_or_404(GroupReplacement, pk=pk)
+    form = GroupReplacementForm(
+        data=request.POST if request.method == "POST" else None, instance=instance
+    )
+    return _routing_edit(
+        request,
+        form,
+        preview_group_replacement,
+        "errata_rpc_group_replacements",
+        "Add Group Replacement"
+        if instance is None
+        else f"Edit Replacement of {instance.group}",
+    )
+
+
+@role_required("rpc")
+def rpc_group_replacement_remove(request, pk):
+    replacement = get_object_or_404(GroupReplacement, pk=pk)
+    return _routing_remove(
+        request,
+        replacement,
+        preview_group_replacement(replacement, delete=True),
+        "errata_rpc_group_replacements",
+        f"Remove Replacement of {replacement.group}",
+    )
 
 
 @requires_api_token

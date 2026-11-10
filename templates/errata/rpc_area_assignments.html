@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load filters %}
+
+{% block title %}Area Assignments{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Area Assignments</h1>
+    <p>An area assignment sends an RFC's errata to an area other than the one the datatracker reports for its group. The assigned area's ADs verify them and are notified of new ones.</p>
+    <p>
+        <a href="{% url 'errata_rpc_area_assignment_add' %}" class="btn btn-primary">Add Area Assignment</a>
+        <a href="{% url 'errata_user_info' %}" class="btn btn-outline-secondary">Return to User Info</a>
+    </p>
+    <div class="table-responsive">
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr><th>RFC</th><th>Title</th><th>Area</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for assignment in assignments %}
+                    <tr>
+                        <td><a href="{{ assignment.rfc_metadata_id|rfc_info_url }}" rel="noopener" target="_blank">RFC {{ assignment.rfc_metadata_id }}</a></td>
+                        <td>{{ assignment.title|default:"(no metadata yet)" }}</td>
+                        <td>{{ assignment.area }}</td>
+                        <td class="text-nowrap">
+                            <a href="{% url 'errata_rpc_area_assignment_edit' pk=assignment.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <a href="{% url 'errata_rpc_area_assignment_remove' pk=assignment.pk %}" class="btn btn-sm btn-outline-warning">Remove</a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4">No RFCs have an area assignment.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <h2 class="h4 mt-4">Recent Changes</h2>
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr><th>When</th><th>Change</th><th>By</th><th>RFC</th><th>Area</th></tr>
+            </thead>
+            <tbody>
+                {% for entry in history %}
+                    <tr>
+                        {% include "errata/_routing_history_who.html" %}
+                        <td>RFC {{ entry.rfc_metadata_id }}</td>
+                        <td>{{ entry.area }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5">No changes yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

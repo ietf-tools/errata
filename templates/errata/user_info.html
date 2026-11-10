@@ -26,6 +26,10 @@
                     </div>
                     {% if user|has_role:"rpc" %}
                         <div class="mt-4">
+                            <a href="{% url 'errata_rpc_area_assignments' %}" class="btn btn-primary">Manage Area Assignments</a>
+                            <a href="{% url 'errata_rpc_group_replacements' %}" class="btn btn-primary">Manage Group Replacements</a>
+                        </div>
+                        <div class="mt-4">
                             <a href="{% url 'errata_rpc_force_metadata_update' %}" class="btn btn-danger">Force RFC Metadata Update</a>
                         </div>
                     {% endif %}

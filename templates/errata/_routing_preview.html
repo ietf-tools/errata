@@ -1,0 +1,32 @@
+{% if preview.changes %}
+    <p><strong>This changes where errata go for {{ preview.rfc_count }} RFC{{ preview.rfc_count|pluralize }}, which {{ preview.rfc_count|pluralize:"has,have" }} {{ preview.errata_count }} errat{{ preview.errata_count|pluralize:"um,a" }} ({{ preview.reported_count }} awaiting verification).</strong></p>
+    <p>New errata on these RFCs will cc the list address shown, and IETF stream technical errata go to the ADs of the area shown.</p>
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>RFCs</th>
+                    <th>Area assignment</th>
+                    <th>Area</th>
+                    <th>Group</th>
+                    <th>List address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for change in preview.changes %}
+                    <tr>
+                        <td>
+                            {% for rfc_number in change.rfc_numbers|slice:":10" %}<a href="{% url 'errata_rfc_detail' rfc_number=rfc_number %}">{{ rfc_number }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% if change.rfc_numbers|length > 10 %} and {{ change.rfc_numbers|length|add:"-10" }} more{% endif %}
+                        </td>
+                        {% include "errata/_routing_preview_cell.html" with before=change.before.area_assignment after=change.after.area_assignment %}
+                        {% include "errata/_routing_preview_cell.html" with before=change.before.area after=change.after.area %}
+                        {% include "errata/_routing_preview_cell.html" with before=change.before.group after=change.after.group %}
+                        {% include "errata/_routing_preview_cell.html" with before=change.before.list_email after=change.after.list_email %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p>This doesn't change where any RFC's errata go.</p>
+{% endif %}

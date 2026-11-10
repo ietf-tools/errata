@@ -13,6 +13,7 @@ from django.db import models
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
+from errata_auth.utils import current_area
 from errata_project.mail import EmailMessage, make_message_id
 
 
@@ -204,12 +205,62 @@ class RfcMetadata(models.Model):
     group_list_email = models.EmailField(max_length=64, blank=True)
     area_acronym = models.CharField(max_length=40, blank=True)
     stream = models.CharField(max_length=40, blank=True)
-    area_assignment = models.CharField(max_length=40, blank=True)
     obsoleted_by = models.CharField(max_length=1024, blank=True)
     updated_by = models.CharField(max_length=1024, blank=True)
+    # Where this RFC's errata go, worked out by resolve_routing on every save.
+    resolved_area = models.CharField(max_length=40, blank=True, editable=False)
+    resolved_group_acronym = models.CharField(max_length=40, blank=True, editable=False)
+    resolved_group_list_email = models.EmailField(
+        max_length=64, blank=True, editable=False
+    )
 
     def __str__(self):
         return f"RFC {self.rfc_number}: {self.title}"
+
+    def save(self, *args, **kwargs):
+        self.resolve_routing()
+        super().save(*args, **kwargs)
+
+    def resolve_routing(self, replacements=None, assigned_area=None):
+        """Set the area, group and list address used for this RFC's errata.
+
+        If the RFC's group has been replaced, the group and list address are
+        the replacement's, following a chain of replacements to its end.
+        Otherwise they are the datatracker's.
+
+        The area is the first of:
+
+        * the RFC's area assignment,
+        * for IETF stream RFCs, the area of the group that replaced the RFC's
+          group, if the GroupReplacement names one,
+        * the area the datatracker reports,
+
+        with a closed area replaced by the current area that took it over.
+
+        ``replacements`` maps group acronyms to their GroupReplacement, and
+        ``assigned_area`` is the RFC's area assignment. They are read from the
+        database if not given.
+        """
+        if replacements is None:
+            replacements = GroupReplacement.objects.in_bulk(field_name="group")
+        group = self.group_acronym
+        list_email = self.group_list_email
+        replacement_area = ""
+        seen = {group}
+        while group in replacements:
+            replacement = replacements[group]
+            group = replacement.replacement_group
+            list_email = replacement.replacement_list_email
+            replacement_area = replacement.replacement_area or replacement_area
+            if group in seen:
+                break  # GroupReplacement.clean refuses loops; don't hang on one
+            seen.add(group)
+        area = self.assigned_area if assigned_area is None else assigned_area
+        if area == "" and self.stream == "ietf":
+            area = replacement_area
+        self.resolved_area = current_area(area or self.area_acronym)
+        self.resolved_group_acronym = group
+        self.resolved_group_list_email = list_email
 
     def display_source(self):
         if self.stream == "ise":
@@ -238,9 +289,161 @@ class RfcMetadata(models.Model):
 
     def display_source_with_assignment(self):
         result = self.display_source()
-        if self.area_assignment != "":
-            result += f" ({self.area_assignment})"
+        if self.assigned_area != "":
+            result += f" ({self.assigned_area})"
+        if self.has_replacement_group():
+            result += f" (replaced by {self.resolved_group_acronym})"
         return result
+
+    def has_replacement_group(self):
+        return self.resolved_group_acronym != self.group_acronym
+
+    def resolved_routing(self):
+        return (
+            self.resolved_area,
+            self.resolved_group_acronym,
+            self.resolved_group_list_email,
+        )
+
+    @property
+    def assigned_area(self):
+        """The area of this RFC's AreaAssignment, or "" if it has none."""
+        try:
+            return self.area_assignment.area
+        except AreaAssignment.DoesNotExist:
+            return ""
+
+
+class AreaAssignment(models.Model):
+    """An RFC whose errata are handled by an area other than its group's.
+
+    The assignment takes precedence over the area the datatracker reports. It
+    is set at the RPC's request. RfcMetadata is a cache of information from
+    the datatracker, so assignments are kept in their own table. The link to
+    RfcMetadata has no database constraint and isn't deleted with it, so
+    assignments survive RfcMetadata being wiped and rebuilt.
+    """
+
+    rfc_metadata = models.OneToOneField(
+        RfcMetadata,
+        on_delete=models.DO_NOTHING,
+        db_constraint=False,
+        db_column="rfc_number",
+        related_name="area_assignment",
+    )
+    area = models.CharField(max_length=40)
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ["rfc_metadata"]
+
+    def __str__(self):
+        return f"RFC {self.rfc_metadata_id}: {self.area}"
+
+    def save(self, *args, **kwargs):
+        previous_rfc_number = (
+            AreaAssignment.objects.filter(pk=self.pk)
+            .values_list("rfc_metadata_id", flat=True)
+            .first()
+        )
+        super().save(*args, **kwargs)
+        refresh_rfc_routing({previous_rfc_number, self.rfc_metadata_id})
+
+    def delete(self, *args, **kwargs):
+        result = super().delete(*args, **kwargs)
+        refresh_rfc_routing({self.rfc_metadata_id})
+        return result
+
+
+def refresh_rfc_routing(rfc_numbers):
+    """Re-resolve the routing of the given RFCs, for those that have metadata."""
+    for metadata in RfcMetadata.objects.filter(rfc_number__in=rfc_numbers - {None}):
+        metadata.save()
+
+
+class GroupReplacement(models.Model):
+    """A group whose RFCs' errata go to the group that replaced it.
+
+    For example, errata on ippm and bmwg RFCs go to bpm. The replacement's
+    list address, and optionally its area, are stored rather than looked up:
+    the replacement may not have published an RFC to take them from, and its
+    list need not be at ietf.org. Saving or deleting a replacement updates the
+    resolved routing of the RFCs it affects.
+    """
+
+    group = models.CharField(max_length=40, unique=True)
+    replacement_group = models.CharField(max_length=40)
+    replacement_list_email = models.EmailField(max_length=64)
+    replacement_area = models.CharField(
+        max_length=40,
+        blank=True,
+        help_text="Leave blank to keep the area of each RFC.",
+    )
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ["group"]
+
+    def __str__(self):
+        return f"{self.group} replaced by {self.replacement_group}"
+
+    def clean(self):
+        if self.group == self.replacement_group:
+            raise ValidationError(
+                {"replacement_group": "A group can't be replaced by itself."}
+            )
+        replaced_by = dict(
+            GroupReplacement.objects.exclude(pk=self.pk).values_list(
+                "group", "replacement_group"
+            )
+        )
+        replaced_by[self.group] = self.replacement_group
+        chain = [self.group]
+        while chain[-1] in replaced_by:
+            chain.append(replaced_by[chain[-1]])
+            if chain[-1] == self.group:
+                raise ValidationError(
+                    {
+                        "replacement_group": "This would make a loop of "
+                        "replacements: " + " → ".join(chain)
+                    }
+                )
+
+    def save(self, *args, **kwargs):
+        previous_group = (
+            GroupReplacement.objects.filter(pk=self.pk)
+            .values_list("group", flat=True)
+            .first()
+        )
+        super().save(*args, **kwargs)
+        refresh_group_routing({self.group, previous_group})
+
+    def delete(self, *args, **kwargs):
+        result = super().delete(*args, **kwargs)
+        refresh_group_routing({self.group})
+        return result
+
+
+def refresh_group_routing(changed_groups):
+    """Re-resolve the routing of RFCs whose group replacements may have changed.
+
+    Through a chain of replacements, a change to one group can affect RFCs of
+    any group that has a replacement, so those are refreshed too.
+    """
+    replacements = GroupReplacement.objects.in_bulk(field_name="group")
+    groups = (set(changed_groups) | set(replacements)) - {None}
+    changed = []
+    for metadata in RfcMetadata.objects.filter(group_acronym__in=groups).select_related(
+        "area_assignment"
+    ):
+        before = metadata.resolved_routing()
+        metadata.resolve_routing(replacements)
+        if metadata.resolved_routing() != before:
+            changed.append(metadata)
+    RfcMetadata.objects.bulk_update(
+        changed,
+        ["resolved_area", "resolved_group_acronym", "resolved_group_list_email"],
+    )
 
 
 class StagedErratumStatus(models.TextChoices):
